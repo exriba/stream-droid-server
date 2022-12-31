@@ -36,10 +36,11 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             Assert.Equal(rewards.Count, data.Count);
         }
 
-        [Fact]
-        public void Save_Throws_NullEntity()
+        [Theory]
+        [InlineData(null)]
+        public void Save_Throws_InvalidArgs(Reward reward)
         {
-            Assert.Throws<ArgumentNullException>(() => _uberRepository.Save<Reward>(null));
+            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Save<Reward>(reward));
         }
 
         [Fact]
@@ -67,10 +68,11 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             Assert.NotEqual(reward.Title, entity.Title);
         }
 
-        [Fact]
-        public void Delete_Throws_NullEntity()
+        [Theory]
+        [InlineData(null)]
+        public void Delete_Throws_InvalidArgs(Reward reward)
         {
-            Assert.Throws<ArgumentNullException>(() => _uberRepository.Delete<Reward>(null));
+            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Delete<Reward>(reward));
         }
 
         [Fact]

@@ -8,17 +8,11 @@ namespace StreamDroid.Core.Tests.ValueObject
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
+        [InlineData(null)]
         public void FileName_Throws_EmptyName(string name)
         {
-            Assert.Throws<ArgumentException>(() => new FileName(name, Extension.MP3));
-            Assert.Throws<ArgumentException>(() => FileName.FromString(name));
-        }
-
-        [Fact]
-        public void FileName_Throws_Null()
-        {
-            Assert.Throws<ArgumentNullException>(() => new FileName(null, Extension.MP3));
-            Assert.Throws<ArgumentNullException>(() => FileName.FromString(null));
+            Assert.ThrowsAny<ArgumentException>(() => new FileName(name, Extension.MP3));
+            Assert.ThrowsAny<ArgumentException>(() => FileName.FromString(name));
         }
 
         [Theory]

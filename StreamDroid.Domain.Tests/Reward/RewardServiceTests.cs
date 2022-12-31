@@ -36,17 +36,11 @@ namespace StreamDroid.Domain.Tests.Reward
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
-        public void RewardService_FindRewardById_Throws_InvalidId(string id)
+        [InlineData(null)]
+        public void RewardService_FindRewardById_Throws_InvalidArgs(string id)
         {
             var rewardService = new RewardService(_apiCore.Object, _userService.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.Throws<ArgumentException>(() => rewardService.FindRewardById(id));
-        }
-
-        [Fact]
-        public void RewardService_FindRewardById_Throws_Null()
-        {
-            var rewardService = new RewardService(_apiCore.Object, _userService.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.Throws<ArgumentNullException>(() => rewardService.FindRewardById(null));
+            Assert.ThrowsAny<ArgumentException>(() => rewardService.FindRewardById(id));
         }
 
         [Fact]
@@ -61,17 +55,11 @@ namespace StreamDroid.Domain.Tests.Reward
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
-        public void RewardService_FindRewardsByUserId_Throws_InvalidUserId(string userId)
+        [InlineData(null)]
+        public void RewardService_FindRewardsByUserId_Throws_InvalidArgs(string userId)
         {
             var rewardService = new RewardService(_apiCore.Object, _userService.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.Throws<ArgumentException>(() => rewardService.FindRewardsByUserId(userId));
-        }
-
-        [Fact]
-        public void RewardService_FindRewardsByUserId_Throws_Null()
-        {
-            var rewardService = new RewardService(_apiCore.Object, _userService.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.Throws<ArgumentNullException>(() => rewardService.FindRewardsByUserId(null));
+            Assert.ThrowsAny<ArgumentException>(() => rewardService.FindRewardsByUserId(userId));
         }
 
         [Fact]

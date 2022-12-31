@@ -8,23 +8,18 @@ namespace StreamDroid.Core.Tests.Entities
     {
         private const string MP4_FILE = "file.mp4";
 
-        [Fact] 
-        public void Reward_Throws_NullFields() 
-        {
-            Assert.Throws<ArgumentNullException>(() => new Reward { Id = null });
-            Assert.Throws<ArgumentNullException>(() => new Reward { Title = null });
-            Assert.Throws<ArgumentNullException>(() => new Reward { StreamerId = null });
-        }
-
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
+        [InlineData(null)]
         public void Reward_Throws_InvalidFields(string value)
         {
-            Assert.Throws<ArgumentException>(() => new Reward { Id = value });
-            Assert.Throws<ArgumentException>(() => new Reward { Title = value });
-            Assert.Throws<ArgumentException>(() => new Reward { ImageUrl = value });
-            Assert.Throws<ArgumentException>(() => new Reward { StreamerId = value });
+            Assert.ThrowsAny<ArgumentException>(() => new Reward { Id = value });
+            Assert.ThrowsAny<ArgumentException>(() => new Reward { Title = value });
+            Assert.ThrowsAny<ArgumentException>(() => new Reward { StreamerId = value });
+
+            if (value != null)
+                Assert.ThrowsAny<ArgumentException>(() => new Reward { ImageUrl = value });
         }
 
         [Theory]
@@ -87,17 +82,11 @@ namespace StreamDroid.Core.Tests.Entities
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
-        public void Reward_GetAsset_Throws_InvalidName(string name)
+        [InlineData(null)]
+        public void Reward_GetAsset_Throws_InvalidArgs(string name)
         {
             var reward = CreateReward();
-            Assert.Throws<ArgumentException>(() => reward.GetAsset(name));
-        }
-
-        [Fact]
-        public void Reward_GetAsset_Throws_NullValue()
-        {
-            var reward = CreateReward();
-            Assert.Throws<ArgumentNullException>(() => reward.GetAsset(null));
+            Assert.ThrowsAny<ArgumentException>(() => reward.GetAsset(name));
         }
 
         [Fact]
@@ -127,17 +116,11 @@ namespace StreamDroid.Core.Tests.Entities
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
-        public void Reward_RemoveAsset_Throws_InvalidName(string name)
+        [InlineData(null)]
+        public void Reward_RemoveAsset_Throws_InvalidArgs(string name)
         {
             var reward = CreateReward();
-            Assert.Throws<ArgumentException>(() => reward.RemoveAsset(name));
-        }
-
-        [Fact]
-        public void Reward_RemoveAsset_Throws_NullValue()
-        {
-            var reward = CreateReward();
-            Assert.Throws<ArgumentNullException>(() => reward.RemoveAsset(null));
+            Assert.ThrowsAny<ArgumentException>(() => reward.RemoveAsset(name));
         }
 
         [Fact]

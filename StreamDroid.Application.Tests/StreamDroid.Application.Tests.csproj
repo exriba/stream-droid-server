@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\StreamDroid.Api\StreamDroid.Application.csproj" />
+    <ProjectReference Include="..\StreamDroid.Application\StreamDroid.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

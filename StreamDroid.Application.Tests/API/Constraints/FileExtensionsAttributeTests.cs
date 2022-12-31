@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Moq;
+﻿using Moq;
+using Microsoft.AspNetCore.Http;
 using StreamDroid.Application.API.Constraints;
 
 namespace StreamDroid.Application.Tests.API.Constraints
@@ -35,7 +35,7 @@ namespace StreamDroid.Application.Tests.API.Constraints
             var mockFile = new Mock<IFormFile>();
             mockFile.Setup(x => x.FileName).Returns(fileName);
 
-            Assert.Throws<ArgumentException>(() => _fileExtensionsAttribute.IsValid(new IFormFile[] { mockFile.Object }));
+            Assert.ThrowsAny<ArgumentException>(() => _fileExtensionsAttribute.IsValid(new IFormFile[] { mockFile.Object }));
         }
     }
 }

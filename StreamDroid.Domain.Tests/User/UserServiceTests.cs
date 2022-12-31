@@ -34,17 +34,11 @@ namespace StreamDroid.Domain.Tests.User
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
-        public void UserService_FindById_Throws_InvalidUserId(string userId)
+        [InlineData(null)]
+        public void UserService_FindById_Throws_InvalidArgs(string userId)
         {
             var userService = new UserService(_apiCore.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.Throws<ArgumentException>(() => userService.FindById(userId));
-        }
-
-        [Fact]
-        public void UserService_FindById_Throws_Null()
-        {
-            var userService = new UserService(_apiCore.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.Throws<ArgumentNullException>(() => userService.FindById(null));
+            Assert.ThrowsAny<ArgumentException>(() => userService.FindById(userId));
         }
 
         [Fact]
@@ -59,17 +53,11 @@ namespace StreamDroid.Domain.Tests.User
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
-        public void UserService_Authenticate_Throws_InvalidCode(string code)
+        [InlineData(null)]
+        public void UserService_Authenticate_Throws_InvalidArgs(string code)
         {
             var userService = new UserService(_apiCore.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.ThrowsAsync<ArgumentException>(async () => await userService.Authenticate(code));
-        }
-
-        [Fact]
-        public void UserService_Authenticate_Throws_Null()
-        {
-            var userService = new UserService(_apiCore.Object, _coreSettings.Object, _uberRepository.Object);
-            Assert.ThrowsAsync<ArgumentNullException>(async () => await userService.Authenticate(null));
+            Assert.ThrowsAnyAsync<ArgumentException>(async () => await userService.Authenticate(code));
         }
 
         [Fact]

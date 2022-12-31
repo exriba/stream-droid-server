@@ -8,24 +8,16 @@ namespace StreamDroid.Core.Tests.Entities
     {
         public UserTests() : base() { }
 
-        [Fact]
-        public void User_Throws_NullFields()
-        {
-            Assert.Throws<ArgumentNullException>(() => new User { Id = null });
-            Assert.Throws<ArgumentNullException>(() => new User { Name = null });
-            Assert.Throws<ArgumentNullException>(() => new User { AccessToken = null });
-            Assert.Throws<ArgumentNullException>(() => new User { RefreshToken = null });
-        }
-
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
+        [InlineData(null)]
         public void User_Throws_InvalidFields(string value)
         {
-            Assert.Throws<ArgumentException>(() => new User { Id = value });
-            Assert.Throws<ArgumentException>(() => new User { Name = value });
-            Assert.Throws<ArgumentException>(() => new User { AccessToken = value });
-            Assert.Throws<ArgumentException>(() => new User { RefreshToken = value });
+            Assert.ThrowsAny<ArgumentException>(() => new User { Id = value });
+            Assert.ThrowsAny<ArgumentException>(() => new User { Name = value });
+            Assert.ThrowsAny<ArgumentException>(() => new User { AccessToken = value });
+            Assert.ThrowsAny<ArgumentException>(() => new User { RefreshToken = value });
         }
 
         [Fact]
