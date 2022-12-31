@@ -1,0 +1,95 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Application", "StreamDroid.Api\StreamDroid.Application.csproj", "{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Shared", "StreamDroid.Shared\StreamDroid.Shared.csproj", "{085652B7-BC84-4429-851D-634F0B1A3741}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Core", "StreamDroid.Core\StreamDroid.Core.csproj", "{6A7A16E3-9FC3-48B1-BEC9-1C1406B9C6BF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Shared.Tests", "StreamDroid.Shared.Tests\StreamDroid.Shared.Tests.csproj", "{0D5FAC08-91B4-4E81-8CC2-DBFF2FF6729E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Infrastructure", "StreamDroid.Infrastructure\StreamDroid.Infrastructure.csproj", "{0833743B-665C-4EB5-AA79-EA633D67EE20}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{472EE243-8981-4BDF-9957-3DEB46430BC5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{089F98B4-F2ED-4970-8992-EE2B041AB26B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Domain", "StreamDroid.Domain\StreamDroid.Domain.csproj", "{217A1DAF-9AB4-4593-8BA5-9EB9889111F4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Infrastructure.Tests", "StreamDroid.Infrastructure.Tests\StreamDroid.Infrastructure.Tests.csproj", "{2AA1F610-DB6C-4E54-8518-428F1BECDEC7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Core.Tests", "StreamDroid.Core.Tests\StreamDroid.Core.Tests.csproj", "{9F984DF6-65FD-4B5F-A317-904090C56750}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Domain.Tests", "StreamDroid.Domain.Tests\StreamDroid.Domain.Tests.csproj", "{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Application.Tests", "StreamDroid.Application.Tests\StreamDroid.Application.Tests.csproj", "{D881BB42-C6D4-474D-840A-2489D10D3CF8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{085652B7-BC84-4429-851D-634F0B1A3741}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{085652B7-BC84-4429-851D-634F0B1A3741}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{085652B7-BC84-4429-851D-634F0B1A3741}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{085652B7-BC84-4429-851D-634F0B1A3741}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A7A16E3-9FC3-48B1-BEC9-1C1406B9C6BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A7A16E3-9FC3-48B1-BEC9-1C1406B9C6BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A7A16E3-9FC3-48B1-BEC9-1C1406B9C6BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A7A16E3-9FC3-48B1-BEC9-1C1406B9C6BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D5FAC08-91B4-4E81-8CC2-DBFF2FF6729E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D5FAC08-91B4-4E81-8CC2-DBFF2FF6729E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D5FAC08-91B4-4E81-8CC2-DBFF2FF6729E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D5FAC08-91B4-4E81-8CC2-DBFF2FF6729E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0833743B-665C-4EB5-AA79-EA633D67EE20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0833743B-665C-4EB5-AA79-EA633D67EE20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0833743B-665C-4EB5-AA79-EA633D67EE20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0833743B-665C-4EB5-AA79-EA633D67EE20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{217A1DAF-9AB4-4593-8BA5-9EB9889111F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{217A1DAF-9AB4-4593-8BA5-9EB9889111F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{217A1DAF-9AB4-4593-8BA5-9EB9889111F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{217A1DAF-9AB4-4593-8BA5-9EB9889111F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2AA1F610-DB6C-4E54-8518-428F1BECDEC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AA1F610-DB6C-4E54-8518-428F1BECDEC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AA1F610-DB6C-4E54-8518-428F1BECDEC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AA1F610-DB6C-4E54-8518-428F1BECDEC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F984DF6-65FD-4B5F-A317-904090C56750}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F984DF6-65FD-4B5F-A317-904090C56750}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F984DF6-65FD-4B5F-A317-904090C56750}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F984DF6-65FD-4B5F-A317-904090C56750}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D881BB42-C6D4-474D-840A-2489D10D3CF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D881BB42-C6D4-474D-840A-2489D10D3CF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D881BB42-C6D4-474D-840A-2489D10D3CF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D881BB42-C6D4-474D-840A-2489D10D3CF8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8} = {472EE243-8981-4BDF-9957-3DEB46430BC5}
+		{085652B7-BC84-4429-851D-634F0B1A3741} = {472EE243-8981-4BDF-9957-3DEB46430BC5}
+		{6A7A16E3-9FC3-48B1-BEC9-1C1406B9C6BF} = {472EE243-8981-4BDF-9957-3DEB46430BC5}
+		{0D5FAC08-91B4-4E81-8CC2-DBFF2FF6729E} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
+		{0833743B-665C-4EB5-AA79-EA633D67EE20} = {472EE243-8981-4BDF-9957-3DEB46430BC5}
+		{217A1DAF-9AB4-4593-8BA5-9EB9889111F4} = {472EE243-8981-4BDF-9957-3DEB46430BC5}
+		{2AA1F610-DB6C-4E54-8518-428F1BECDEC7} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
+		{9F984DF6-65FD-4B5F-A317-904090C56750} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
+		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
+		{D881BB42-C6D4-474D-840A-2489D10D3CF8} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EDFEC61E-EA36-4157-86DE-FF0CED2D6020}
+	EndGlobalSection
+EndGlobal
