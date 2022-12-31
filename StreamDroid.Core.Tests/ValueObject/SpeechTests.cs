@@ -19,7 +19,7 @@ namespace StreamDroid.Core.Tests.ValueObject
                 Enabled = true,
             };
 
-            Assert.True(speech.Equals(speech1));
+            Assert.Equal(speech, speech1);
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace StreamDroid.Core.Tests.ValueObject
                 Enabled = false,
             };
             
-            Assert.False(speech.Equals(speech1));
+            Assert.NotEqual(speech, speech1);
         }
     }
 }

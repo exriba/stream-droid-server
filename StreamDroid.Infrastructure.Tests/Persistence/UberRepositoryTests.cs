@@ -40,7 +40,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         [InlineData(null)]
         public void Save_Throws_InvalidArgs(Reward reward)
         {
-            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Save<Reward>(reward));
+            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Save(reward));
         }
 
         [Fact]
@@ -72,7 +72,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         [InlineData(null)]
         public void Delete_Throws_InvalidArgs(Reward reward)
         {
-            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Delete<Reward>(reward));
+            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Delete(reward));
         }
 
         [Fact]
@@ -85,7 +85,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             _uberRepository.Delete(reward);
             var data = _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
 
-            Assert.False(data.Any());
+            Assert.Empty(data);
         }
 
         private static IReadOnlyCollection<Reward> CreateRewards()

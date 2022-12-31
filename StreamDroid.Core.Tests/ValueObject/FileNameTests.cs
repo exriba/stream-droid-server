@@ -9,19 +9,14 @@ namespace StreamDroid.Core.Tests.ValueObject
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void FileName_Throws_EmptyName(string name)
-        {
-            Assert.ThrowsAny<ArgumentException>(() => new FileName(name, Extension.MP3));
-            Assert.ThrowsAny<ArgumentException>(() => FileName.FromString(name));
-        }
-
-        [Theory]
         [InlineData("file")]
         [InlineData(".mp4")]
         [InlineData("file.csv")]
-        public void FileName_Throws_InvalidNames(string name)
+        public void FileName_Throws_InvalidArgs(string name)
         {
-            Assert.Throws<ArgumentException>(() => FileName.FromString(name));
+            if (string.IsNullOrWhiteSpace(name))
+                Assert.ThrowsAny<ArgumentException>(() => new FileName(name, Extension.MP3));
+            Assert.ThrowsAny<ArgumentException>(() => FileName.FromString(name));
         }
 
         [Fact]
@@ -32,7 +27,7 @@ namespace StreamDroid.Core.Tests.ValueObject
             Assert.Equal(name, fileName.ToString());
 
             var fileName1 = FileName.FromString(name);
-            Assert.True(fileName.Equals(fileName1));
+            Assert.Equal(fileName, fileName1);
         }
     }
 }

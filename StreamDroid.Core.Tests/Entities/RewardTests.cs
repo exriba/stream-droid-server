@@ -76,7 +76,7 @@ namespace StreamDroid.Core.Tests.Entities
             var fileName = FileName.FromString(MP4_FILE);
             reward.AddAsset(fileName, 100);
 
-            Assert.True(reward.Assets.Any());
+            Assert.NotEmpty(reward.Assets);
         }
 
         [Theory]
@@ -132,7 +132,7 @@ namespace StreamDroid.Core.Tests.Entities
             reward.AddAsset(fileName, 100);
             reward.RemoveAsset(fileName.ToString());
 
-            Assert.False(reward.Assets.Any());
+            Assert.Empty(reward.Assets);
         }
 
         [Fact]

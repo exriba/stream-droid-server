@@ -68,9 +68,8 @@ namespace StreamDroid.Domain.Tests.Reward
             var rewardService = new RewardService(_apiCore.Object, _userService.Object, _coreSettings.Object, _uberRepository.Object);
             var rewards = rewardService.FindRewardsByUserId(_reward.StreamerId);
 
-            Assert.True(rewards.Any());
+            Assert.NotEmpty(rewards);
         }
-
 
         [Fact]
         public void RewardService_UpdateRewardSpeech()
@@ -100,7 +99,7 @@ namespace StreamDroid.Domain.Tests.Reward
             var tuple = rewardService.AddRewardAssets(_reward.Id, dictionary);
 
             Assert.Equal(_reward.Title, tuple.Item1);
-            Assert.True(tuple.Item2.Any());
+            Assert.NotEmpty(tuple.Item2);
         }
 
         [Fact]
@@ -116,12 +115,12 @@ namespace StreamDroid.Domain.Tests.Reward
             rewardService.AddRewardAssets(_reward.Id, dictionary);
             var reward = rewardService.FindRewardById(_reward.Id);
             
-            Assert.True(reward.Assets.Any());
+            Assert.NotEmpty(reward.Assets);
 
             rewardService.RemoveRewardAssets(_reward.Id, dictionary.Keys);
             reward = rewardService.FindRewardById(_reward.Id);
             
-            Assert.False(reward.Assets.Any());
+            Assert.Empty(reward.Assets);
         }
 
         [Fact]

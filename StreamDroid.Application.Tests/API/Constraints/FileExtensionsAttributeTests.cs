@@ -14,6 +14,18 @@ namespace StreamDroid.Application.Tests.API.Constraints
         }
 
         [Theory]
+        [InlineData("file.xml")]
+        [InlineData("file.csv")]
+        [InlineData("file.json")]
+        public void FileExtensionsAttribute_IsValid_Throws_InvalidExtension(string fileName)
+        {
+            var mockFile = new Mock<IFormFile>();
+            mockFile.Setup(x => x.FileName).Returns(fileName);
+
+            Assert.ThrowsAny<ArgumentException>(() => _fileExtensionsAttribute.IsValid(new IFormFile[] { mockFile.Object }));
+        }
+
+        [Theory]
         [InlineData("file.mp3")]
         [InlineData("file.mp4")]
         public void FileExtensionsAttribute_IsValid_True(string fileName)
@@ -24,18 +36,6 @@ namespace StreamDroid.Application.Tests.API.Constraints
             var result = _fileExtensionsAttribute.IsValid(new IFormFile[] { mockFile.Object });
 
             Assert.True(result);
-        }
-
-        [Theory]
-        [InlineData("file.xml")]
-        [InlineData("file.csv")]
-        [InlineData("file.json")]
-        public void FileExtensionsAttribute_IsValid_Throws_InvalidExtension(string fileName)
-        {
-            var mockFile = new Mock<IFormFile>();
-            mockFile.Setup(x => x.FileName).Returns(fileName);
-
-            Assert.ThrowsAny<ArgumentException>(() => _fileExtensionsAttribute.IsValid(new IFormFile[] { mockFile.Object }));
         }
     }
 }
