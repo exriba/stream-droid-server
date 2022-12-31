@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Application", "StreamDroid.Api\StreamDroid.Application.csproj", "{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Application", "StreamDroid.Application\StreamDroid.Application.csproj", "{9F9F4D51-3D0D-4EB8-9B74-527CA73823E8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Shared", "StreamDroid.Shared\StreamDroid.Shared.csproj", "{085652B7-BC84-4429-851D-634F0B1A3741}"
 EndProject
