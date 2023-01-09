@@ -6,6 +6,7 @@ using StreamDroid.Application.API.Reward;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Reward;
 using System.Security.Claims;
+using StreamDroid.Application.API.Models;
 
 namespace StreamDroid.Application.Tests.API.Reward
 {
@@ -94,7 +95,7 @@ namespace StreamDroid.Application.Tests.API.Reward
             mockFile.Setup(x => x.FileName).Returns(tuple.Item2.First().FileName.ToString());
             _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).Returns(tuple);
 
-            var result = await _rewardController.AddAssets(id, new IFormFile[] { mockFile.Object });
+            var result = await _rewardController.AddAssets(id, new AssetForm { Files = new IFormFile[] { mockFile.Object } });
 
             Assert.Equal(typeof(CreatedAtActionResult), result.GetType());
 
