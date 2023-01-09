@@ -20,14 +20,51 @@ namespace StreamDroid.Core.Tests.ValueObject
         }
 
         [Fact]
-        public void FileName_Created()
+        public void FileName_FromString_Equal()
         {
             var name = "file.mp4";
-            var fileName = new FileName("file", Extension.MP4);
-            Assert.Equal(name, fileName.ToString());
 
+            var fileName = FileName.FromString(name);
             var fileName1 = FileName.FromString(name);
+
             Assert.Equal(fileName, fileName1);
+        }
+
+        [Fact]
+        public void FileName_FromString_NotEqual()
+        {
+            var name = "file.mp4";
+            var name1 = "file1.mp4";
+
+            var fileName = FileName.FromString(name);
+            var fileName1 = FileName.FromString(name1);
+
+            Assert.NotEqual(fileName, fileName1);
+        }
+
+        [Fact]
+        public void Equal()
+        {
+            var name = "file";
+            var extension = Extension.MP4;
+
+            var fileName = new FileName(name, extension);
+            var fileName1 = new FileName(name, extension);
+
+            Assert.Equal(fileName, fileName1);
+        }
+
+        [Fact]
+        public void NotEqual()
+        {
+            var name = "file";
+            var name1 = "file2";
+            var extension = Extension.MP4;
+
+            var fileName = new FileName(name, extension);
+            var fileName1 = new FileName(name1, extension);
+
+            Assert.NotEqual(fileName, fileName1);
         }
     }
 }

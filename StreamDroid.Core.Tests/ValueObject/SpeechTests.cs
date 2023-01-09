@@ -5,7 +5,7 @@ namespace StreamDroid.Core.Tests.ValueObject
     public class SpeechTests
     {
         [Fact]
-        public void Speech_Equal()
+        public void Equal()
         {
             var speech = new Speech
             {
@@ -23,7 +23,7 @@ namespace StreamDroid.Core.Tests.ValueObject
         }
 
         [Fact]
-        public void Speech_NotEqual()
+        public void NotEqual()
         {
             var speech = new Speech
             {
