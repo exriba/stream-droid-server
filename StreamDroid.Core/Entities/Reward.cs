@@ -61,13 +61,13 @@ namespace StreamDroid.Core.Entities
             }
         }
 
-        private Speech _speech = new Speech();
+        private Speech _speech = new Speech(false, 0);
         public Speech Speech
         {
             get => _speech;
             set
             {
-                _speech = value ?? new Speech();
+                _speech = value ?? new Speech(false, 0);
             }
         }
 
@@ -84,15 +84,14 @@ namespace StreamDroid.Core.Entities
             }
         }
 
-        public void EnableTextToSpeech(int voiceIndex = 0)
+        public void EnableTextToSpeech()
         {
-            _speech.Enabled = true;
-            _speech.VoiceIndex = voiceIndex;
+            _speech = new Speech(true, _speech.VoiceIndex);
         }
 
         public void DisableTextToSpeech()
         {
-            _speech.Enabled = false;
+            _speech = new Speech(false, _speech.VoiceIndex);
         }
 
         public Asset? GetRandomAsset()

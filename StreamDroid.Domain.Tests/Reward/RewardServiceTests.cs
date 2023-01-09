@@ -74,11 +74,7 @@ namespace StreamDroid.Domain.Tests.Reward
         [Fact]
         public void RewardService_UpdateRewardSpeech()
         {
-            var speech = new Speech
-            {
-                VoiceIndex = 0,
-                Enabled = true,
-            };
+            var speech = new Speech(true, 0);
 
             var rewardService = new RewardService(_apiCore.Object, _userService.Object, _coreSettings.Object, _uberRepository.Object);
             var reward = rewardService.UpdateRewardSpeech(_reward.Id, speech);
