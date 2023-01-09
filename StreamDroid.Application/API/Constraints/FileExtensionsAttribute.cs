@@ -2,7 +2,7 @@
 
 namespace StreamDroid.Application.API.Constraints
 {
-    [AttributeUsage(AttributeTargets.Parameter)]
+    [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property)]
     public class FileExtensionsAttribute : ValidationAttribute
     {
         private readonly string[] _extensions;

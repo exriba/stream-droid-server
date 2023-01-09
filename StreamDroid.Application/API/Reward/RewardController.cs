@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Application.Helpers;
 using StreamDroid.Domain.Reward;
+using StreamDroid.Application.API.Models;
 
 namespace StreamDroid.Application.API.Reward
 {
@@ -58,15 +59,15 @@ namespace StreamDroid.Application.API.Reward
         [DisableRequestSizeLimit]
         [RequestFormLimits(ValueLengthLimit = int.MaxValue, MultipartBodyLengthLimit = long.MaxValue)]
         public async Task<IActionResult> AddAssets([FromRoute] Guid rewardId,
-                                                   [FromForm][Required][Constraints.FileExtensions(new string[] {".mp3", ".mp4"})] IEnumerable<IFormFile> files)
+                                                   [FromForm][Required] AssetForm assetForm)
         {
-            if (!files.Any())
+            if (!assetForm.Files.Any())
                 return NoContent();
 
             var id = rewardId.ToString();
-            var fileMap = files.ToDictionary(x => FileName.FromString(x.FileName), _ => 100);
+            var fileMap = assetForm.Files.ToDictionary(x => FileName.FromString(x.FileName), _ => assetForm.Volume);
             var tuple = _rewardService.AddRewardAssets(id, fileMap);
-            await SaveAssetFiles(tuple.Item1, files);
+            await SaveAssetFiles(tuple.Item1, assetForm.Files);
             return CreatedAtAction(nameof(AddAssets), tuple.Item2);
         }
 
