@@ -38,6 +38,7 @@ namespace StreamDroid.Core.Tests.Entities
             Assert.NotNull(user.UserKey);
             Assert.True(user.AccessToken.IsBase64String());
             Assert.True(user.RefreshToken.IsBase64String());
+            Assert.Equal(100, user.Preferences.DefaultVolume);
         }
     }
 }

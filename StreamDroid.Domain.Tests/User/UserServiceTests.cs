@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using SharpTwitch.Auth.Models;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Interfaces;
+using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Tests.Common;
 using StreamDroid.Domain.User;
 using StreamDroid.Infrastructure.Persistence;
@@ -136,6 +137,23 @@ namespace StreamDroid.Domain.Tests.User
             var token = await userService.RefreshAccessToken(_user);
 
             Assert.False(string.IsNullOrWhiteSpace(token));
+        }
+
+        [Fact]
+        public void UserService_UpdatePreferences_Throws_InvalidArgs()
+        {
+            var userService = new UserService(_apiCore.Object, _coreSettings.Object, _uberRepository.Object);
+            Assert.ThrowsAny<ArgumentException>(() => userService.UpdatePreferences(_user.Id, null));
+        }
+
+        [Fact]
+        public void UserService_UpdatePreferences() 
+        {
+            var preferences = new Preferences();
+            var userService = new UserService(_apiCore.Object, _coreSettings.Object, _uberRepository.Object);
+            var data = userService.UpdatePreferences(_user.Id, preferences);
+
+            Assert.Equal(preferences, data);
         }
 
         private static Core.Entities.User CreateUser()

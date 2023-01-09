@@ -17,7 +17,8 @@ namespace StreamDroid.Application.API.Converters
             {
                 value.Id,
                 value.Name,
-                value.UserKey
+                value.UserKey,
+                value.Preferences
             };
 
             var json = JsonSerializer.Serialize(user);

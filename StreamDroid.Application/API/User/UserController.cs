@@ -11,6 +11,8 @@ using StreamDroid.Shared.Helpers;
 using SharpTwitch.Auth.Helpers;
 using SharpTwitch.Core.Interfaces;
 using StreamDroid.Domain.User;
+using System.ComponentModel.DataAnnotations;
+using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Application.API.User
 {
@@ -39,6 +41,14 @@ namespace StreamDroid.Application.API.User
             var claim = User.Claims.First(c => c.Type.Equals(Constants.ID));
             var me = _userService.FindById(claim.Value);
             return Ok(me);
+        }
+
+        [HttpPost("me/preferences")]
+        public IActionResult UpdatePreferences([Required][FromBody] Preferences preferences)
+        {
+            var claim = User.Claims.First(c => c.Type.Equals(Constants.ID));
+            var data = _userService.UpdatePreferences(claim.Value, preferences);
+            return Ok(data);
         }
 
         [AllowAnonymous]

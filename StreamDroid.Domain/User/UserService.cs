@@ -5,6 +5,7 @@ using SharpTwitch.Core.Interfaces;
 using SharpTwitch.Auth;
 using StreamDroid.Shared.Helpers;
 using StreamDroid.Domain.Models;
+using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Domain.User
 {
@@ -47,6 +48,16 @@ namespace StreamDroid.Domain.User
             var token = await _authApi.RefreshAccessTokenAsync(refreshToken, CancellationToken.None);
             Save(user.Id, user.Name, token.AccessToken, token.RefreshToken);
             return token.AccessToken;
+        }
+
+        public Preferences UpdatePreferences(string userId, Preferences preferences)
+        {
+            Guard.Against.Null(preferences, nameof(preferences));
+
+            var user = FindById(userId);
+            user.Preferences = preferences;
+            _uberRepository.Save(user);
+            return user.Preferences;
         }
 
         private Entities.User Save(string id, string name, string accessToken, string refreshToken)

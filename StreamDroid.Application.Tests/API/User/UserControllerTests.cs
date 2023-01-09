@@ -10,6 +10,7 @@ using StreamDroid.Domain.User;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using StreamDroid.Shared.Helpers;
+using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Application.Tests.API.User
 {
@@ -27,7 +28,11 @@ namespace StreamDroid.Application.Tests.API.User
             };
             var claimsIdentity = new ClaimsIdentity(claims);
 
+            var id = Guid.NewGuid();
+            var user = CreateUser(id);
             _mockUserService = new Mock<IUserService>();
+            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).Returns(user);
+
             var mockLogger = new Mock<ILogger<UserController>>();
             var mockCoreSettings = new Mock<ICoreSettings>();
             mockCoreSettings.Setup(x => x.ClientId).Returns("clientId");
@@ -48,11 +53,16 @@ namespace StreamDroid.Application.Tests.API.User
         [Fact]
         public void UserController_Index()
         {
-            var id = Guid.NewGuid();
-            var user = CreateUser(id);
-            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).Returns(user);
-
             var result = _userController.Index();
+
+            Assert.Equal(typeof(OkObjectResult), result.GetType());
+        }
+
+        [Fact]
+        public void UserController_UpdatePreferences()
+        {
+            var preferences = new Preferences();
+            var result = _userController.UpdatePreferences(preferences);
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
@@ -60,10 +70,6 @@ namespace StreamDroid.Application.Tests.API.User
         [Fact]
         public void UserController_Login()
         {
-            var id = Guid.NewGuid();
-            var user = CreateUser(id);
-            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).Returns(user);
-
             var result = _userController.Login();
 
             Assert.Equal(typeof(RedirectResult), result.GetType());

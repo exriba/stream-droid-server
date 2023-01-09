@@ -1,5 +1,6 @@
 ﻿using Ardalis.GuardClauses;
 using StreamDroid.Core.Common;
+using StreamDroid.Core.ValueObjects;
 using StreamDroid.Shared.Helpers;
 
 namespace StreamDroid.Core.Entities
@@ -46,6 +47,16 @@ namespace StreamDroid.Core.Entities
             {
                 Guard.Against.NullOrWhiteSpace(value, nameof(RefreshToken));
                 _refreshToken = value.IsBase64String() ? value : value.Base64Encrypt();
+            }
+        }
+
+        private Preferences _preferences = new Preferences();
+        public Preferences Preferences
+        {
+            get => _preferences;
+            set
+            {
+                _preferences = value;
             }
         }
     }
