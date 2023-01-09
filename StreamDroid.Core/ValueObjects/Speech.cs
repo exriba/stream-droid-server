@@ -2,9 +2,15 @@
 {
     public sealed class Speech : ValueObject
     {
-        public bool Enabled { get; set; }
+        public bool Enabled { get; } 
 
-        public int VoiceIndex { get; set; }
+        public int VoiceIndex { get; }
+
+        public Speech(bool enabled = false, int voiceIndex = 0) 
+        {
+            Enabled = enabled;
+            VoiceIndex = voiceIndex;
+        }
 
         protected override IEnumerable<object> GetEqualityComponents()
         {
