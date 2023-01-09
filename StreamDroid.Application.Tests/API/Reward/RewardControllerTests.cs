@@ -24,7 +24,14 @@ namespace StreamDroid.Application.Tests.API.Reward
             };
             var claimsIdentity = new ClaimsIdentity(claims);
 
+            var id = Guid.NewGuid();
+            var reward = CreateReward(id);
+            var rewards = new List<Core.Entities.Reward> { reward };
             _mockRewardService = new Mock<IRewardService>();
+            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).Returns(reward);
+            _mockRewardService.Setup(x => x.FindRewardsByUserId(It.IsAny<string>())).Returns(rewards);
+            _mockRewardService.Setup(x => x.UpdateRewardSpeech(It.IsAny<string>(), It.IsAny<Speech>())).Returns(reward);
+
             _mockEnvironment = new Mock<IWebHostEnvironment>();
             _mockEnvironment.Setup(x => x.WebRootPath).Returns(".");
             _rewardController = new RewardController(_mockRewardService.Object, _mockEnvironment.Object)
@@ -50,11 +57,6 @@ namespace StreamDroid.Application.Tests.API.Reward
         [Fact]
         public void RewardController_Index()
         {
-            var id = Guid.NewGuid();
-            var reward = CreateReward(id);
-            var rewards = new List<Core.Entities.Reward> { reward };
-            _mockRewardService.Setup(x => x.FindRewardsByUserId(It.IsAny<string>())).Returns(rewards);
-
             var result = _rewardController.Index();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
@@ -63,10 +65,6 @@ namespace StreamDroid.Application.Tests.API.Reward
         [Fact]
         public void RewardController_GetReward()
         {
-            var id = Guid.NewGuid();
-            var reward = CreateReward(id);
-            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).Returns(reward);
-
             var result = _rewardController.GetReward(Guid.NewGuid());
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
@@ -76,9 +74,6 @@ namespace StreamDroid.Application.Tests.API.Reward
         public void RewardController_GetRewardAssets()
         {
             var id = Guid.NewGuid();
-            var reward = CreateReward(id);
-            reward.AddAsset(FileName.FromString("file.mp4"), 100);
-            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).Returns(reward);
 
             var result = _rewardController.GetRewardAssets(id);
 
@@ -110,9 +105,7 @@ namespace StreamDroid.Application.Tests.API.Reward
         public void RewardController_UpdateSpeech()
         {
             var id = Guid.NewGuid();
-            var reward = CreateReward(id);
             var speech = new Speech();
-            _mockRewardService.Setup(x => x.UpdateRewardSpeech(It.IsAny<string>(), It.IsAny<Speech>())).Returns(reward);
 
             var result = _rewardController.UpdateSpeech(id, speech);
 
@@ -139,9 +132,7 @@ namespace StreamDroid.Application.Tests.API.Reward
         public void RewardController_DeleteAsset()
         {
             var id = Guid.NewGuid();
-            var reward = CreateReward(id);
             var tuple = CreateAssets(id);
-            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).Returns(reward);
 
             var result = _rewardController.DeleteAsset(id, tuple.Item2.First().FileName.ToString());
 

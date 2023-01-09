@@ -13,6 +13,7 @@ namespace StreamDroid.Application.API.Reward
     [Route("/rewards")]
     public class RewardController : Controller
     {
+        private const string ASSET_NAME = "ASSET_NAME";
         private readonly IRewardService _rewardService;
         private readonly IWebHostEnvironment _environment;
 
@@ -91,9 +92,9 @@ namespace StreamDroid.Application.API.Reward
             return Ok();
         }
 
-        [HttpDelete("{rewardId}/assets/{assetName}")]
+        [HttpDelete("{rewardId}/assets")]
         public IActionResult DeleteAsset([FromRoute] Guid rewardId,
-                                         [FromRoute] string assetName)
+                                         [FromHeader(Name = ASSET_NAME)] string assetName)
         {
             var id = rewardId.ToString();
             var fileName = FileName.FromString(assetName);
