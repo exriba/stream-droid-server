@@ -40,6 +40,16 @@ namespace StreamDroid.Core.Entities
             }
         }
 
+        private string? _backgroundColor;
+        public string? BackgroundColor
+        {
+            get => _backgroundColor;
+            set
+            {
+                _backgroundColor = value;
+            }
+        }
+
         private string _streamerId = string.Empty;
         public string StreamerId
         {
@@ -48,16 +58,6 @@ namespace StreamDroid.Core.Entities
             {
                 Guard.Against.NullOrWhiteSpace(value, nameof(StreamerId));
                 _streamerId = value;
-            }
-        }
-
-        private string? _backgroundColor;
-        public string? BackgroundColor
-        {
-            get => _backgroundColor;
-            set
-            {
-                _backgroundColor = value;
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using Ardalis.GuardClauses;
 using SharpTwitch.Core.Interfaces;
 using SharpTwitch.Helix;
+using StreamDroid.Core.Entities;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Helpers;
@@ -79,8 +80,8 @@ namespace StreamDroid.Domain.Reward
 
             if (data.Any())
             {
-                var rewards = FindRewardsByUserId(userId);
-                var redeems = data.Select(redeem =>
+                var internalRewards = FindRewardsByUserId(userId);
+                var externalRewards = data.Select(redeem =>
                 {
                     var imageUrl = redeem.Image == null ? redeem.DefaultImage.Url1x : redeem.Image.Url1x;
                     var rewardBackgroundColor = redeem.BackgroundColor.Equals("#FFFFFF") ? "#6441A4" : redeem.BackgroundColor;
@@ -95,9 +96,26 @@ namespace StreamDroid.Domain.Reward
                     };
                 });
 
-                var newRedeems = redeems.Except(rewards);
-                foreach(var redeem in newRedeems)
-                    _uberRepository.Save(redeem);
+                var staleRewards = internalRewards.Except(externalRewards);
+                foreach (var reward in staleRewards)
+                    _uberRepository.Delete(reward);
+
+                foreach (var reward in externalRewards)
+                {
+                    var rewards = _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(reward.Id));
+
+                    if (!rewards.Any())
+                        _uberRepository.Save(reward);
+                    else
+                    {
+                        var current = rewards.First();
+                        current.Title = reward.Title;
+                        current.Prompt = reward.Prompt;
+                        current.ImageUrl = reward.ImageUrl;
+                        current.BackgroundColor = reward.BackgroundColor;
+                        _uberRepository.Save(current);
+                    }
+                }
             }
         }
     }
