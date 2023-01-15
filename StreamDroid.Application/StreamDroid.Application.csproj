@@ -26,11 +26,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\" />
+    <ProjectReference Include="..\StreamDroid.Domain\StreamDroid.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\StreamDroid.Domain\StreamDroid.Domain.csproj" />
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

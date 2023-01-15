@@ -5,6 +5,7 @@ using StreamDroid.Core.ValueObjects;
 using StreamDroid.Application.Helpers;
 using StreamDroid.Domain.Reward;
 using StreamDroid.Application.API.Models;
+using System.Web;
 
 namespace StreamDroid.Application.API.Reward
 {
@@ -97,7 +98,8 @@ namespace StreamDroid.Application.API.Reward
                                          [FromHeader(Name = ASSET_NAME)] string assetName)
         {
             var id = rewardId.ToString();
-            var fileName = FileName.FromString(assetName);
+            var decodedName = HttpUtility.UrlDecode(assetName);
+            var fileName = FileName.FromString(decodedName);
             var fileNames = new FileName[] { fileName };
             var reward = _rewardService.FindRewardById(id);
             _rewardService.RemoveRewardAssets(id, fileNames);
