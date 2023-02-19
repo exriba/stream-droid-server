@@ -1,7 +1,7 @@
 ﻿using Ardalis.GuardClauses;
 using StreamDroid.Core.Common;
 using StreamDroid.Core.ValueObjects;
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
 
 namespace StreamDroid.Core.Entities
 {

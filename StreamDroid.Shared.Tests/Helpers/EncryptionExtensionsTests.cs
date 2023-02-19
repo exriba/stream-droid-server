@@ -1,4 +1,4 @@
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
 using StreamDroid.Shared.Tests.Common;
 
 namespace StreamDroid.Shared.Tests.Helpers

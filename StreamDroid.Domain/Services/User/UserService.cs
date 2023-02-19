@@ -3,11 +3,11 @@ using StreamDroid.Infrastructure.Persistence;
 using Entities = StreamDroid.Core.Entities;
 using SharpTwitch.Core.Interfaces;
 using SharpTwitch.Auth;
-using StreamDroid.Shared.Helpers;
 using StreamDroid.Domain.Models;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Shared.Extensions;
 
-namespace StreamDroid.Domain.User
+namespace StreamDroid.Domain.Services.User
 {
     public sealed class UserService : IUserService
     {

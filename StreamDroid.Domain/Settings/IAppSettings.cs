@@ -1,4 +1,4 @@
-﻿namespace StreamDroid.Domain.Configuration
+﻿namespace StreamDroid.Domain.Settings
 {
     public interface IAppSettings
     {

@@ -7,11 +7,12 @@ using StreamDroid.Domain;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Net;
 using StreamDroid.Shared;
-using StreamDroid.Domain.Configuration;
+using StreamDroid.Domain.Settings;
 using StreamDroid.Application.Services;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
-using StreamDroid.Infrastructure.Configuration;
+using StreamDroid.Infrastructure.Settings;
+using StreamDroid.Application.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 

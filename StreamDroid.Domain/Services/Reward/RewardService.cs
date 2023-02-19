@@ -1,15 +1,14 @@
 ﻿using Ardalis.GuardClauses;
 using SharpTwitch.Core.Interfaces;
 using SharpTwitch.Helix;
-using StreamDroid.Core.Entities;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Helpers;
-using StreamDroid.Domain.User;
+using StreamDroid.Domain.Services.User;
 using StreamDroid.Infrastructure.Persistence;
 using Entities = StreamDroid.Core.Entities;
 
-namespace StreamDroid.Domain.Reward
+namespace StreamDroid.Domain.Services.Reward
 {
     public sealed class RewardService : IRewardService
     {
@@ -67,7 +66,7 @@ namespace StreamDroid.Domain.Reward
         public void RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames)
         {
             var reward = FindRewardById(rewardId);
-            foreach(var fileName in fileNames)
+            foreach (var fileName in fileNames)
                 reward.RemoveAsset(fileName.ToString());
             _uberRepository.Save(reward);
         }

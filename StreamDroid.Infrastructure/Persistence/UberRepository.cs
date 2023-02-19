@@ -1,7 +1,7 @@
-﻿using Ardalis.GuardClauses;
-using LiteDB;
+﻿using LiteDB;
+using Ardalis.GuardClauses;
 using StreamDroid.Core.Common;
-using StreamDroid.Infrastructure.Configuration;
+using StreamDroid.Infrastructure.Settings;
 using System.Linq.Expressions;
 
 namespace StreamDroid.Infrastructure.Persistence

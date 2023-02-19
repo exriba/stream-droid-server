@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
-using StreamDroid.Shared.Configuration;
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
+using StreamDroid.Shared.Settings;
 
 namespace StreamDroid.Shared
 {
-    public static class Extensions
+    public static class Configuration
     {
         public static void Configure(this ConfigurationManager configurationManager)
         {

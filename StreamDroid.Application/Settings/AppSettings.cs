@@ -1,6 +1,6 @@
-﻿using StreamDroid.Domain.Configuration;
+﻿using StreamDroid.Domain.Settings;
 
-namespace StreamDroid.Application.Configuration
+namespace StreamDroid.Application.Settings
 {
     internal class AppSettings : IAppSettings
     {

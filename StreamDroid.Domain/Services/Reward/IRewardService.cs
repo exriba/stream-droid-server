@@ -1,7 +1,7 @@
 ﻿using StreamDroid.Core.ValueObjects;
 using Entities = StreamDroid.Core.Entities;
 
-namespace StreamDroid.Domain.Reward
+namespace StreamDroid.Domain.Services.Reward
 {
     public interface IRewardService
     {

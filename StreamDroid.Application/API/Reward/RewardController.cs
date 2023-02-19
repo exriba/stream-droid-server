@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Application.Helpers;
-using StreamDroid.Domain.Reward;
 using StreamDroid.Application.API.Models;
 using System.Web;
+using StreamDroid.Domain.Services.Reward;
 
 namespace StreamDroid.Application.API.Reward
 {

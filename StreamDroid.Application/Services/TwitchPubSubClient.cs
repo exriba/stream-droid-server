@@ -2,8 +2,8 @@
 using StreamDroid.Application.Helpers;
 using StreamDroid.Core.Entities;
 using StreamDroid.Core.Enums;
-using StreamDroid.Domain.Configuration;
-using StreamDroid.Domain.User;
+using StreamDroid.Domain.Services.User;
+using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using TwitchLib.PubSub;
 using TwitchLib.PubSub.Events;
