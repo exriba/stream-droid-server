@@ -6,9 +6,9 @@ using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Interfaces;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Tests.Common;
-using StreamDroid.Domain.User;
+using StreamDroid.Domain.Services.User;
 using StreamDroid.Infrastructure.Persistence;
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
 using System.Linq.Expressions;
 
 namespace StreamDroid.Domain.Tests.User

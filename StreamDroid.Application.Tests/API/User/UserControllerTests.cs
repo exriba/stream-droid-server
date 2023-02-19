@@ -6,11 +6,11 @@ using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Interfaces;
 using StreamDroid.Application.Tests.Common;
 using StreamDroid.Application.API.User;
-using StreamDroid.Domain.User;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.Services.User;
 
 namespace StreamDroid.Application.Tests.API.User
 {

@@ -2,7 +2,7 @@
 using Polly.Retry;
 using SharpTwitch.Core.Exceptions;
 using StreamDroid.Domain.Helpers;
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
 using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Models

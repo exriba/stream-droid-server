@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using StreamDroid.Application.API.Reward;
 using StreamDroid.Core.ValueObjects;
-using StreamDroid.Domain.Reward;
 using System.Security.Claims;
 using StreamDroid.Application.API.Models;
+using StreamDroid.Domain.Services.Reward;
 
 namespace StreamDroid.Application.Tests.API.Reward
 {

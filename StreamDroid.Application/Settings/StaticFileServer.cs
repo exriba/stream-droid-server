@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.FileProviders;
-using StreamDroid.Domain.Configuration;
+using StreamDroid.Domain.Settings;
 
 namespace StreamDroid.Application.Configuration
 {

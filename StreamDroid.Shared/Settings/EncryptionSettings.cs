@@ -1,4 +1,4 @@
-﻿namespace StreamDroid.Shared.Configuration
+﻿namespace StreamDroid.Shared.Settings
 {
     internal class EncryptionSettings
     {

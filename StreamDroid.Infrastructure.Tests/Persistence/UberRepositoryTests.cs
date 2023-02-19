@@ -1,6 +1,6 @@
 using Moq;
 using StreamDroid.Core.Entities;
-using StreamDroid.Infrastructure.Configuration;
+using StreamDroid.Infrastructure.Settings;
 using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Infrastructure.Tests.Persistence

@@ -3,7 +3,7 @@ using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Infrastructure
 {
-    public static class ConfigureServices
+    public static class Configuration
     {
         public static IServiceCollection AddInfrastructureConfiguration(this IServiceCollection services)
         {

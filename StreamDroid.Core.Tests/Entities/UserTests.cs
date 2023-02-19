@@ -1,6 +1,6 @@
 ﻿using StreamDroid.Core.Entities;
 using StreamDroid.Core.Tests.Common;
-using StreamDroid.Shared.Helpers;
+using StreamDroid.Shared.Extensions;
 
 namespace StreamDroid.Core.Tests.Entities
 {

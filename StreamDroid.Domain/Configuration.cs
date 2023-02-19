@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SharpTwitch.Core.Interfaces;
 using SharpTwitch.Core;
-using StreamDroid.Domain.Reward;
 using Microsoft.Extensions.Caching.Memory;
-using StreamDroid.Domain.User;
+using StreamDroid.Domain.Services.User;
+using StreamDroid.Domain.Services.Reward;
 
 namespace StreamDroid.Domain
 {
-    public static class ConfigureServices
+    public static class Configuration
     {
         public static IServiceCollection AddServiceConfiguration(this IServiceCollection services)
         {

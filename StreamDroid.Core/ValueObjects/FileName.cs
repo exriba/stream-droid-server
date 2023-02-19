@@ -1,6 +1,5 @@
 ﻿using Ardalis.GuardClauses;
 using StreamDroid.Core.Enums;
-using System.Xml.Linq;
 
 namespace StreamDroid.Core.ValueObjects
 {

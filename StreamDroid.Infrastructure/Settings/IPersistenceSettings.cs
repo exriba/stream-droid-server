@@ -1,4 +1,4 @@
-﻿namespace StreamDroid.Infrastructure.Configuration
+﻿namespace StreamDroid.Infrastructure.Settings
 {
     public interface IPersistenceSettings
     {

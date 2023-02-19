@@ -1,9 +1,9 @@
 ﻿using Ardalis.GuardClauses;
-using StreamDroid.Shared.Configuration;
+using StreamDroid.Shared.Settings;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace StreamDroid.Shared.Helpers
+namespace StreamDroid.Shared.Extensions
 {
     public static class EncryptionExtensions
     {

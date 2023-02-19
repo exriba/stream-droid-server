@@ -7,12 +7,12 @@ using System.Security.Claims;
 using StreamDroid.Application.API.Constraints;
 using StreamDroid.Application.Services;
 using Microsoft.IdentityModel.Tokens;
-using StreamDroid.Shared.Helpers;
 using SharpTwitch.Auth.Helpers;
 using SharpTwitch.Core.Interfaces;
-using StreamDroid.Domain.User;
 using System.ComponentModel.DataAnnotations;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.Services.User;
+using StreamDroid.Shared.Extensions;
 
 namespace StreamDroid.Application.API.User
 {

@@ -4,9 +4,9 @@ using SharpTwitch.Core.Interfaces;
 using SharpTwitch.Helix.Models;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Models;
-using StreamDroid.Domain.Reward;
+using StreamDroid.Domain.Services.Reward;
+using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Tests.Common;
-using StreamDroid.Domain.User;
 using StreamDroid.Infrastructure.Persistence;
 using System.Linq.Expressions;
 

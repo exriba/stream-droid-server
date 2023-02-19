@@ -1,6 +1,6 @@
-﻿using StreamDroid.Infrastructure.Configuration;
+﻿using StreamDroid.Infrastructure.Settings;
 
-namespace StreamDroid.Application.Configuration
+namespace StreamDroid.Application.Settings
 {
     internal class PersistenceSettings : IPersistenceSettings
     {

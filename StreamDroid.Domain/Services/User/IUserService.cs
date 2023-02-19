@@ -2,7 +2,7 @@
 using StreamDroid.Domain.Models;
 using Entities = StreamDroid.Core.Entities;
 
-namespace StreamDroid.Domain.User
+namespace StreamDroid.Domain.Services.User
 {
     public interface IUserService
     {
