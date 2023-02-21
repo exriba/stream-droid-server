@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpTwitch.Core.Enums;
-using SharpTwitch.Core.Interfaces;
 using StreamDroid.Application.Tests.Common;
 using StreamDroid.Application.API.User;
 using System.Security.Claims;
@@ -11,12 +10,14 @@ using Microsoft.IdentityModel.Tokens;
 using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.User;
+using SharpTwitch.Core.Settings;
 
 namespace StreamDroid.Application.Tests.API.User
 {
     public class UserControllerTests : TestFixture
     {
         private const string REFERER = "Referer";
+
         private readonly UserController _userController;
         private readonly Mock<IUserService> _mockUserService;
 
@@ -39,7 +40,7 @@ namespace StreamDroid.Application.Tests.API.User
             mockCoreSettings.Setup(x => x.RedirectUri).Returns("redirectUri");
             mockCoreSettings.Setup(x => x.Scopes).Returns(new List<Scope> { Scope.BITS_READ } );
 
-            _userController = new UserController(_mockUserService.Object, mockCoreSettings.Object, null, mockLogger.Object)
+            _userController = new UserController(_mockUserService.Object, mockCoreSettings.Object, mockLogger.Object)
             {
                 ControllerContext = new ControllerContext()
             };

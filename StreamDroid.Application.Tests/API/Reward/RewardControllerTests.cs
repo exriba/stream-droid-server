@@ -97,6 +97,7 @@ namespace StreamDroid.Application.Tests.API.Reward
             var directoryPath = @$"{Directory.GetCurrentDirectory()}\{tuple.Item1}";
             var filePath = @$"{directoryPath}\{tuple.Item2.First().FileName}";
             Directory.Delete(directoryPath, true);
+
             Assert.False(File.Exists(filePath));
             Assert.False(Directory.Exists(directoryPath));
         }

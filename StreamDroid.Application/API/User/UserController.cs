@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 using StreamDroid.Application.Helpers;
 using System.Security.Claims;
 using StreamDroid.Application.API.Constraints;
-using StreamDroid.Application.Services;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth.Helpers;
-using SharpTwitch.Core.Interfaces;
+using SharpTwitch.Core.Settings;
 using System.ComponentModel.DataAnnotations;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.User;
@@ -22,17 +21,16 @@ namespace StreamDroid.Application.API.User
     public class UserController : Controller
     {
         private const string REFERER = "Referer";
+
         private readonly IUserService _userService;
         private readonly ICoreSettings _coreSettings;
-        private readonly TwitchPubSubClient _twitchPubSubClient;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, ICoreSettings coreSettings, TwitchPubSubClient twitchPubSubClient, ILogger<UserController> logger)
+        public UserController(IUserService userService, ICoreSettings coreSettings, ILogger<UserController> logger)
         {
             _logger = logger;
             _userService = userService;
             _coreSettings = coreSettings;
-            _twitchPubSubClient = twitchPubSubClient;
         }
 
         [HttpGet("me")]
@@ -97,7 +95,7 @@ namespace StreamDroid.Application.API.User
             };
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, properties);
-            _twitchPubSubClient.Connect();
+            // _twitchPubSubClient.Connect();
             _logger.LogInformation("{user} logged in.", user.Name);
             return Redirect(referer);
         }

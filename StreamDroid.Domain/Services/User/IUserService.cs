@@ -1,5 +1,5 @@
 ﻿using StreamDroid.Core.ValueObjects;
-using StreamDroid.Domain.Models;
+using StreamDroid.Domain.RefreshPolicy;
 using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Services.User
@@ -8,7 +8,6 @@ namespace StreamDroid.Domain.Services.User
     {
         Entities.User? FindById(string userId);
         Task<Entities.User> Authenticate(string code);
-        Task<string> RefreshAccessToken(Entities.User user);
         TokenRefreshPolicy CreateTokenRefreshPolicy(string userId);
         Preferences UpdatePreferences(string userId, Preferences preferences);
     }

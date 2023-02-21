@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using StreamDroid.Domain.Settings;
 
-namespace StreamDroid.Application.Configuration
+namespace StreamDroid.Application
 {
     /// <summary>
     /// Static File Server for local use. 

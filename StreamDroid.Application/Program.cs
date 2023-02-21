@@ -1,6 +1,3 @@
-using SharpTwitch.Core.Configuration;
-using StreamDroid.Application.Configuration;
-using SharpTwitch.Core.Interfaces;
 using Microsoft.Extensions.Options;
 using StreamDroid.Infrastructure;
 using StreamDroid.Domain;
@@ -13,38 +10,43 @@ using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
 using StreamDroid.Infrastructure.Settings;
 using StreamDroid.Application.Settings;
+using SharpTwitch.EventSub;
+using SharpTwitch.Core;
+using StreamDroid.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add configuration
+// Add Shared Configuration
 builder.Configuration.Configure();
+
+// Add Configuration Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
-builder.Services.Configure<CoreSettings>(builder.Configuration.GetSection(CoreSettings.Key));
 builder.Services.Configure<PersistenceSettings>(builder.Configuration.GetSection(PersistenceSettings.Key));
+
+// Add Logging
 builder.Logging.ClearProviders();
 if (builder.Environment.IsDevelopment())
     builder.Logging.AddConsole();
 else
     builder.Logging.AddLog4Net();
 
-// Add services to the container.
+// Add Services to the Container.
+builder.Services.AddSingleton<IPersistenceSettings>(options => options.GetRequiredService<IOptions<PersistenceSettings>>().Value);
+builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
+builder.Services.AddHostedService<EventSubHostedService>();
+builder.Services.AddTwitchCore(builder.Configuration);
+builder.Services.AddTwitchEventSub();
+builder.Services.AddDirectoryBrowser();
+builder.Services.AddInfrastructureConfiguration();
+builder.Services.AddServiceConfiguration();
+builder.Services.AddHttpClient();
+builder.Services.AddSignalR();
 builder.Services.AddControllers()
                 .AddJsonOptions(options => {
                     options.JsonSerializerOptions.Converters.Add(new RewardConverter());
                     options.JsonSerializerOptions.Converters.Add(new AssetConverter());
                     options.JsonSerializerOptions.Converters.Add(new UserConverter());
                 });
-builder.Services.AddDirectoryBrowser();
-builder.Services.AddSingleton<IPersistenceSettings>(options => options.GetRequiredService<IOptions<PersistenceSettings>>().Value);
-builder.Services.AddSingleton<ICoreSettings>(options => options.GetRequiredService<IOptions<CoreSettings>>().Value);
-builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
-builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
-builder.Services.AddSingleton<TwitchPubSubClient>();
-builder.Services.AddHostedService<TwitchPubSubHost>();
-builder.Services.AddInfrastructureConfiguration();
-builder.Services.AddServiceConfiguration();
-builder.Services.AddHttpClient();
-builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
     var appSettings = new AppSettings();
@@ -61,8 +63,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-})
-.AddCookie(options =>
+}).AddCookie(options =>
 {
     options.LogoutPath = "/logout";
     options.SlidingExpiration = true;
