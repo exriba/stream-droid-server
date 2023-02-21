@@ -15,6 +15,7 @@ namespace StreamDroid.Application.API.Reward
     public class RewardController : Controller
     {
         private const string ASSET_NAME = "ASSET_NAME";
+
         private readonly IRewardService _rewardService;
         private readonly IWebHostEnvironment _environment;
 
@@ -99,11 +100,10 @@ namespace StreamDroid.Application.API.Reward
         {
             var id = rewardId.ToString();
             var decodedName = HttpUtility.UrlDecode(assetName);
-            var fileName = FileName.FromString(decodedName);
-            var fileNames = new FileName[] { fileName };
+            var fileName = new FileName[] { FileName.FromString(decodedName) };
             var reward = _rewardService.FindRewardById(id);
-            _rewardService.RemoveRewardAssets(id, fileNames);
-            DeleteAssetFile(reward.Title, fileName);
+            _rewardService.RemoveRewardAssets(id, fileName);
+            DeleteAssetFile(reward.Title, fileName[0]);
             return Ok();
         }
 

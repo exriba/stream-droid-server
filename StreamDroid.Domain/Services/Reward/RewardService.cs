@@ -1,9 +1,8 @@
 ﻿using Ardalis.GuardClauses;
-using SharpTwitch.Core.Interfaces;
+using SharpTwitch.Core.Enums;
 using SharpTwitch.Helix;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.ValueObjects;
-using StreamDroid.Domain.Helpers;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Infrastructure.Persistence;
 using Entities = StreamDroid.Core.Entities;
@@ -16,11 +15,11 @@ namespace StreamDroid.Domain.Services.Reward
         private readonly IUserService _userService;
         private readonly IUberRepository _uberRepository;
 
-        public RewardService(IApiCore apiCore, IUserService userService, ICoreSettings coreSettings, IUberRepository uberRepository)
+        public RewardService(HelixApi helixApi, IUserService userService, IUberRepository uberRepository)
         {
+            _helixApi = helixApi;
             _userService = userService;
             _uberRepository = uberRepository;
-            _helixApi = new HelixApi(coreSettings, apiCore);
         }
 
         public Entities.Reward FindRewardById(string rewardId)
@@ -28,15 +27,16 @@ namespace StreamDroid.Domain.Services.Reward
             Guard.Against.NullOrWhiteSpace(rewardId, nameof(rewardId));
             var rewards = _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(rewardId));
 
-            if (rewards.Any())
-                return rewards.First();
+            if (!rewards.Any())
+                throw new EntityNotFoundException(rewardId);
 
-            throw new EntityNotFoundException(rewardId);
+            return rewards.First();
         }
 
         public IReadOnlyCollection<Entities.Reward> FindRewardsByUserId(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
+            
             return _uberRepository.Find<Entities.Reward>(r => r.StreamerId.Equals(userId));
         }
 
@@ -74,30 +74,27 @@ namespace StreamDroid.Domain.Services.Reward
         public async Task SyncRewards(string userId)
         {
             var tokenRefreshPolicy = _userService.CreateTokenRefreshPolicy(userId);
-            var data = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-               await _helixApi.ChannelPoints.GetChannelPointRewards(userId, context[Constants.ACCESS_TOKEN].ToString(), CancellationToken.None), tokenRefreshPolicy.ContextData);
+            var users = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-            if (data.Any())
+            if (users.Any() && users.First().UserBroadcasterType is not BroadcasterType.NORMAL)
             {
-                var internalRewards = FindRewardsByUserId(userId);
-                var externalRewards = data.Select(redeem =>
+                var data = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None);
+
+                var externalRewards = data.Select(customReward =>
                 {
-                    var imageUrl = redeem.Image == null ? redeem.DefaultImage.Url1x : redeem.Image.Url1x;
-                    var rewardBackgroundColor = redeem.BackgroundColor.Equals("#FFFFFF") ? "#6441A4" : redeem.BackgroundColor;
+                    var imageUrl = customReward.Image == null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
                     return new Entities.Reward
                     {
-                        Id = redeem.Id,
+                        Id = customReward.Id,
                         ImageUrl = imageUrl,
-                        Title = redeem.Title,
-                        Prompt = redeem.Prompt,
-                        StreamerId = redeem.BroadcasterId,
-                        BackgroundColor = redeem.BackgroundColor,
+                        Title = customReward.Title,
+                        Prompt = customReward.Prompt,
+                        StreamerId = customReward.BroadcasterId,
+                        BackgroundColor = customReward.BackgroundColor,
+                        Speech = new Speech(customReward.IsUserInputRequired)
                     };
                 });
-
-                var staleRewards = internalRewards.Except(externalRewards);
-                foreach (var reward in staleRewards)
-                    _uberRepository.Delete(reward);
 
                 foreach (var reward in externalRewards)
                 {
@@ -112,6 +109,7 @@ namespace StreamDroid.Domain.Services.Reward
                         current.Prompt = reward.Prompt;
                         current.ImageUrl = reward.ImageUrl;
                         current.BackgroundColor = reward.BackgroundColor;
+                        current.Speech = new Speech(reward.Speech.Enabled, current.Speech.VoiceIndex);
                         _uberRepository.Save(current);
                     }
                 }
