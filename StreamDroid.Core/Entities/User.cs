@@ -7,16 +7,9 @@ namespace StreamDroid.Core.Entities
 {
     public partial class User : EntityBase
     {
-        private string _name = string.Empty;
-        public string Name
-        {
-            get => _name;
-            set
-            {
-                Guard.Against.NullOrWhiteSpace(value, nameof(Name));
-                _name = value;
-            }
-        }
+        public string Name { get; set; } = string.Empty;
+
+        public Preferences Preferences { get; set; } = new Preferences();
 
         private string _userKey = string.Empty;
         public string UserKey
@@ -47,16 +40,6 @@ namespace StreamDroid.Core.Entities
             {
                 Guard.Against.NullOrWhiteSpace(value, nameof(RefreshToken));
                 _refreshToken = value.IsBase64String() ? value : value.Base64Encrypt();
-            }
-        }
-
-        private Preferences _preferences = new Preferences();
-        public Preferences Preferences
-        {
-            get => _preferences;
-            set
-            {
-                _preferences = value;
             }
         }
     }

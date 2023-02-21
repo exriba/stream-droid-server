@@ -6,8 +6,8 @@ namespace StreamDroid.Domain.RefreshPolicy
 {
     public class TokenRefreshPolicy
     {
-        private const string USER_ID = "userId";
-        private const string ACCESS_TOKEN = "accessToken";
+        public const string USER_ID = "userId";
+        public const string ACCESS_TOKEN = "accessToken";
 
         public readonly AsyncRetryPolicy Policy;
         public readonly IDictionary<string, object> ContextData = new Dictionary<string, object>();

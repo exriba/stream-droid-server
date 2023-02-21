@@ -42,11 +42,7 @@ builder.Services.AddServiceConfiguration();
 builder.Services.AddHttpClient();
 builder.Services.AddSignalR();
 builder.Services.AddControllers()
-                .AddJsonOptions(options => {
-                    options.JsonSerializerOptions.Converters.Add(new RewardConverter());
-                    options.JsonSerializerOptions.Converters.Add(new AssetConverter());
-                    options.JsonSerializerOptions.Converters.Add(new UserConverter());
-                });
+                .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new AssetConverter()));
 builder.Services.AddCors(options =>
 {
     var appSettings = new AppSettings();

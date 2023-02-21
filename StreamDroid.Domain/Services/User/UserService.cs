@@ -6,6 +6,7 @@ using StreamDroid.Core.ValueObjects;
 using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.Exceptions;
 using SharpTwitch.Auth;
+using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Domain.Services.User
 {
@@ -20,21 +21,31 @@ namespace StreamDroid.Domain.Services.User
             _uberRepository = uberRepository;
         }
 
-        public Entities.User? FindById(string userId)
+        public UserDto? FindById(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
 
             var users = _uberRepository.Find<Entities.User>(u => u.Id.Equals(userId));
-            return users.FirstOrDefault();
+            return users.Any() ? UserDto.FromEntity(users.First()) : null;
         }
 
-        public async Task<Entities.User> Authenticate(string code)
+        public async Task<UserDto> Authenticate(string code)
         {
             Guard.Against.NullOrWhiteSpace(code, nameof(code));
 
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
-            return Save(userData.UserId, userData.Login, token.AccessToken, token.RefreshToken);
+
+            var user = new Entities.User
+            {
+                Id = userData.UserId,
+                Name = userData.Login,
+                AccessToken = token.AccessToken,
+                RefreshToken = token.RefreshToken,
+            };
+            user = _uberRepository.Save(user);
+
+            return UserDto.FromEntity(user);
         }
 
         public TokenRefreshPolicy CreateTokenRefreshPolicy(string userId)
@@ -45,7 +56,9 @@ namespace StreamDroid.Domain.Services.User
             {
                 var refreshToken = user.RefreshToken.Base64Decrypt();
                 var token = await _authApi.RefreshAccessTokenAsync(refreshToken, CancellationToken.None);
-                Save(user.Id, user.Name, token.AccessToken, token.RefreshToken);
+                user.AccessToken = token.AccessToken;
+                user.RefreshToken = token.RefreshToken;
+                user = _uberRepository.Save(user);
                 return token.AccessToken;
             };
 
@@ -59,25 +72,20 @@ namespace StreamDroid.Domain.Services.User
 
             var user = FindUser(userId);
             user.Preferences = preferences;
-            _uberRepository.Save(user);
+            user = _uberRepository.Save(user);
             return user.Preferences;
         }
 
         private Entities.User FindUser(string userId)
         {
-            return FindById(userId) ?? throw new EntityNotFoundException(userId);
+            return FindUserById(userId) ?? throw new EntityNotFoundException(userId);
         }
 
-        private Entities.User Save(string id, string name, string accessToken, string refreshToken)
+        private Entities.User? FindUserById(string userId)
         {
-            var user = FindById(id) ?? new Entities.User
-            {
-                Id = id,
-                Name = name,
-            };
-            user.AccessToken = accessToken;
-            user.RefreshToken = refreshToken;
-            return _uberRepository.Save(user);
+            Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
+            var users = _uberRepository.Find<Entities.User>(u => u.Id.Equals(userId));
+            return users.FirstOrDefault();
         }
     }
 }

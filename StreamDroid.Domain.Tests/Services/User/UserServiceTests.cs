@@ -4,7 +4,6 @@ using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Tests.Common;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Infrastructure.Persistence;
-using StreamDroid.Shared.Extensions;
 using System.Linq.Expressions;
 using System.Text.Json;
 using SharpTwitch.Auth;
@@ -93,8 +92,6 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             Assert.Equal(user.Id, _user.Id);
             Assert.Equal(user.Name, _user.Name);
-            Assert.True(user.AccessToken.IsBase64String());
-            Assert.True(user.RefreshToken.IsBase64String());
         }
 
         [Fact]

@@ -15,9 +15,9 @@ namespace StreamDroid.Application.API.Converters
         {
             var asset = new
             {
-                Id = Guid.NewGuid().ToString(),
-                FileName = value.ToString(),
-                value.Volume,
+                id = Guid.NewGuid().ToString(),
+                fileName = value.ToString(),
+                volume = value.Volume,
             };
 
             var json = JsonSerializer.Serialize(asset);

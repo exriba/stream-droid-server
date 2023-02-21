@@ -11,6 +11,7 @@ using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.User;
 using SharpTwitch.Core.Settings;
+using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Application.Tests.API.User
 {
@@ -96,9 +97,9 @@ namespace StreamDroid.Application.Tests.API.User
             Assert.Equal(typeof(RedirectResult), result.GetType());
         }
 
-        private static Core.Entities.User CreateUser(Guid id)
+        private static UserDto CreateUser(Guid id)
         {
-            return new Core.Entities.User
+            return new UserDto
             {
                 Id = id.ToString(),
                 Name = "Name"

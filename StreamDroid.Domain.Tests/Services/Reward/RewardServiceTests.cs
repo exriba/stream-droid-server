@@ -55,9 +55,18 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public void RewardService_FindRewardById()
         {
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository.Object);
-            var entity = rewardService.FindRewardById(_reward.Id);
+            var dto = rewardService.FindRewardById(_reward.Id);
 
-            Assert.Equal(_reward.Id, entity.Id);
+            Assert.Equal(_reward.Id, dto.Id.ToString());
+        }
+
+        [Fact]
+        public void RewardService_FindAssetsByRewardId()
+        {
+            var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository.Object);
+            var assets = rewardService.FindAssetsByRewardId(_reward.StreamerId);
+
+            Assert.NotEmpty(assets);
         }
 
         [Theory]
@@ -78,16 +87,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             var rewards = rewardService.FindRewardsByUserId(_reward.StreamerId);
 
             Assert.NotEmpty(rewards);
-        }
-
-        [Fact]
-        public void RewardService_UpdateRewardSpeech()
-        {
-            var speech = new Speech(true, 0);
-            var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository.Object);
-            var reward = rewardService.UpdateRewardSpeech(_reward.Id, speech);
-
-            Assert.Equal(reward.Speech, speech);
         }
 
         [Fact]
@@ -117,14 +116,14 @@ namespace StreamDroid.Domain.Tests.Services.Reward
 
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository.Object);
             rewardService.AddRewardAssets(_reward.Id, dictionary);
-            var reward = rewardService.FindRewardById(_reward.Id);
+            var assets = rewardService.FindAssetsByRewardId(_reward.Id);
 
-            Assert.NotEmpty(reward.Assets);
+            Assert.Equal(2, assets.Count);
 
             rewardService.RemoveRewardAssets(_reward.Id, dictionary.Keys);
-            reward = rewardService.FindRewardById(_reward.Id);
+            assets = rewardService.FindAssetsByRewardId(_reward.Id);
 
-            Assert.Empty(reward.Assets);
+            Assert.Equal(1, assets.Count);
         }
 
         [Fact]
@@ -190,12 +189,14 @@ namespace StreamDroid.Domain.Tests.Services.Reward
 
         private static Core.Entities.Reward CreateReward()
         {
-            return new Core.Entities.Reward
+            var reward = new Core.Entities.Reward
             {
                 Id = Guid.NewGuid().ToString(),
                 StreamerId = Guid.NewGuid().ToString(),
                 Title = "Title"
             };
+            reward.AddAsset(FileName.FromString("file.mp3"), 100);
+            return reward;
         }
     }
 }

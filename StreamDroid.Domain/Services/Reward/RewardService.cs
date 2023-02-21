@@ -1,8 +1,11 @@
 ﻿using Ardalis.GuardClauses;
+using Mapster;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Helix;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.DTOs;
+using StreamDroid.Domain.RefreshPolicy;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Infrastructure.Persistence;
 using Entities = StreamDroid.Core.Entities;
@@ -22,35 +25,35 @@ namespace StreamDroid.Domain.Services.Reward
             _uberRepository = uberRepository;
         }
 
-        public Entities.Reward FindRewardById(string rewardId)
+        public RewardDto FindRewardById(string rewardId)
         {
-            Guard.Against.NullOrWhiteSpace(rewardId, nameof(rewardId));
-            var rewards = _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(rewardId));
-
-            if (!rewards.Any())
-                throw new EntityNotFoundException(rewardId);
-
-            return rewards.First();
+            var reward = FindById(rewardId);
+            return RewardDto.FromEntity(reward);
         }
 
-        public IReadOnlyCollection<Entities.Reward> FindRewardsByUserId(string userId)
+        public IReadOnlyCollection<Asset> FindAssetsByRewardId(string rewardId)
+        {
+            var reward = FindById(rewardId);
+            return reward.Assets;
+        }
+
+        public IReadOnlyCollection<RewardDto> FindRewardsByUserId(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
-            
-            return _uberRepository.Find<Entities.Reward>(r => r.StreamerId.Equals(userId));
+            var rewards = _uberRepository.Find<Entities.Reward>(r => r.StreamerId.Equals(userId)).AsQueryable();
+            return rewards.ProjectToType<RewardDto>().ToList();
         }
 
-        public Entities.Reward UpdateRewardSpeech(string rewardId, Speech speech)
+        public void UpdateRewardSpeech(string rewardId, Speech speech)
         {
-            var reward = FindRewardById(rewardId);
+            var reward = FindById(rewardId);
             reward.Speech = speech;
             _uberRepository.Save(reward);
-            return reward;
         }
 
         public Tuple<string, IReadOnlyCollection<Asset>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap)
         {
-            var reward = FindRewardById(rewardId);
+            var reward = FindById(rewardId);
 
             var assets = new List<Asset>();
             foreach (var entry in fileMap)
@@ -65,7 +68,7 @@ namespace StreamDroid.Domain.Services.Reward
 
         public void RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames)
         {
-            var reward = FindRewardById(rewardId);
+            var reward = FindById(rewardId);
             foreach (var fileName in fileNames)
                 reward.RemoveAsset(fileName.ToString());
             _uberRepository.Save(reward);
@@ -75,7 +78,7 @@ namespace StreamDroid.Domain.Services.Reward
         {
             var tokenRefreshPolicy = _userService.CreateTokenRefreshPolicy(userId);
             var users = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), context[TokenRefreshPolicy.ACCESS_TOKEN].ToString(), CancellationToken.None), tokenRefreshPolicy.ContextData);
 
             if (users.Any() && users.First().UserBroadcasterType is not BroadcasterType.NORMAL)
             {
@@ -114,6 +117,13 @@ namespace StreamDroid.Domain.Services.Reward
                     }
                 }
             }
+        }
+
+        private Entities.Reward FindById(string rewardId)
+        {
+            Guard.Against.NullOrWhiteSpace(rewardId, nameof(rewardId));
+            var rewards = _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(rewardId));
+            return rewards.Any() ? rewards.First() : throw new EntityNotFoundException(rewardId);
         }
     }
 }
