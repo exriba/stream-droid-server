@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StreamDroid.Application.Helpers;
 using System.Security.Claims;
 using StreamDroid.Application.API.Constraints;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +19,9 @@ namespace StreamDroid.Application.API.User
     [Route("/")]
     public class UserController : Controller
     {
+        private const string ID = "Id";
+        private const string USER = "User";
+        private const string NAME = "Name";
         private const string REFERER = "Referer";
 
         private readonly IUserService _userService;
@@ -36,7 +38,7 @@ namespace StreamDroid.Application.API.User
         [HttpGet("me")]
         public IActionResult Index()
         {
-            var claim = User.Claims.First(c => c.Type.Equals(Constants.ID));
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
             var me = _userService.FindById(claim.Value);
             return Ok(me);
         }
@@ -44,9 +46,9 @@ namespace StreamDroid.Application.API.User
         [HttpPost("me/preferences")]
         public IActionResult UpdatePreferences([Required][FromBody] Preferences preferences)
         {
-            var claim = User.Claims.First(c => c.Type.Equals(Constants.ID));
-            var data = _userService.UpdatePreferences(claim.Value, preferences);
-            return Ok(data);
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
+            var userPreferences = _userService.UpdatePreferences(claim.Value, preferences);
+            return Ok(userPreferences);
         }
 
         [AllowAnonymous]
@@ -81,11 +83,11 @@ namespace StreamDroid.Application.API.User
 
             var claims = new List<Claim>
             {
-                new Claim(Constants.ID, user.Id),
-                new Claim(Constants.NAME, user.Name),
+                new Claim(ID, user.Id.ToString()),
+                new Claim(NAME, user.Name),
             };
 
-            var identity = new ClaimsIdentity(claims, Constants.USER);
+            var identity = new ClaimsIdentity(claims, USER);
             var claimsPrincipal = new ClaimsPrincipal(identity);
             var properties = new AuthenticationProperties
             {
@@ -95,7 +97,6 @@ namespace StreamDroid.Application.API.User
             };
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, properties);
-            // _twitchPubSubClient.Connect();
             _logger.LogInformation("{user} logged in.", user.Name);
             return Redirect(referer);
         }

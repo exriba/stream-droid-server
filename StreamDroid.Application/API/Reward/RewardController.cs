@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using StreamDroid.Core.ValueObjects;
-using StreamDroid.Application.Helpers;
 using StreamDroid.Application.API.Models;
 using System.Web;
 using StreamDroid.Domain.Services.Reward;
@@ -14,6 +13,7 @@ namespace StreamDroid.Application.API.Reward
     [Route("/rewards")]
     public class RewardController : Controller
     {
+        private const string ID = "Id";
         private const string ASSET_NAME = "ASSET_NAME";
 
         private readonly IRewardService _rewardService;
@@ -28,7 +28,7 @@ namespace StreamDroid.Application.API.Reward
         [HttpGet("sync")]
         public async Task<IActionResult> SyncRewards()
         {
-            var claim = User.Claims.First(c => c.Type.Equals(Constants.ID));
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
             await _rewardService.SyncRewards(claim.Value);
             return Ok();
         }
@@ -36,7 +36,7 @@ namespace StreamDroid.Application.API.Reward
         [HttpGet]
         public IActionResult Index()
         {
-            var claim = User.Claims.First(c => c.Type.Equals(Constants.ID));
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
             var rewards = _rewardService.FindRewardsByUserId(claim.Value);
             return Ok(rewards);
         }
@@ -54,8 +54,8 @@ namespace StreamDroid.Application.API.Reward
         public IActionResult GetRewardAssets([FromRoute] Guid rewardId)
         {
             var id = rewardId.ToString();
-            var reward = _rewardService.FindRewardById(id);
-            return Ok(reward.Assets);
+            var assets = _rewardService.FindAssetsByRewardId(id);
+            return Ok(assets);
         }
 
         [HttpPost("{rewardId}/assets")]
@@ -79,8 +79,8 @@ namespace StreamDroid.Application.API.Reward
                                           [FromBody][Required] Speech speech)
         {
             var id = rewardId.ToString();
-            var reward = _rewardService.UpdateRewardSpeech(id, speech);
-            return Ok(reward);
+            _rewardService.UpdateRewardSpeech(id, speech);
+            return Ok();
         }
 
         [HttpPut("{rewardId}/assets")]

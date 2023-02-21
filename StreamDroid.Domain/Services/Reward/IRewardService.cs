@@ -1,14 +1,15 @@
 ﻿using StreamDroid.Core.ValueObjects;
-using Entities = StreamDroid.Core.Entities;
+using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Domain.Services.Reward
 {
     public interface IRewardService
     {
         Task SyncRewards(string userId);
-        Entities.Reward FindRewardById(string rewardId);
-        IReadOnlyCollection<Entities.Reward> FindRewardsByUserId(string userId);
-        Entities.Reward UpdateRewardSpeech(string rewardId, Speech speech);
+        RewardDto FindRewardById(string rewardId);
+        void UpdateRewardSpeech(string rewardId, Speech speech);
+        IReadOnlyCollection<Asset> FindAssetsByRewardId(string rewardId);
+        IReadOnlyCollection<RewardDto> FindRewardsByUserId(string userId);
         Tuple<string, IReadOnlyCollection<Asset>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap);
         void RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames);
     }

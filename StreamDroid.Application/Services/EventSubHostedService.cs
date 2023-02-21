@@ -13,6 +13,7 @@ using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.RefreshPolicy;
 
 namespace StreamDroid.Application.Services
 {
@@ -229,7 +230,7 @@ namespace StreamDroid.Application.Services
                 var user = users.First();
                 var tokenRefreshPolicy = userService.CreateTokenRefreshPolicy(user.Id);
                 var helixSubscription = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await _helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
+                    await _helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, context[TokenRefreshPolicy.ACCESS_TOKEN].ToString(), cancellationToken), tokenRefreshPolicy.ContextData);
                 var inactiveSubscriptions = helixSubscription.Data.Where(x => _inactiveSubscriptionStatus.Contains(x.SubscriptionStatus)).ToList();
 
                 foreach (var subscription in inactiveSubscriptions)

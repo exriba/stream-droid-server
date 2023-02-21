@@ -7,6 +7,7 @@ using StreamDroid.Core.ValueObjects;
 using System.Security.Claims;
 using StreamDroid.Application.API.Models;
 using StreamDroid.Domain.Services.Reward;
+using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Application.Tests.API.Reward
 {
@@ -25,12 +26,11 @@ namespace StreamDroid.Application.Tests.API.Reward
             var claimsIdentity = new ClaimsIdentity(claims);
 
             var id = Guid.NewGuid();
-            var reward = CreateReward(id);
-            var rewards = new List<Core.Entities.Reward> { reward };
+            var reward = CreateRewardDto(id);
+            var rewards = new List<RewardDto> { reward };
             _mockRewardService = new Mock<IRewardService>();
             _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).Returns(reward);
             _mockRewardService.Setup(x => x.FindRewardsByUserId(It.IsAny<string>())).Returns(rewards);
-            _mockRewardService.Setup(x => x.UpdateRewardSpeech(It.IsAny<string>(), It.IsAny<Speech>())).Returns(reward);
 
             _mockEnvironment = new Mock<IWebHostEnvironment>();
             _mockEnvironment.Setup(x => x.WebRootPath).Returns(".");
@@ -110,7 +110,7 @@ namespace StreamDroid.Application.Tests.API.Reward
 
             var result = _rewardController.UpdateSpeech(id, speech);
 
-            Assert.Equal(typeof(OkObjectResult), result.GetType());
+            Assert.Equal(typeof(OkResult), result.GetType());
         }
 
         [Fact]
@@ -140,18 +140,18 @@ namespace StreamDroid.Application.Tests.API.Reward
             Assert.Equal(typeof(OkResult), result.GetType());
         }
 
-        private static Core.Entities.Reward CreateReward(Guid id)
+        private static RewardDto CreateRewardDto(Guid id)
         {
-            return new Core.Entities.Reward
+            return new RewardDto
             {
-                Id = id.ToString(),
+                Id = id,
                 Title = "Title"
             };
         }
 
         private static Tuple<string, IReadOnlyCollection<Asset>> CreateAssets(Guid id)
         {
-            var reward = CreateReward(id);
+            var reward = new Core.Entities.Reward { Id = id.ToString(), Title = "Title" };
             var asset = reward.AddAsset(FileName.FromString("file.mp4"), 100);
             return Tuple.Create<string, IReadOnlyCollection<Asset>>(reward.Title, new List<Asset> { asset });
         }

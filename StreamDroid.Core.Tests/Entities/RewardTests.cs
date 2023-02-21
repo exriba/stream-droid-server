@@ -9,20 +9,6 @@ namespace StreamDroid.Core.Tests.Entities
         private const string MP4_FILE = "file.mp4";
 
         [Theory]
-        [InlineData("")]
-        [InlineData(" ")]
-        [InlineData(null)]
-        public void Reward_Throws_InvalidFields(string value)
-        {
-            Assert.ThrowsAny<ArgumentException>(() => new Reward { Id = value });
-            Assert.ThrowsAny<ArgumentException>(() => new Reward { Title = value });
-            Assert.ThrowsAny<ArgumentException>(() => new Reward { StreamerId = value });
-
-            if (value != null)
-                Assert.ThrowsAny<ArgumentException>(() => new Reward { ImageUrl = value });
-        }
-
-        [Theory]
         [InlineData("Reward", "Description", "red")]
         public void Reward_Created(string title, string prompt, string backgroundColor)
         {
@@ -170,7 +156,7 @@ namespace StreamDroid.Core.Tests.Entities
                 Id = id ?? Guid.NewGuid().ToString(),
                 Title = title ?? "Test",
                 Prompt = prompt,
-                Speech = speech,
+                Speech = speech ?? new Speech(),
                 StreamerId = streamerId ?? Guid.NewGuid().ToString(),
                 BackgroundColor = backgroundColor ?? "blue"
             };

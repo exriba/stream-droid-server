@@ -7,26 +7,15 @@ namespace StreamDroid.Core.Entities
 {
     public partial class Reward : EntityBase
     {
-        private string _title = string.Empty;
-        public string Title
-        {
-            get => _title;
-            set
-            {
-                Guard.Against.NullOrWhiteSpace(value, nameof(Title));
-                _title = value;
-            }
-        }
+        public string Title { get; set; } = string.Empty;
 
-        private string _prompt = string.Empty;
-        public string Prompt
-        {
-            get => _prompt;
-            set
-            {
-                _prompt = value ?? "N/A";
-            }
-        }
+        public string Prompt { get; set; } = "N/A";
+
+        public string BackgroundColor { get; set; } = string.Empty;
+
+        public string StreamerId { get; set; } = string.Empty;
+
+        public Speech Speech { get; set; } = new Speech();
 
         private string? _imageUrl;
         public string? ImageUrl
@@ -34,40 +23,9 @@ namespace StreamDroid.Core.Entities
             get => _imageUrl;
             set
             {
-                if (value != null && !Uri.TryCreate(value, UriKind.Absolute, out _))
+                if (value is not null && !Uri.TryCreate(value, UriKind.Absolute, out _))
                     throw new ArgumentException("Invalid image url.", nameof(value));
                 _imageUrl = value;
-            }
-        }
-
-        private string? _backgroundColor;
-        public string? BackgroundColor
-        {
-            get => _backgroundColor;
-            set
-            {
-                _backgroundColor = value;
-            }
-        }
-
-        private string _streamerId = string.Empty;
-        public string StreamerId
-        {
-            get => _streamerId;
-            set
-            {
-                Guard.Against.NullOrWhiteSpace(value, nameof(StreamerId));
-                _streamerId = value;
-            }
-        }
-
-        private Speech _speech = new Speech(false, 0);
-        public Speech Speech
-        {
-            get => _speech;
-            set
-            {
-                _speech = value ?? new Speech(false, 0);
             }
         }
 
@@ -77,26 +35,26 @@ namespace StreamDroid.Core.Entities
             get => _assets.ToList();
             private set
             {
-                if (value == null)
+                if (value is null)
                     return;
-                if (_assets.Count == 0)
+                if (_assets.Count is 0)
                     _assets = value.ToHashSet();
             }
         }
 
         public void EnableTextToSpeech()
         {
-            _speech = new Speech(true, _speech.VoiceIndex);
+            Speech = new Speech(true, Speech.VoiceIndex);
         }
 
         public void DisableTextToSpeech()
         {
-            _speech = new Speech(false, _speech.VoiceIndex);
+            Speech = new Speech(false, Speech.VoiceIndex);
         }
 
         public Asset? GetRandomAsset()
         {
-            if (_assets.Count == 0)
+            if (_assets.Count is 0)
                 return null;
 
             var random = new Random();
@@ -114,9 +72,7 @@ namespace StreamDroid.Core.Entities
         {
             var asset = new Asset(fileName, volume);
             var added = _assets.Add(asset);
-            if (!added)
-                throw new DuplicateAssetException(this, fileName);
-            return asset;
+            return added ? asset : throw new DuplicateAssetException(this, fileName);
         }
 
         public void RemoveAsset(string assetName)

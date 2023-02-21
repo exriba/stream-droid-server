@@ -1,11 +1,12 @@
-﻿using StreamDroid.Application.Helpers;
-using StreamDroid.Core.Exceptions;
+﻿using StreamDroid.Core.Exceptions;
 using System.Net;
 
 namespace StreamDroid.Application.Middleware
 {
     public class GlobalRequestHandler
     {
+        private const string NAME = "Name";
+
         private readonly RequestDelegate _next;
         private readonly ILogger<GlobalRequestHandler> _logger;
         private const string CorrelationIdHeaderKey = "X-Correlation-ID";
@@ -30,7 +31,7 @@ namespace StreamDroid.Application.Middleware
 
             if (context.User.Claims.Any())
             {
-                var claim = context.User.Claims.First(c => c.Type.Equals(Constants.NAME));
+                var claim = context.User.Claims.First(c => c.Type.Equals(NAME));
                 _logger.LogInformation("{correlationId}: {user} requested {method} {url}", 
                      correlationId, claim.Value, context.Request?.Method, context.Request?.Path.Value);
             }
