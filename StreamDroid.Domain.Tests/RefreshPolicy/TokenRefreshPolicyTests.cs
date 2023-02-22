@@ -21,9 +21,9 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
             
             var token = await refreshPolicy.Policy.ExecuteAsync(async context =>
             {
-                if (context[accessToken].Equals(accessToken))
+                if (refreshPolicy.AccessToken.Equals(accessToken))
                     throw new UnauthorizedRequestException("error");
-                return await Task.FromResult(context[accessToken].ToString());
+                return await Task.FromResult(refreshPolicy.AccessToken);
             }, refreshPolicy.ContextData);
 
             Assert.Equal(NEW_ACCESS_TOKEN, token);
