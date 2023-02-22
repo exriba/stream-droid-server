@@ -5,7 +5,6 @@ using SharpTwitch.Helix;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.DTOs;
-using StreamDroid.Domain.RefreshPolicy;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Infrastructure.Persistence;
 using Entities = StreamDroid.Core.Entities;
@@ -78,7 +77,7 @@ namespace StreamDroid.Domain.Services.Reward
         {
             var tokenRefreshPolicy = _userService.CreateTokenRefreshPolicy(userId);
             var users = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), context[TokenRefreshPolicy.ACCESS_TOKEN].ToString(), CancellationToken.None), tokenRefreshPolicy.ContextData);
+                await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
             if (users.Any() && users.First().UserBroadcasterType is not BroadcasterType.NORMAL)
             {

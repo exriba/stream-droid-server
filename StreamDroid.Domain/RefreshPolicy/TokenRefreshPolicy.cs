@@ -6,8 +6,8 @@ namespace StreamDroid.Domain.RefreshPolicy
 {
     public class TokenRefreshPolicy
     {
-        public const string USER_ID = "userId";
-        public const string ACCESS_TOKEN = "accessToken";
+        private const string USER_ID = "userId";
+        private const string ACCESS_TOKEN = "accessToken";
 
         public readonly AsyncRetryPolicy Policy;
         public readonly IDictionary<string, object> ContextData = new Dictionary<string, object>();
@@ -24,7 +24,7 @@ namespace StreamDroid.Domain.RefreshPolicy
                 .RetryAsync(async (exception, retryCount, context) =>
                 {
                     var accessToken = await refreshToken(userId);
-                    context[ACCESS_TOKEN] = accessToken;
+                    ContextData[ACCESS_TOKEN] = accessToken;
                 });
 
             ContextData.Add(USER_ID, userId);
