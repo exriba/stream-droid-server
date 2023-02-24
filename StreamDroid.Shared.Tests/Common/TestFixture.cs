@@ -9,7 +9,7 @@ namespace StreamDroid.Shared.Tests.Common
         {
             _configurationManager = new ConfigurationManager();
             _configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.Test.json")
+                .AddJsonFile("Common/appsettings.Test.json")
                 .Build();
             _configurationManager.Configure();
         }
