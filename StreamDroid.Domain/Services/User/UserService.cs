@@ -23,10 +23,8 @@ namespace StreamDroid.Domain.Services.User
 
         public UserDto? FindById(string userId)
         {
-            Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
-
-            var users = _uberRepository.Find<Entities.User>(u => u.Id.Equals(userId));
-            return users.Any() ? UserDto.FromEntity(users.First()) : null;
+            var user = FindUserById(userId);
+            return user is not null ? UserDto.FromEntity(user) : null;
         }
 
         public async Task<UserDto> Authenticate(string code)
@@ -35,14 +33,11 @@ namespace StreamDroid.Domain.Services.User
 
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
-
-            var user = new Entities.User
-            {
-                Id = userData.UserId,
-                Name = userData.Login,
-                AccessToken = token.AccessToken,
-                RefreshToken = token.RefreshToken,
-            };
+            
+            var user = FindUserById(userData.UserId) ?? new Entities.User { Id = userData.UserId };
+            user.Name = userData.Login;
+            user.AccessToken = token.AccessToken;
+            user.RefreshToken = token.RefreshToken;
             user = _uberRepository.Save(user);
 
             return UserDto.FromEntity(user);
