@@ -1,25 +1,11 @@
-using Moq;
 using StreamDroid.Core.Entities;
-using StreamDroid.Infrastructure.Settings;
-using StreamDroid.Infrastructure.Persistence;
+using StreamDroid.Infrastructure.Tests.Common;
 
 namespace StreamDroid.Infrastructure.Tests.Persistence
 {
-    public class UberRepositoryTests : IDisposable
+    public class UberRepositoryTests : TestFixture
     {
-        private readonly string _filePath;
-        private readonly UberRepository _uberRepository;
-
-        public UberRepositoryTests()
-        {
-            _filePath = @$"{Directory.GetCurrentDirectory()}\test.db";
-            var fileStream = new FileStream(_filePath, FileMode.Create);
-            fileStream.Dispose();
-
-            var persistenceSettings = new Mock<IPersistenceSettings>();
-            persistenceSettings.Setup(x => x.ConnectionString).Returns($"Filename={_filePath}");
-            _uberRepository = new UberRepository(persistenceSettings.Object);
-        }
+        public UberRepositoryTests() : base() { }
 
         [Fact]
         public void FindAll()
@@ -113,12 +99,6 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
                     BackgroundColor = "#6441A4",
                 }
             };
-        }
-
-        public void Dispose()
-        {
-            _uberRepository.Dispose();
-            File.Delete(_filePath);
         }
     }
 }
