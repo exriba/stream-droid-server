@@ -1,14 +1,11 @@
 using SharpTwitch.Core.Exceptions;
 using StreamDroid.Domain.RefreshPolicy;
-using StreamDroid.Domain.Tests.Common;
 
 namespace StreamDroid.Domain.Tests.RefreshPolicy
 {
-    public class TokenRefreshPolicyTests : TestFixture
+    public class TokenRefreshPolicyTests
     {
         private const string NEW_ACCESS_TOKEN = "NewAccessToken";
-
-        public TokenRefreshPolicyTests() : base() { }
 
         [Fact]
         public async Task TokenRefreshPolicy_Execute()
@@ -22,7 +19,7 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
             var token = await refreshPolicy.Policy.ExecuteAsync(async context =>
             {
                 if (refreshPolicy.AccessToken.Equals(accessToken))
-                    throw new UnauthorizedRequestException("error");
+                    throw new UnauthorizedRequestException("Invalid OAuth Token.");
                 return await Task.FromResult(refreshPolicy.AccessToken);
             }, refreshPolicy.ContextData);
 
