@@ -13,10 +13,11 @@ using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Core.ValueObjects;
+using SharpTwitch.Helix.Models.Channel.Reward;
 
 namespace StreamDroid.Application.Services
 {
-    public class EventSubHostedService : IHostedService
+    public class EventSubHostedService : IHostedService // fixme: review this - move to domain module
     {
         private const string AUDIO_EVENT = "AUDIO_EVENT";
         private const string VIDEO_EVENT = "VIDEO_EVENT";
@@ -67,7 +68,9 @@ namespace StreamDroid.Application.Services
 
         private async void OnClientConnected(object? sender, ClientConnectedArgs e)
         {
-            if (!e.ReconnectionRequested && !string.IsNullOrWhiteSpace(_userDetails.UserId))
+            _logger.LogInformation("EventSub client connected");
+
+            if (!e.ReconnectionRequested)
             {
                 await _helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_userDetails.UserId, _userDetails.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None);
                 await _helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_userDetails.UserId, _userDetails.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_OFFLINE, CancellationToken.None);
@@ -118,51 +121,59 @@ namespace StreamDroid.Application.Services
         private void OnCustomRewardAdd(object? sender, CustomRewardAddArgs e)
         {
             var customReward = e.Notification.Payload.Event;
+            _logger.LogInformation("Received custom reward add notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
+
             using var scope = _serviceScopeFactory.CreateScope();
             var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
+            SaveReward(customReward, uberRepository);
+        }
+
+        private void OnCustomRewardUpdate(object? sender, CustomRewardUpdateArgs e)
+        {
+            var customReward = e.Notification.Payload.Event;
+            _logger.LogInformation("Received custom reward update notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
+            SaveReward(customReward, uberRepository);
+        }
+
+        private static void SaveReward(CustomReward customReward, IUberRepository uberRepository)
+        {
+            // var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
             var rewards = uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
             var reward = rewards.FirstOrDefault();
 
-            if (reward is null)
+            if (reward is not null)
             {
-                var imageUrl = customReward.Image == null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
+                // reward.ImageUrl = imageUrl;
+                reward.Title = customReward.Title;
+                reward.Prompt = customReward.Prompt;
+                reward.BackgroundColor = customReward.BackgroundColor;
+                reward.Speech = new Speech(customReward.IsUserInputRequired, reward.Speech.VoiceIndex);
+            }
+            else
+            {
                 reward = new Reward
                 {
                     Id = customReward.Id,
-                    ImageUrl = imageUrl,
+                    // ImageUrl = imageUrl,
                     Title = customReward.Title,
                     Prompt = customReward.Prompt,
                     StreamerId = customReward.BroadcasterId,
                     BackgroundColor = customReward.BackgroundColor,
                     Speech = new Speech(customReward.IsUserInputRequired)
                 };
-                uberRepository.Save(reward);
             }
-        }
 
-        private void OnCustomRewardUpdate(object? sender, CustomRewardUpdateArgs e)
-        {
-            var customReward = e.Notification.Payload.Event;
-            using var scope = _serviceScopeFactory.CreateScope();
-            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            var rewards = uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
-            var reward = rewards.FirstOrDefault();
-
-            if (reward is not null)
-            {
-                var imageUrl = customReward.Image == null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
-                reward.ImageUrl = imageUrl;
-                reward.Title = customReward.Title;
-                reward.Prompt = customReward.Prompt;
-                reward.BackgroundColor = customReward.BackgroundColor;
-                reward.Speech = new Speech(customReward.IsUserInputRequired, reward.Speech.VoiceIndex);
-                uberRepository.Save(reward);
-            }
+            uberRepository.Save(reward);
         }
 
         private void OnCustomRewardRemove(object? sender, CustomRewardRemoveArgs e)
         {
             var customReward = e.Notification.Payload.Event;
+            _logger.LogInformation("Received custom reward delete notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
+
             using var scope = _serviceScopeFactory.CreateScope();
             var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
             var rewards = uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
@@ -175,7 +186,7 @@ namespace StreamDroid.Application.Services
         private async void OnChannelPointsCustomRewardRedemption(object? sender, CustomRewardRedemptionArgs e)
         {
             var redemption = e.Notification.Payload.Event;
-            _logger.LogInformation("{streamer}'s stream: {user} redeemed {title} at {redeemedAt}.",
+            _logger.LogInformation("On {streamer}'s channel: {user} redeemed {title} at {redeemedAt}.",
                 redemption.BroadcasterUserName, redemption.UserName, redemption.Reward.Title, redemption.RedeemedAt);
 
             using var scope = _serviceScopeFactory.CreateScope();
@@ -217,37 +228,55 @@ namespace StreamDroid.Application.Services
                 await _hubContext.Clients.All.SendAsync(VIDEO_EVENT, data);
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            using var scope = _serviceScopeFactory.CreateScope();
-            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            var users = uberRepository.FindAll<User>();
-
-            if (users.Any())
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            Task.Run(async () =>
             {
-                var user = users.First();
-                var tokenRefreshPolicy = userService.CreateTokenRefreshPolicy(user.Id);
-                var helixSubscription = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await _helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
-                var inactiveSubscriptions = helixSubscription.Data.Where(x => _inactiveSubscriptionStatus.Contains(x.SubscriptionStatus)).ToList();
+                using var scope = _serviceScopeFactory.CreateScope();
+                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
+                var users = uberRepository.FindAll<User>();
 
-                foreach (var subscription in inactiveSubscriptions)
-                    await DeleteSubscription(user.Id, tokenRefreshPolicy.AccessToken, subscription.Id, cancellationToken);
-
-                var twitchUsers = await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, cancellationToken);
-
-                if (twitchUsers.Any())
+                while (!users.Any())
                 {
-                    var twitchUser = twitchUsers.First();
-
-                    if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
-                        await _eventSub.ConnectAsync();
+                    await Task.Delay(1000, cancellationToken);
+                    users = uberRepository.FindAll<User>();
                 }
 
-                _userDetails.UserId = user.Id;
-                _userDetails.AccessToken = tokenRefreshPolicy.AccessToken;
-            }
+                if (users.Any())
+                {
+                    var user = users.First();
+                    _logger.LogInformation("Initializing event sub connection. User: {id} - {name}", user.Id, user.Name);
+
+                    var tokenRefreshPolicy = userService.CreateTokenRefreshPolicy(user.Id);
+                    var helixSubscription = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                        await _helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
+                    var inactiveSubscriptions = helixSubscription.Data.Where(x => _inactiveSubscriptionStatus.Contains(x.SubscriptionStatus)).ToList();
+
+                    foreach (var subscription in inactiveSubscriptions)
+                        await DeleteSubscription(user.Id, tokenRefreshPolicy.AccessToken, subscription.Id, cancellationToken);
+
+                    var twitchUsers = await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, cancellationToken);
+
+                    if (twitchUsers.Any())
+                    {
+                        var twitchUser = twitchUsers.First();
+                        _logger.LogInformation("Verifying user broadcaster type. User: {id} - {name} - {type}.", twitchUser.Id, twitchUser.Login, twitchUser.UserBroadcasterType);
+
+                        if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
+                        {
+                            _userDetails.UserId = user.Id;
+                            _userDetails.AccessToken = tokenRefreshPolicy.AccessToken;
+                            await _eventSub.ConnectAsync();
+                        }
+                    }
+                }
+
+            }, cancellationToken);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
+            return Task.CompletedTask;
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
