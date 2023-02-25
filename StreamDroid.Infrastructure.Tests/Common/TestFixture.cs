@@ -11,7 +11,7 @@ namespace StreamDroid.Infrastructure.Tests.Common
 
         protected TestFixture()
         {
-            _filePath = @$"{Directory.GetCurrentDirectory()}\test.db";
+            _filePath = @$"{Directory.GetCurrentDirectory()}/test.db";
             var fileStream = new FileStream(_filePath, FileMode.Create);
             fileStream.Dispose();
 
