@@ -5,15 +5,14 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
 {
     public class TokenRefreshPolicyTests
     {
-        private const string NEW_ACCESS_TOKEN = "NewAccessToken";
-
         [Fact]
         public async Task TokenRefreshPolicy_Execute()
         {
             var accessToken = "accessToken";
+            var newAccessToken = "NewAccessToken";
             var userId = Guid.NewGuid().ToString();
 
-            async Task<string> refreshToken(string userId) => await Task.FromResult(NEW_ACCESS_TOKEN);
+            async Task<string> refreshToken(string userId) => await Task.FromResult(newAccessToken);
             var refreshPolicy = new TokenRefreshPolicy(userId, accessToken, refreshToken);
             
             var token = await refreshPolicy.Policy.ExecuteAsync(async context =>
@@ -23,7 +22,7 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
                 return await Task.FromResult(refreshPolicy.AccessToken);
             }, refreshPolicy.ContextData);
 
-            Assert.Equal(NEW_ACCESS_TOKEN, token);
+            Assert.Equal(newAccessToken, token);
         }
     }
 }
