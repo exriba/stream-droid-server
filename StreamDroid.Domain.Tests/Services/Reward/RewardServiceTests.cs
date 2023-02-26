@@ -12,6 +12,7 @@ using SharpTwitch.Helix;
 using StreamDroid.Domain.RefreshPolicy;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using Helix = SharpTwitch.Helix.Models;
+using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Tests.Services.Reward
 {
@@ -156,7 +157,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 Id = Guid.NewGuid().ToString(),
                 Title = "Title",
                 Prompt = "Prompt",
-                BroadcasterId = user.Id,
+                BroadcasterUserId = user.Id,
                 BackgroundColor = "#FFFFFF",
                 IsUserInputRequired = true,
                 Image = new Image
@@ -198,7 +199,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             Assert.Equal(rewardDto.Id.ToString(), customReward.Id);
             Assert.Equal(rewardDto.Title, customReward.Title);
             Assert.Equal(rewardDto.Prompt, customReward.Prompt);
-            Assert.Equal(rewardDto.StreamerId, customReward.BroadcasterId);
+            Assert.Equal(rewardDto.StreamerId, customReward.BroadcasterUserId);
             Assert.Equal(rewardDto.BackgroundColor, customReward.BackgroundColor);
             Assert.Equal(rewardDto.Speech.Enabled, customReward.IsUserInputRequired);
         }
