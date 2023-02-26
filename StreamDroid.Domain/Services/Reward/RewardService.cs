@@ -92,7 +92,7 @@ namespace StreamDroid.Domain.Services.Reward
                         ImageUrl = imageUrl,
                         Title = customReward.Title,
                         Prompt = customReward.Prompt,
-                        StreamerId = customReward.BroadcasterId,
+                        StreamerId = customReward.BroadcasterUserId,
                         BackgroundColor = customReward.BackgroundColor,
                         Speech = new Speech(customReward.IsUserInputRequired)
                     };
