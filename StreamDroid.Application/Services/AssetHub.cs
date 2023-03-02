@@ -33,5 +33,10 @@ namespace StreamDroid.Application.Services
             // Add more information
             throw new ArgumentException("Invalid url.");
         }
+
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            return base.OnDisconnectedAsync(exception);
+        }
     }
 }
