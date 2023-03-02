@@ -6,10 +6,10 @@ namespace StreamDroid.Application.Middleware
     public class GlobalRequestHandler
     {
         private const string NAME = "Name";
+        private const string CorrelationIdHeaderKey = "X-Correlation-ID";
 
         private readonly RequestDelegate _next;
         private readonly ILogger<GlobalRequestHandler> _logger;
-        private const string CorrelationIdHeaderKey = "X-Correlation-ID";
 
         public GlobalRequestHandler(RequestDelegate next, ILoggerFactory loggerFactory)
         {
