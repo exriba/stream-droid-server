@@ -10,10 +10,11 @@ using SharpTwitch.Helix;
 using StreamDroid.Core.Entities;
 using StreamDroid.Core.Enums;
 using StreamDroid.Domain.Services.User;
-using StreamDroid.Domain.Settings;
+using StreamDroid.Application.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Core.ValueObjects;
 using SharpTwitch.Helix.Models.Channel.Reward;
+using Microsoft.Extensions.Options;
 
 namespace StreamDroid.Application.Services
 {
@@ -26,7 +27,7 @@ namespace StreamDroid.Application.Services
         private readonly EventSub _eventSub;
         private readonly HelixApi _helixApi;
         private readonly UserDetails _userDetails;
-        private readonly IAppSettings _appSettings;
+        private readonly AppSettings _appSettings;
         private readonly IHubContext<AssetHub> _hubContext;
         private readonly ILogger<EventSubHostedService> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -34,7 +35,7 @@ namespace StreamDroid.Application.Services
 
         public EventSubHostedService(EventSub eventSub, 
                                      HelixApi helixApi,
-                                     IAppSettings appSettings,
+                                     IOptions<AppSettings> options,
                                      IHubContext<AssetHub> hubContext, 
                                      IServiceScopeFactory serviceScopeFactory, 
                                      ILogger<EventSubHostedService> logger)
@@ -43,7 +44,7 @@ namespace StreamDroid.Application.Services
             _eventSub = eventSub;
             _helixApi = helixApi;
             _hubContext = hubContext;
-            _appSettings = appSettings;
+            _appSettings = options.Value;
             _userDetails = new UserDetails();
             _serviceScopeFactory = serviceScopeFactory;
             _inactiveSubscriptionStatus = new HashSet<SubscriptionStatus>
@@ -83,12 +84,16 @@ namespace StreamDroid.Application.Services
 
         private void OnStreamOnline(object? sender, StreamOnlineArgs e)
         {
-            _logger.LogInformation("{user} has gone online at {timeStamp}.", e.Notification.Payload.Event.BroadcasterUserName, e.Notification.Payload.Event.StartedAt);
+            var stream = e.Notification.Payload.Event;
+
+            _logger.LogInformation("{user} has gone online at {timeStamp}.", stream.BroadcasterUserName, stream.StartedAt);
         }
 
         private void OnStreamOffline(object? sender, StreamOfflineArgs e)
         {
-            _logger.LogInformation("{user} has gone offline at {timeStamp}.", e.Notification.Payload.Event.BroadcasterUserName, DateTime.Now);
+            var stream = e.Notification.Payload.Event;
+
+            _logger.LogInformation("{user} has gone offline at {timeStamp}.", stream.BroadcasterUserName, DateTime.Now);
         }
 
         private void OnErrorMessage(object? sender, ErrorMessageArgs e)
@@ -121,6 +126,7 @@ namespace StreamDroid.Application.Services
         private async void OnCustomRewardAdd(object? sender, CustomRewardAddArgs e)
         {
             var customReward = e.Notification.Payload.Event;
+
             _logger.LogInformation("Received custom reward add notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
@@ -131,6 +137,7 @@ namespace StreamDroid.Application.Services
         private async void OnCustomRewardUpdate(object? sender, CustomRewardUpdateArgs e)
         {
             var customReward = e.Notification.Payload.Event;
+
             _logger.LogInformation("Received custom reward update notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
@@ -172,6 +179,7 @@ namespace StreamDroid.Application.Services
         private async void OnCustomRewardRemove(object? sender, CustomRewardRemoveArgs e)
         {
             var customReward = e.Notification.Payload.Event;
+
             _logger.LogInformation("Received custom reward delete notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
@@ -186,6 +194,7 @@ namespace StreamDroid.Application.Services
         private async void OnChannelPointsCustomRewardRedemption(object? sender, CustomRewardRedemptionArgs e)
         {
             var redemption = e.Notification.Payload.Event;
+
             _logger.LogInformation("On {streamer}'s channel: {user} redeemed {title} at {redeemedAt}.",
                 redemption.BroadcasterUserName, redemption.UserName, redemption.Reward.Title, redemption.RedeemedAt);
 
@@ -244,7 +253,9 @@ namespace StreamDroid.Application.Services
                 }
 
                 var user = users.First();
+
                 var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicy(user.Id);
+
                 var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context => 
                     await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
 
@@ -264,6 +275,7 @@ namespace StreamDroid.Application.Services
                             await DeleteSubscription(user.Id, tokenRefreshPolicy.AccessToken, subscription.Id, cancellationToken);
 
                         _logger.LogInformation("Initializing event sub connection. User: {id} - {name}", twitchUser.Id, twitchUser.Login);
+                        
                         await _eventSub.ConnectAsync();
                     }
                 }

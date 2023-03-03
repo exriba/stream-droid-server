@@ -15,6 +15,7 @@ namespace StreamDroid.Core.Tests.Entities
             var speech = new Speech();
             var id = Guid.NewGuid().ToString();
             var streamerId = Guid.NewGuid().ToString();
+
             var reward = CreateReward(id, title, prompt, speech, streamerId, backgroundColor);
 
             Assert.Equal(id, reward.Id);
@@ -30,6 +31,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_EnableTextToSpeech()
         {
             var reward = CreateReward();
+
             reward.EnableTextToSpeech();
 
             Assert.True(reward.Speech.Enabled);
@@ -39,6 +41,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_DisableTextToSpeech()
         {
             var reward = CreateReward();
+
             reward.EnableTextToSpeech();
             reward.DisableTextToSpeech();
 
@@ -50,6 +53,7 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var reward = CreateReward();
             var fileName = FileName.FromString(MP4_FILE);
+
             reward.AddAsset(fileName, 100);
 
             Assert.Throws<DuplicateAssetException>(() => reward.AddAsset(fileName, 100));
@@ -60,6 +64,7 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var reward = CreateReward();
             var fileName = FileName.FromString(MP4_FILE);
+
             reward.AddAsset(fileName, 100);
 
             Assert.NotEmpty(reward.Assets);
@@ -72,6 +77,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_GetAsset_Throws_InvalidArgs(string name)
         {
             var reward = CreateReward();
+
             Assert.ThrowsAny<ArgumentException>(() => reward.GetAsset(name));
         }
 
@@ -80,8 +86,8 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var reward = CreateReward();
             var fileName = FileName.FromString(MP4_FILE);
-
             reward.AddAsset(fileName, 100);
+
             var asset = reward.GetAsset(fileName.ToString());
 
             Assert.Equal(asset?.ToString(), fileName.ToString());
@@ -92,8 +98,8 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var reward = CreateReward();
             var fileName = FileName.FromString(MP4_FILE);
-
             reward.AddAsset(fileName, 100);
+
             var asset = reward.GetRandomAsset();
 
             Assert.Equal(asset?.ToString(), fileName.ToString());
@@ -106,6 +112,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_RemoveAsset_Throws_InvalidArgs(string name)
         {
             var reward = CreateReward();
+
             Assert.ThrowsAny<ArgumentException>(() => reward.RemoveAsset(name));
         }
 
@@ -114,8 +121,8 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var reward = CreateReward();
             var fileName = FileName.FromString(MP4_FILE);
-
             reward.AddAsset(fileName, 100);
+
             reward.RemoveAsset(fileName.ToString());
 
             Assert.Empty(reward.Assets);
@@ -126,6 +133,7 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var id = Guid.NewGuid().ToString();
             var streamerId = Guid.NewGuid().ToString();
+
             var reward = CreateReward(id, streamerId);
             var reward1 = CreateReward(id, streamerId);
 
@@ -137,6 +145,7 @@ namespace StreamDroid.Core.Tests.Entities
         {
             var id = Guid.NewGuid().ToString();
             var streamerId = Guid.NewGuid().ToString();
+
             var reward = CreateReward(id, streamerId);
             var reward1 = CreateReward();
 
@@ -155,7 +164,7 @@ namespace StreamDroid.Core.Tests.Entities
             {
                 Id = id ?? Guid.NewGuid().ToString(),
                 Title = title ?? "Test",
-                Prompt = prompt,
+                Prompt = prompt ?? "N/A",
                 Speech = speech ?? new Speech(),
                 StreamerId = streamerId ?? Guid.NewGuid().ToString(),
                 BackgroundColor = backgroundColor ?? "blue"

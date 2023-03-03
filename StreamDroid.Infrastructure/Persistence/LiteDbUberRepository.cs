@@ -14,25 +14,30 @@ namespace StreamDroid.Infrastructure.Persistence
         public LiteDbUberRepository(IOptions<LiteDbSettings> options)
         {
             Guard.Against.NullOrWhiteSpace(options.Value.ConnectionString, nameof(options.Value.ConnectionString));
+
             _database = new LiteDatabase(options.Value.ConnectionString);
         }
 
         public Task<IReadOnlyCollection<T>> FindAll<T>() where T : EntityBase
         {
             var collection = _database.GetCollection<T>();
-            return Task.FromResult<IReadOnlyCollection<T>>(collection.FindAll().ToList());
+            var entities = collection.FindAll().ToList();
+            return Task.FromResult<IReadOnlyCollection<T>>(entities);
         }
 
         public Task<IReadOnlyCollection<T>> Find<T>(Expression<Func<T, bool>> expression) where T : EntityBase
         {
             Guard.Against.Null(expression);
+
             var collection = _database.GetCollection<T>();
-            return Task.FromResult<IReadOnlyCollection<T>>(collection.Find(expression).ToList());
+            var entities = collection.FindAll().ToList();
+            return Task.FromResult<IReadOnlyCollection<T>>(entities);
         }
 
         public Task<T> Save<T>(T entity) where T : EntityBase
         {
             Guard.Against.Null(entity);
+
             var collection = _database.GetCollection<T>();
             collection.Upsert(entity);
             return Task.FromResult(entity);
@@ -41,6 +46,7 @@ namespace StreamDroid.Infrastructure.Persistence
         public Task Delete<T>(T entity) where T : EntityBase
         {
             Guard.Against.Null(entity);
+
             var collection = _database.GetCollection<T>();
             collection.Delete(entity.Id);
             return Task.CompletedTask;

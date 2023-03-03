@@ -58,6 +58,7 @@ namespace StreamDroid.Domain.Services.User
             };
 
             var accessToken = user.AccessToken.Base64Decrypt();
+
             return new TokenRefreshPolicy(userId, accessToken, refreshToken);
         }
 
@@ -68,6 +69,7 @@ namespace StreamDroid.Domain.Services.User
             var user = await FindUser(userId);
             user.Preferences = preferences;
             user = await _uberRepository.Save(user);
+
             return user.Preferences;
         }
 
@@ -79,6 +81,7 @@ namespace StreamDroid.Domain.Services.User
         private async Task<Entities.User?> FindUserById(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
+
             var users = await _uberRepository.Find<Entities.User>(u => u.Id.Equals(userId));
             return users.FirstOrDefault();
         }

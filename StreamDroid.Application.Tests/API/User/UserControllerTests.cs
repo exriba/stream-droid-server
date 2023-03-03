@@ -17,29 +17,32 @@ namespace StreamDroid.Application.Tests.API.User
 {
     public class UserControllerTests : TestFixture
     {
+        private const string ID = "Id";
         private const string REFERER = "Referer";
+        private const string CLIENT_ID = "clientId";
+        private const string REDIRECT_URI = "redirectUri";
 
         private readonly UserController _userController;
         private readonly Mock<IUserService> _mockUserService;
 
         public UserControllerTests() : base()
         {
+            var id = Guid.NewGuid();
+            var user = CreateUser(id);
             var claims = new List<Claim>
             {
-                new Claim("Id", Guid.NewGuid().ToString())
+                new Claim(ID, id.ToString())
             };
             var claimsIdentity = new ClaimsIdentity(claims);
 
-            var id = Guid.NewGuid();
-            var user = CreateUser(id);
-            _mockUserService = new Mock<IUserService>();
-            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).ReturnsAsync(user);
-
             var mockLogger = new Mock<ILogger<UserController>>();
             var mockCoreSettings = new Mock<ICoreSettings>();
-            mockCoreSettings.Setup(x => x.ClientId).Returns("clientId");
-            mockCoreSettings.Setup(x => x.RedirectUri).Returns("redirectUri");
+            mockCoreSettings.Setup(x => x.ClientId).Returns(CLIENT_ID);
+            mockCoreSettings.Setup(x => x.RedirectUri).Returns(REDIRECT_URI);
             mockCoreSettings.Setup(x => x.Scopes).Returns(new List<Scope> { Scope.BITS_READ } );
+
+            _mockUserService = new Mock<IUserService>();
+            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).ReturnsAsync(user);
 
             _userController = new UserController(_mockUserService.Object, mockCoreSettings.Object, mockLogger.Object)
             {

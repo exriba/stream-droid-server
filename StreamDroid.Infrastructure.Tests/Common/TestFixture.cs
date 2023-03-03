@@ -14,7 +14,6 @@ namespace StreamDroid.Infrastructure.Tests.Common
             _filePath = @$"{Directory.GetCurrentDirectory()}/database.db";
             var fileStream = new FileStream(_filePath, FileMode.Create);
             fileStream.Dispose();
-
             var liteDbSettings = new LiteDbSettings(){ ConnectionString = $"Filename={_filePath}" };
             IOptions<LiteDbSettings> options = Options.Create(liteDbSettings);
             _uberRepository = new LiteDbUberRepository(options);

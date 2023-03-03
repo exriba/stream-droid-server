@@ -6,7 +6,6 @@ namespace StreamDroid.Domain.DTOs
         where TDto : class, new()
         where TEntity : class, new()
     {
-
         public TEntity ToEntity()
         {
             return this.Adapt<TEntity>();
@@ -26,11 +25,9 @@ namespace StreamDroid.Domain.DTOs
 
         public virtual void AddCustomMappings() { }
 
-        protected TypeAdapterSetter<TDto, TEntity> SetCustomMappings()
-            => Config.ForType<TDto, TEntity>();
+        protected TypeAdapterSetter<TDto, TEntity> SetCustomMappings() => Config.ForType<TDto, TEntity>();
 
-        protected TypeAdapterSetter<TEntity, TDto> SetCustomMappingsInverse()
-            => Config.ForType<TEntity, TDto>();
+        protected TypeAdapterSetter<TEntity, TDto> SetCustomMappingsInverse() => Config.ForType<TEntity, TDto>();
 
         public void Register(TypeAdapterConfig config)
         {

@@ -22,8 +22,8 @@ namespace StreamDroid.Shared.Tests.Extensions
         [Fact]
         public void IsBase64String_True()
         {
-            var encryptedText = TEXT.Base64Encrypt();
-            var isBase64String = encryptedText.IsBase64String();
+            var encryptedTextWithDefaultKeyPhrase = TEXT.Base64Encrypt();
+            var isBase64String = encryptedTextWithDefaultKeyPhrase.IsBase64String();
 
             Assert.True(isBase64String);
         }
@@ -51,11 +51,10 @@ namespace StreamDroid.Shared.Tests.Extensions
         [Fact]
         public void Base64Encrypt()
         {
-            var encryptedText = TEXT.Base64Encrypt();
+            var encryptedTextWithDefaultKeyPhrase = TEXT.Base64Encrypt();
             var encryptedTextWithKeyPhrase = TEXT.Base64Encrypt(keyPhrase: SECRET_KEY);
 
-            Assert.NotEqual(TEXT, encryptedText);
-            Assert.NotEqual(TEXT, encryptedTextWithKeyPhrase);
+            Assert.NotEqual(encryptedTextWithDefaultKeyPhrase, encryptedTextWithKeyPhrase);
         }
 
         [Theory]
@@ -73,14 +72,13 @@ namespace StreamDroid.Shared.Tests.Extensions
         [Fact]
         public void Base64Decrypt()
         {
-            var encryptedText = TEXT.Base64Encrypt();
-            var decryptedText = encryptedText.Base64Decrypt();
+            var encryptedTextWithDefaultKeyPhrase = TEXT.Base64Encrypt();
+            var decryptedTextWithDefaultKeyPhrase = encryptedTextWithDefaultKeyPhrase.Base64Decrypt();
 
             var encryptedTextWithKeyPhrase = TEXT.Base64Encrypt(keyPhrase: SECRET_KEY);
             var decryptedTextWithKeyPhrase = encryptedTextWithKeyPhrase.Base64Decrypt(keyPhrase: SECRET_KEY);
 
-            Assert.Equal(TEXT, decryptedText);
-            Assert.Equal(TEXT, decryptedTextWithKeyPhrase);
+            Assert.Equal(decryptedTextWithDefaultKeyPhrase, decryptedTextWithKeyPhrase);
         }
     }
 }

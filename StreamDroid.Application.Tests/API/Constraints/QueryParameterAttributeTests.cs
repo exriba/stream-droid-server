@@ -14,8 +14,10 @@ namespace StreamDroid.Application.Tests.API.Constraints
         public QueryParameterAttributeTests()
         {
             _mockQueryCollection = new Mock<IQueryCollection>();
+
             var mockRequest = new Mock<HttpRequest>();
             mockRequest.Setup(x => x.Query).Returns(_mockQueryCollection.Object);
+
             var mockHttpContext = new Mock<HttpContext>();
             mockHttpContext.Setup(x => x.Request).Returns(mockRequest.Object);
 

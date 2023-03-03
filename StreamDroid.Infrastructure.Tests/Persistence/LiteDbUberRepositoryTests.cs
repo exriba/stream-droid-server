@@ -3,15 +3,16 @@ using StreamDroid.Infrastructure.Tests.Common;
 
 namespace StreamDroid.Infrastructure.Tests.Persistence
 {
-    public class UberRepositoryTests : TestFixture
+    public class LiteDbUberRepositoryTests : TestFixture
     {
-        public UberRepositoryTests() : base() { }
+        public LiteDbUberRepositoryTests() : base() { }
 
         [Fact]
         public async Task FindAll()
         {
             // Given
             var rewards = CreateRewards();
+
             foreach (var reward in rewards)
                 await _uberRepository.Save(reward);
 
@@ -45,11 +46,13 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         {
             var rewards = CreateRewards();
             var reward = rewards.First();
+
             await _uberRepository.Save(reward);
 
             var entities = await _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
             var entity = entities.First();
             entity.Title = "Updated";
+
             await _uberRepository.Save(entity);
 
             Assert.NotEqual(reward.Title, entity.Title);
