@@ -174,6 +174,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
 
             static async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
             var tokenRefreshPolicy = new TokenRefreshPolicy(user.Id, "accessToken", refreshToken);
+            var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
 
             _userService.Setup(x => x.CreateTokenRefreshPolicy(It.IsAny<string>())).ReturnsAsync(tokenRefreshPolicy);
 
@@ -183,6 +184,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                     It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(userResponse));
+
             _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<CustomReward>>(
                     It.IsAny<UrlFragment>(),
                     It.IsAny<IDictionary<Header, string>>(),
@@ -190,7 +192,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(customRewardResponse));
 
-            var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
             await rewardService.SyncRewards(user.Id);
 
             var rewardDto = await rewardService.FindRewardById(customReward.Id);

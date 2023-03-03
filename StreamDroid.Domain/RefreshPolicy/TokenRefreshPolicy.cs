@@ -13,8 +13,8 @@ namespace StreamDroid.Domain.RefreshPolicy
         public readonly IDictionary<string, object> ContextData = new Dictionary<string, object>();
 
 #pragma warning disable CS8603 // Possible null reference return.
-        public string UserId => ContextData.Any() ? ContextData[USER_ID].ToString() : string.Empty;
-        public string AccessToken => ContextData.Any() ? ContextData[ACCESS_TOKEN].ToString() : string.Empty;
+        public string UserId => ContextData.TryGetValue(USER_ID, out var id) ? id.ToString() : string.Empty;
+        public string AccessToken => ContextData.TryGetValue(ACCESS_TOKEN, out var accessToken) ? accessToken.ToString() : string.Empty;
 #pragma warning restore CS8603 // Possible null reference return.
 
         public TokenRefreshPolicy(string userId, string accessToken, Func<string, Task<string>> refreshToken)

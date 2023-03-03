@@ -13,7 +13,6 @@ namespace StreamDroid.Domain.Tests.Common
     {
         private static bool Initialized;
         private readonly string _filePath;
-        private readonly ConfigurationManager _configurationManager;
 
         protected readonly LiteDbUberRepository _uberRepository;
 
@@ -35,17 +34,16 @@ namespace StreamDroid.Domain.Tests.Common
             IOptions<LiteDbSettings> options = Options.Create(liteDbSettings);
             _uberRepository = new LiteDbUberRepository(options);
 
-            _configurationManager = new ConfigurationManager();
-            _configurationManager.SetBasePath(Directory.GetCurrentDirectory())
+            using var configurationManager = new ConfigurationManager();
+            configurationManager.SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("Common/appsettings.Test.json")
                 .Build();
-            _configurationManager.Configure();
+            configurationManager.Configure();
         }
 
         public void Dispose()
         {
             _uberRepository.Dispose();
-            _configurationManager.Dispose();
             File.Delete(_filePath);
         }
     }

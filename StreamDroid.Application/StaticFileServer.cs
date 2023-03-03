@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.FileProviders;
-using StreamDroid.Domain.Settings;
+using Microsoft.Extensions.Options;
+using StreamDroid.Application.Settings;
 
 namespace StreamDroid.Application
 {
@@ -11,12 +12,13 @@ namespace StreamDroid.Application
     {
         public static void UseStaticFileServer(this WebApplication app)
         {
-            var coreOptions = app.Services.GetRequiredService<IAppSettings>();
+            var options = app.Services.GetRequiredService<IOptions<AppSettings>>();
+            var appSettings = options.Value;
 
             app.UseFileServer(new FileServerOptions
             {
                 EnableDirectoryBrowsing = true,
-                RequestPath = coreOptions.StaticAssetPath,
+                RequestPath = appSettings.StaticAssetPath,
                 FileProvider = new PhysicalFileProvider(app.Environment.WebRootPath),
             });
         }

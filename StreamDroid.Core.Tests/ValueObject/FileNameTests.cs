@@ -16,6 +16,7 @@ namespace StreamDroid.Core.Tests.ValueObject
         {
             if (string.IsNullOrWhiteSpace(name))
                 Assert.ThrowsAny<ArgumentException>(() => new FileName(name, Extension.MP3));
+
             Assert.ThrowsAny<ArgumentException>(() => FileName.FromString(name));
         }
 

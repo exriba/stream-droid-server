@@ -39,6 +39,7 @@ namespace StreamDroid.Domain.Services.Reward
         public async Task<IReadOnlyCollection<RewardDto>> FindRewardsByUserId(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
+
             var entities = await _uberRepository.Find<Entities.Reward>(r => r.StreamerId.Equals(userId));
             var rewards = entities.AsQueryable(); 
             return rewards.ProjectToType<RewardDto>().ToList();
@@ -47,6 +48,7 @@ namespace StreamDroid.Domain.Services.Reward
         public async Task UpdateRewardSpeech(string rewardId, Speech speech)
         {
             var reward = await FindById(rewardId);
+
             reward.Speech = speech;
             await _uberRepository.Save(reward);
         }
@@ -54,8 +56,8 @@ namespace StreamDroid.Domain.Services.Reward
         public async Task<Tuple<string, IReadOnlyCollection<Asset>>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap)
         {
             var reward = await FindById(rewardId);
-
             var assets = new List<Asset>();
+
             foreach (var entry in fileMap)
             {
                 var asset = reward.AddAsset(entry.Key, entry.Value);
@@ -63,57 +65,66 @@ namespace StreamDroid.Domain.Services.Reward
             }
 
             await _uberRepository.Save(reward);
+
             return Tuple.Create<string, IReadOnlyCollection<Asset>>(reward.Title, assets);
         }
 
         public async Task RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames)
         {
             var reward = await FindById(rewardId);
+
             foreach (var fileName in fileNames)
                 reward.RemoveAsset(fileName.ToString());
+
             await _uberRepository.Save(reward);
         }
 
         public async Task SyncRewards(string userId)
         {
             var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicy(userId);
+
             var users = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
                 await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-            if (users.Any() && users.First().UserBroadcasterType is not BroadcasterType.NORMAL)
+            if (users.Any())
             {
-                var data = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None);
+                var user = users.First();
 
-                var externalRewards = data.Select(customReward =>
+                if (user.UserBroadcasterType is not BroadcasterType.NORMAL)
                 {
-                    var imageUrl = customReward.Image == null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
-                    return new Entities.Reward
-                    {
-                        Id = customReward.Id,
-                        ImageUrl = imageUrl,
-                        Title = customReward.Title,
-                        Prompt = customReward.Prompt,
-                        StreamerId = customReward.BroadcasterUserId,
-                        BackgroundColor = customReward.BackgroundColor,
-                        Speech = new Speech(customReward.IsUserInputRequired)
-                    };
-                });
+                    var data = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None);
 
-                foreach (var reward in externalRewards)
-                {
-                    var rewards = await _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(reward.Id));
-
-                    if (!rewards.Any())
-                        await _uberRepository.Save(reward);
-                    else
+                    var externalRewards = data.Select(customReward =>
                     {
-                        var current = rewards.First();
-                        current.Title = reward.Title;
-                        current.Prompt = reward.Prompt;
-                        current.ImageUrl = reward.ImageUrl;
-                        current.BackgroundColor = reward.BackgroundColor;
-                        current.Speech = new Speech(reward.Speech.Enabled, current.Speech.VoiceIndex);
-                        await _uberRepository.Save(current);
+                        var imageUrl = customReward.Image == null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
+                        return new Entities.Reward
+                        {
+                            Id = customReward.Id,
+                            ImageUrl = imageUrl,
+                            Title = customReward.Title,
+                            Prompt = customReward.Prompt,
+                            StreamerId = customReward.BroadcasterUserId,
+                            BackgroundColor = customReward.BackgroundColor,
+                            Speech = new Speech(customReward.IsUserInputRequired)
+                        };
+                    });
+
+                    foreach (var reward in externalRewards)
+                    {
+                        var rewards = await _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(reward.Id));
+
+                        if (!rewards.Any())
+                            await _uberRepository.Save(reward);
+                        else
+                        {
+                            var current = rewards.First();
+                            current.Title = reward.Title;
+                            current.Prompt = reward.Prompt;
+                            current.ImageUrl = reward.ImageUrl;
+                            current.BackgroundColor = reward.BackgroundColor;
+                            current.Speech = new Speech(reward.Speech.Enabled, current.Speech.VoiceIndex);
+                            await _uberRepository.Save(current);
+                        }
                     }
                 }
             }
@@ -122,6 +133,7 @@ namespace StreamDroid.Domain.Services.Reward
         private async Task<Entities.Reward> FindById(string rewardId)
         {
             Guard.Against.NullOrWhiteSpace(rewardId, nameof(rewardId));
+
             var rewards = await _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(rewardId));
             return rewards.Any() ? rewards.First() : throw new EntityNotFoundException(rewardId);
         }

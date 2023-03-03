@@ -19,6 +19,7 @@ namespace StreamDroid.Application.API.Constraints
             foreach (var file in files)
             {
                 var extension = Path.GetExtension(file.FileName);
+
                 if (!_extensions.Contains(extension.ToLower()))
                     throw new ArgumentException("Invalid file extension.");
             }

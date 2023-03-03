@@ -68,17 +68,18 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var accessTokenResponse = JsonSerializer.Deserialize<AccessTokenResponse>(accessTokenResponseJson.ToString());
             var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString());
+            var userService = new UserService(_authApi.Object, _uberRepository);
 
             _authApi.Setup(x => x.GetAccessTokenFromCodeAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(accessTokenResponse!));
+
             _authApi.Setup(x => x.ValidateAccessTokenAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(validateTokenResponse!));
 
-            var userService = new UserService(_authApi.Object, _uberRepository);
             var userDto = await userService.Authenticate(user.AccessToken);
 
             Assert.Equal(user.Id, user.Id);

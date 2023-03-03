@@ -75,8 +75,7 @@ namespace StreamDroid.Application.API.Reward
         public async Task<IActionResult> UpdateSpeech([FromRoute] Guid rewardId,
                                           [FromBody][Required] Speech speech)
         {
-            var id = rewardId.ToString();
-            await _rewardService.UpdateRewardSpeech(id, speech);
+            await _rewardService.UpdateRewardSpeech(rewardId.ToString(), speech);
             return Ok();
         }
 

@@ -1,14 +1,12 @@
-using Microsoft.Extensions.Options;
 using StreamDroid.Infrastructure;
 using StreamDroid.Domain;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Net;
 using StreamDroid.Shared;
-using StreamDroid.Domain.Settings;
+using StreamDroid.Application.Settings;
 using StreamDroid.Application.Services;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
-using StreamDroid.Application.Settings;
 using SharpTwitch.EventSub;
 using SharpTwitch.Core;
 using StreamDroid.Application;
@@ -29,7 +27,6 @@ else
     builder.Logging.AddLog4Net();
 
 // Add Services to the Container.
-builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddHostedService<EventSubHostedService>();
 builder.Services.AddTwitchCore(builder.Configuration);
 builder.Services.AddTwitchEventSub();

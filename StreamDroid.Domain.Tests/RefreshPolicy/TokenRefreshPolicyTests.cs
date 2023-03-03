@@ -19,6 +19,7 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
             {
                 if (refreshPolicy.AccessToken.Equals(accessToken))
                     throw new UnauthorizedRequestException("Invalid OAuth Token.");
+
                 return await Task.FromResult(refreshPolicy.AccessToken);
             }, refreshPolicy.ContextData);
 
