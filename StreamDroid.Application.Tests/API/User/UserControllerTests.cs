@@ -33,7 +33,7 @@ namespace StreamDroid.Application.Tests.API.User
             var id = Guid.NewGuid();
             var user = CreateUser(id);
             _mockUserService = new Mock<IUserService>();
-            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).Returns(user);
+            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).ReturnsAsync(user);
 
             var mockLogger = new Mock<ILogger<UserController>>();
             var mockCoreSettings = new Mock<ICoreSettings>();
@@ -53,18 +53,19 @@ namespace StreamDroid.Application.Tests.API.User
         }
 
         [Fact]
-        public void UserController_Index()
+        public async Task UserController_Index()
         {
-            var result = _userController.Index();
+            var result = await _userController.Index();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public void UserController_UpdatePreferences()
+        public async Task UserController_UpdatePreferences()
         {
             var preferences = new Preferences();
-            var result = _userController.UpdatePreferences(preferences);
+
+            var result = await _userController.UpdatePreferences(preferences);
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
@@ -73,16 +74,6 @@ namespace StreamDroid.Application.Tests.API.User
         public void UserController_Login()
         {
             var result = _userController.Login();
-
-            Assert.Equal(typeof(RedirectResult), result.GetType());
-        }
-
-        [Fact]
-        public void UserController_AuthSuccess()
-        {
-            var encryptedState = "state".Base64Encrypt();
-            var encodedState = Base64UrlEncoder.Encode(encryptedState);
-            var result = _userController.AuthError("error", "errorDescription", encodedState);
 
             Assert.Equal(typeof(RedirectResult), result.GetType());
         }

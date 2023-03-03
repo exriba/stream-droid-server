@@ -20,7 +20,7 @@ namespace StreamDroid.Application.Services
             {
                 if (Guid.TryParse(id.ToString(), out var guid))
                 {
-                    var users = _uberRepository.Find<User>(u => u.UserKey.Equals(guid.ToString()));
+                    var users = await _uberRepository.Find<User>(u => u.UserKey.Equals(guid.ToString()));
 
                     if (users.Any())
                     {

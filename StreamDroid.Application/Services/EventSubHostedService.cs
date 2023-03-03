@@ -118,30 +118,30 @@ namespace StreamDroid.Application.Services
             }
         }
 
-        private void OnCustomRewardAdd(object? sender, CustomRewardAddArgs e)
+        private async void OnCustomRewardAdd(object? sender, CustomRewardAddArgs e)
         {
             var customReward = e.Notification.Payload.Event;
             _logger.LogInformation("Received custom reward add notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
             var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            SaveReward(customReward, uberRepository);
+            await SaveReward(customReward, uberRepository);
         }
 
-        private void OnCustomRewardUpdate(object? sender, CustomRewardUpdateArgs e)
+        private async void OnCustomRewardUpdate(object? sender, CustomRewardUpdateArgs e)
         {
             var customReward = e.Notification.Payload.Event;
             _logger.LogInformation("Received custom reward update notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
             var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            SaveReward(customReward, uberRepository);
+            await SaveReward(customReward, uberRepository);
         }
 
-        private static void SaveReward(CustomReward customReward, IUberRepository uberRepository)
+        private static async Task SaveReward(CustomReward customReward, IUberRepository uberRepository)
         {
             // var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
-            var rewards = uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
+            var rewards = await uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
             var reward = rewards.FirstOrDefault();
 
             if (reward is not null)
@@ -166,21 +166,21 @@ namespace StreamDroid.Application.Services
                 };
             }
 
-            uberRepository.Save(reward);
+            await uberRepository.Save(reward);
         }
 
-        private void OnCustomRewardRemove(object? sender, CustomRewardRemoveArgs e)
+        private async void OnCustomRewardRemove(object? sender, CustomRewardRemoveArgs e)
         {
             var customReward = e.Notification.Payload.Event;
             _logger.LogInformation("Received custom reward delete notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
             var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            var rewards = uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
+            var rewards = await uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
             var reward = rewards.FirstOrDefault();
 
             if (reward is not null)
-                uberRepository.Delete(reward);
+                await uberRepository.Delete(reward);
         }
 
         private async void OnChannelPointsCustomRewardRedemption(object? sender, CustomRewardRedemptionArgs e)
@@ -191,7 +191,7 @@ namespace StreamDroid.Application.Services
 
             using var scope = _serviceScopeFactory.CreateScope();
             var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            var rewards = uberRepository.Find<Reward>(r => r.Id.Equals(redemption.Reward.Id));
+            var rewards = await uberRepository.Find<Reward>(r => r.Id.Equals(redemption.Reward.Id));
 
             if (!rewards.Any())
                 return;
@@ -230,51 +230,44 @@ namespace StreamDroid.Application.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () =>
             {
                 using var scope = _serviceScopeFactory.CreateScope();
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
                 var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-                var users = uberRepository.FindAll<User>();
+                var users = await uberRepository.FindAll<User>();
 
                 while (!users.Any())
                 {
                     await Task.Delay(1000, cancellationToken);
-                    users = uberRepository.FindAll<User>();
+                    users = await uberRepository.FindAll<User>();
                 }
 
-                if (users.Any())
+                var user = users.First();
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicy(user.Id);
+                var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context => 
+                    await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
+
+                if (twitchUsers.Any())
                 {
-                    var user = users.First();
-                    _logger.LogInformation("Initializing event sub connection. User: {id} - {name}", user.Id, user.Name);
+                    var twitchUser = twitchUsers.First();
 
-                    var tokenRefreshPolicy = userService.CreateTokenRefreshPolicy(user.Id);
-                    var helixSubscription = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                        await _helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
-                    var inactiveSubscriptions = helixSubscription.Data.Where(x => _inactiveSubscriptionStatus.Contains(x.SubscriptionStatus)).ToList();
-
-                    foreach (var subscription in inactiveSubscriptions)
-                        await DeleteSubscription(user.Id, tokenRefreshPolicy.AccessToken, subscription.Id, cancellationToken);
-
-                    var twitchUsers = await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, cancellationToken);
-
-                    if (twitchUsers.Any())
+                    if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
                     {
-                        var twitchUser = twitchUsers.First();
-                        _logger.LogInformation("Verifying user broadcaster type. User: {id} - {name} - {type}.", twitchUser.Id, twitchUser.Login, twitchUser.UserBroadcasterType);
+                        _userDetails.UserId = user.Id;
+                        _userDetails.AccessToken = tokenRefreshPolicy.AccessToken;
 
-                        if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
-                        {
-                            _userDetails.UserId = user.Id;
-                            _userDetails.AccessToken = tokenRefreshPolicy.AccessToken;
-                            await _eventSub.ConnectAsync();
-                        }
+                        var helixSubscription = await _helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, cancellationToken);
+                        var inactiveSubscriptions = helixSubscription.Data.Where(x => _inactiveSubscriptionStatus.Contains(x.SubscriptionStatus)).ToList();
+                        
+                        foreach (var subscription in inactiveSubscriptions)
+                            await DeleteSubscription(user.Id, tokenRefreshPolicy.AccessToken, subscription.Id, cancellationToken);
+
+                        _logger.LogInformation("Initializing event sub connection. User: {id} - {name}", twitchUser.Id, twitchUser.Login);
+                        await _eventSub.ConnectAsync();
                     }
                 }
-
             }, cancellationToken);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             return Task.CompletedTask;
         }

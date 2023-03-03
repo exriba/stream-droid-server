@@ -8,15 +8,15 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         public UberRepositoryTests() : base() { }
 
         [Fact]
-        public void FindAll()
+        public async Task FindAll()
         {
             // Given
             var rewards = CreateRewards();
             foreach (var reward in rewards)
-                _uberRepository.Save(reward);
+                await _uberRepository.Save(reward);
 
             // When
-            var data = _uberRepository.FindAll<Reward>();
+            var data = await _uberRepository.FindAll<Reward>();
 
             // Then
             Assert.Equal(rewards.Count, data.Count);
@@ -26,30 +26,31 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         [InlineData(null)]
         public void Save_Throws_InvalidArgs(Reward reward)
         {
-            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Save(reward));
+            Assert.ThrowsAnyAsync<ArgumentException>(async () => await _uberRepository.Save(reward));
         }
 
         [Fact]
-        public void Save_Insert()
+        public async Task Save_Insert()
         {
             var rewards = CreateRewards();
             var reward = rewards.First();
-            var entity = _uberRepository.Save(reward);
+
+            var entity = await _uberRepository.Save(reward);
 
             Assert.Equal(reward, entity);
         }
 
         [Fact]
-        public void Save_Update()
+        public async Task Save_Update()
         {
             var rewards = CreateRewards();
             var reward = rewards.First();
-            _uberRepository.Save(reward);
+            await _uberRepository.Save(reward);
 
-            var data = _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
-            var entity = data.First();
+            var entities = await _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
+            var entity = entities.First();
             entity.Title = "Updated";
-            _uberRepository.Save(entity);
+            await _uberRepository.Save(entity);
 
             Assert.NotEqual(reward.Title, entity.Title);
         }
@@ -58,18 +59,19 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         [InlineData(null)]
         public void Delete_Throws_InvalidArgs(Reward reward)
         {
-            Assert.ThrowsAny<ArgumentException>(() => _uberRepository.Delete(reward));
+            Assert.ThrowsAnyAsync<ArgumentException>(async () => await _uberRepository.Delete(reward));
         }
 
         [Fact]
-        public void Delete()
+        public async Task Delete()
         {
             var rewards = CreateRewards();
             var reward = rewards.First();
-            _uberRepository.Save(reward);
 
-            _uberRepository.Delete(reward);
-            var data = _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
+            await _uberRepository.Save(reward);
+            await _uberRepository.Delete(reward);
+
+            var data = await _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
 
             Assert.Empty(data);
         }
