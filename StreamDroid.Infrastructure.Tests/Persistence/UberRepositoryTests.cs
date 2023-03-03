@@ -34,6 +34,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         {
             var rewards = CreateRewards();
             var reward = rewards.First();
+
             var entity = await _uberRepository.Save(reward);
 
             Assert.Equal(reward, entity);
@@ -46,8 +47,8 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var reward = rewards.First();
             await _uberRepository.Save(reward);
 
-            var task = _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
-            var entity = task.Result.First();
+            var entities = await _uberRepository.Find<Reward>(r => r.Id.Equals(reward.Id));
+            var entity = entities.First();
             entity.Title = "Updated";
             await _uberRepository.Save(entity);
 

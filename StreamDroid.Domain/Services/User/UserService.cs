@@ -33,8 +33,8 @@ namespace StreamDroid.Domain.Services.User
 
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
-            
             var user = await FindUserById(userData.UserId) ?? new Entities.User { Id = userData.UserId };
+
             user.Name = userData.Login;
             user.AccessToken = token.AccessToken;
             user.RefreshToken = token.RefreshToken;

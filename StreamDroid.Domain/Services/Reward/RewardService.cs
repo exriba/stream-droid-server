@@ -48,7 +48,7 @@ namespace StreamDroid.Domain.Services.Reward
         {
             var reward = await FindById(rewardId);
             reward.Speech = speech;
-            _uberRepository.Save(reward);
+            await _uberRepository.Save(reward);
         }
 
         public async Task<Tuple<string, IReadOnlyCollection<Asset>>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap)
@@ -101,8 +101,7 @@ namespace StreamDroid.Domain.Services.Reward
 
                 foreach (var reward in externalRewards)
                 {
-                    var task = _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(reward.Id));
-                    var rewards = task.Result;
+                    var rewards = await _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(reward.Id));
 
                     if (!rewards.Any())
                         await _uberRepository.Save(reward);
