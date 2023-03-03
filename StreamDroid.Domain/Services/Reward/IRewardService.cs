@@ -6,11 +6,11 @@ namespace StreamDroid.Domain.Services.Reward
     public interface IRewardService
     {
         Task SyncRewards(string userId);
-        RewardDto FindRewardById(string rewardId);
-        void UpdateRewardSpeech(string rewardId, Speech speech);
-        IReadOnlyCollection<Asset> FindAssetsByRewardId(string rewardId);
-        IReadOnlyCollection<RewardDto> FindRewardsByUserId(string userId);
-        Tuple<string, IReadOnlyCollection<Asset>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap);
-        void RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames);
+        Task<RewardDto> FindRewardById(string rewardId);
+        Task UpdateRewardSpeech(string rewardId, Speech speech);
+        Task<IReadOnlyCollection<Asset>> FindAssetsByRewardId(string rewardId);
+        Task<IReadOnlyCollection<RewardDto>> FindRewardsByUserId(string userId);
+        Task<Tuple<string, IReadOnlyCollection<Asset>>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap);
+        Task RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames);
     }
 }

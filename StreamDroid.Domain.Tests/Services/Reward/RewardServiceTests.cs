@@ -12,7 +12,6 @@ using SharpTwitch.Helix;
 using StreamDroid.Domain.RefreshPolicy;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using Helix = SharpTwitch.Helix.Models;
-using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Tests.Services.Reward
 {
@@ -38,27 +37,28 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         {
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
             
-            Assert.ThrowsAny<ArgumentException>(() => rewardService.FindRewardById(id));
+            Assert.ThrowsAnyAsync<ArgumentException>(async() 
+                => await rewardService.FindRewardById(id));
         }
 
         [Fact]
-        public void RewardService_FindRewardById()
+        public async Task RewardService_FindRewardById()
         {
-            var reward = CreateReward();
-
+            var reward = await CreateReward();
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
-            var rewardDto = rewardService.FindRewardById(reward.Id);
+
+            var rewardDto = await rewardService.FindRewardById(reward.Id);
 
             Assert.Equal(reward.Id, rewardDto.Id.ToString());
         }
 
         [Fact]
-        public void RewardService_FindAssetsByRewardId()
+        public async Task RewardService_FindAssetsByRewardId()
         {
-            var reward = CreateReward();
-
+            var reward = await CreateReward();
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
-            var assets = rewardService.FindAssetsByRewardId(reward.Id);
+
+            var assets = await rewardService.FindAssetsByRewardId(reward.Id);
 
             Assert.NotEmpty(assets);
         }
@@ -71,69 +71,70 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         {
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
             
-            Assert.ThrowsAny<ArgumentException>(() => rewardService.FindRewardsByUserId(userId));
+            Assert.ThrowsAnyAsync<ArgumentException>(async() 
+                => await rewardService.FindRewardsByUserId(userId));
         }
 
         [Fact]
-        public void RewardService_FindRewardsByUserId()
+        public async Task RewardService_FindRewardsByUserId()
         {
-            var reward = CreateReward();
-
+            var reward = await CreateReward();
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
-            var rewards = rewardService.FindRewardsByUserId(reward.StreamerId);
+
+            var rewards = await rewardService.FindRewardsByUserId(reward.StreamerId);
 
             Assert.NotEmpty(rewards);
         }
 
         [Fact]
-        public void RewardService_UpdateRewardSpeech()
+        public async Task RewardService_UpdateRewardSpeech()
         {
-            var reward = CreateReward();
             var speech = new Speech(true);
-
+            var reward = await CreateReward();
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
-            rewardService.UpdateRewardSpeech(reward.Id, speech);
-            var rewardDto = rewardService.FindRewardById(reward.Id);
+
+            await rewardService.UpdateRewardSpeech(reward.Id, speech);
+            var rewardDto = await rewardService.FindRewardById(reward.Id);
 
             Assert.False(reward.Speech.Enabled);
             Assert.True(rewardDto.Speech.Enabled);
         }
 
         [Fact]
-        public void RewardService_AddRewardAssets()
+        public async Task RewardService_AddRewardAssets()
         {
             var fileName = "file.mp4";
-            var reward = CreateReward();
+            var reward = await CreateReward();
             var dictionary = new Dictionary<FileName, int>
             {
                 { FileName.FromString(fileName), 100 },
             };
-
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
-            var tuple = rewardService.AddRewardAssets(reward.Id, dictionary);
+
+            var tuple = await rewardService.AddRewardAssets(reward.Id, dictionary);
 
             Assert.Equal(reward.Title, tuple.Item1);
             Assert.NotEmpty(tuple.Item2);
         }
 
         [Fact]
-        public void RewardService_RemoveRewardAssets()
+        public async Task RewardService_RemoveRewardAssets()
         {
             var fileName = "file.mp4";
-            var reward = CreateReward();
+            var reward = await CreateReward();
             var dictionary = new Dictionary<FileName, int>
             {
                 { FileName.FromString(fileName), 100 },
             };
-
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
-            rewardService.AddRewardAssets(reward.Id, dictionary);
-            var assets = rewardService.FindAssetsByRewardId(reward.Id);
+
+            await rewardService.AddRewardAssets(reward.Id, dictionary);
+            var assets = await rewardService.FindAssetsByRewardId(reward.Id);
 
             Assert.Equal(2, assets.Count);
 
-            rewardService.RemoveRewardAssets(reward.Id, dictionary.Keys);
-            assets = rewardService.FindAssetsByRewardId(reward.Id);
+            await rewardService.RemoveRewardAssets(reward.Id, dictionary.Keys);
+            assets = await rewardService.FindAssetsByRewardId(reward.Id);
 
             Assert.Equal(1, assets.Count);
         }
@@ -171,10 +172,10 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 Data = new List<CustomReward> { customReward }
             };
 
-            async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
+            static async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
             var tokenRefreshPolicy = new TokenRefreshPolicy(user.Id, "accessToken", refreshToken);
 
-            _userService.Setup(x => x.CreateTokenRefreshPolicy(It.IsAny<string>())).Returns(tokenRefreshPolicy);
+            _userService.Setup(x => x.CreateTokenRefreshPolicy(It.IsAny<string>())).ReturnsAsync(tokenRefreshPolicy);
 
             _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<Helix.User.User>>(
                     It.IsAny<UrlFragment>(),
@@ -182,7 +183,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                     It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(userResponse));
-
             _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<CustomReward>>(
                     It.IsAny<UrlFragment>(),
                     It.IsAny<IDictionary<Header, string>>(),
@@ -193,7 +193,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             var rewardService = new RewardService(_helixApi, _userService.Object, _uberRepository);
             await rewardService.SyncRewards(user.Id);
 
-            var rewardDto = rewardService.FindRewardById(customReward.Id);
+            var rewardDto = await rewardService.FindRewardById(customReward.Id);
 
             Assert.NotNull(rewardDto);
             Assert.Equal(rewardDto.Id.ToString(), customReward.Id);
@@ -204,7 +204,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             Assert.Equal(rewardDto.Speech.Enabled, customReward.IsUserInputRequired);
         }
 
-        private Core.Entities.Reward CreateReward()
+        private async Task<Core.Entities.Reward> CreateReward()
         {
             var reward = new Core.Entities.Reward
             {
@@ -216,7 +216,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 BackgroundColor = ""
             };
             reward.AddAsset(FileName.FromString("file.mp3"), 100);
-            return _uberRepository.Save(reward);
+            return await _uberRepository.Save(reward);
         }
     }
 }

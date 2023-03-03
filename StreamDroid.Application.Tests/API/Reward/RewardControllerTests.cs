@@ -29,8 +29,8 @@ namespace StreamDroid.Application.Tests.API.Reward
             var reward = CreateRewardDto(id);
             var rewards = new List<RewardDto> { reward };
             _mockRewardService = new Mock<IRewardService>();
-            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).Returns(reward);
-            _mockRewardService.Setup(x => x.FindRewardsByUserId(It.IsAny<string>())).Returns(rewards);
+            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).ReturnsAsync(reward);
+            _mockRewardService.Setup(x => x.FindRewardsByUserId(It.IsAny<string>())).ReturnsAsync(rewards);
 
             _mockEnvironment = new Mock<IWebHostEnvironment>();
             _mockEnvironment.Setup(x => x.WebRootPath).Returns(".");
@@ -55,27 +55,27 @@ namespace StreamDroid.Application.Tests.API.Reward
         }
 
         [Fact]
-        public void RewardController_Index()
+        public async Task RewardController_Index()
         {
-            var result = _rewardController.Index();
+            var result = await _rewardController.Index();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public void RewardController_GetReward()
+        public async Task RewardController_GetReward()
         {
-            var result = _rewardController.GetReward(Guid.NewGuid());
+            var result = await _rewardController.GetReward(Guid.NewGuid());
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public void RewardController_GetRewardAssets()
+        public async Task RewardController_GetRewardAssets()
         {
             var id = Guid.NewGuid();
 
-            var result = _rewardController.GetRewardAssets(id);
+            var result = await _rewardController.GetRewardAssets(id);
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
@@ -88,7 +88,7 @@ namespace StreamDroid.Application.Tests.API.Reward
 
             var mockFile = new Mock<IFormFile>();
             mockFile.Setup(x => x.FileName).Returns(tuple.Item2.First().FileName.ToString());
-            _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).Returns(tuple);
+            _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).ReturnsAsync(tuple);
 
             var result = await _rewardController.AddAssets(id, new AssetForm { Files = new IFormFile[] { mockFile.Object } });
 
@@ -103,18 +103,18 @@ namespace StreamDroid.Application.Tests.API.Reward
         }
 
         [Fact]
-        public void RewardController_UpdateSpeech()
+        public async Task RewardController_UpdateSpeech()
         {
             var id = Guid.NewGuid();
             var speech = new Speech();
 
-            var result = _rewardController.UpdateSpeech(id, speech);
+            var result = await _rewardController.UpdateSpeech(id, speech);
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }
 
         [Fact]
-        public void RewardController_UpdateAssets()
+        public async Task RewardController_UpdateAssets()
         {
             var id = Guid.NewGuid();
             var tuple = CreateAssets(id);
@@ -122,20 +122,20 @@ namespace StreamDroid.Application.Tests.API.Reward
             {
                 { "file.mp4", 50 }
             };
-            _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).Returns(tuple);
+            _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).ReturnsAsync(tuple);
 
-            var result = _rewardController.UpdateAssets(id, dictionary);
+            var result = await _rewardController.UpdateAssets(id, dictionary);
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }
 
         [Fact]
-        public void RewardController_DeleteAsset()
+        public async Task RewardController_DeleteAsset()
         {
             var id = Guid.NewGuid();
             var tuple = CreateAssets(id);
 
-            var result = _rewardController.DeleteAsset(id, tuple.Item2.First().FileName.ToString());
+            var result = await _rewardController.DeleteAsset(id, tuple.Item2.First().FileName.ToString());
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }

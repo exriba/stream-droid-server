@@ -8,7 +8,6 @@ using StreamDroid.Domain.Settings;
 using StreamDroid.Application.Services;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
-using StreamDroid.Infrastructure.Settings;
 using StreamDroid.Application.Settings;
 using SharpTwitch.EventSub;
 using SharpTwitch.Core;
@@ -21,7 +20,6 @@ builder.Configuration.Configure();
 
 // Add Configuration Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
-builder.Services.Configure<PersistenceSettings>(builder.Configuration.GetSection(PersistenceSettings.Key));
 
 // Add Logging
 builder.Logging.ClearProviders();
@@ -31,13 +29,12 @@ else
     builder.Logging.AddLog4Net();
 
 // Add Services to the Container.
-builder.Services.AddSingleton<IPersistenceSettings>(options => options.GetRequiredService<IOptions<PersistenceSettings>>().Value);
 builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddHostedService<EventSubHostedService>();
 builder.Services.AddTwitchCore(builder.Configuration);
 builder.Services.AddTwitchEventSub();
 builder.Services.AddDirectoryBrowser();
-builder.Services.AddInfrastructureConfiguration();
+builder.Services.AddInfrastructureConfiguration(builder.Configuration);
 builder.Services.AddServiceConfiguration();
 builder.Services.AddHttpClient();
 builder.Services.AddSignalR();

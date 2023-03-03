@@ -34,27 +34,25 @@ namespace StreamDroid.Application.API.Reward
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var claim = User.Claims.First(c => c.Type.Equals(ID));
-            var rewards = _rewardService.FindRewardsByUserId(claim.Value);
+            var rewards = await _rewardService.FindRewardsByUserId(claim.Value);
             return Ok(rewards);
         }
 
         [AllowAnonymous]
         [HttpGet("{rewardId}")]
-        public IActionResult GetReward([FromRoute] Guid rewardId)
+        public async Task<IActionResult> GetReward([FromRoute] Guid rewardId)
         {
-            var id = rewardId.ToString();
-            var reward = _rewardService.FindRewardById(id);
+            var reward = await _rewardService.FindRewardById(rewardId.ToString());
             return Ok(reward);
         }
 
         [HttpGet("{rewardId}/assets")]
-        public IActionResult GetRewardAssets([FromRoute] Guid rewardId)
+        public async Task<IActionResult> GetRewardAssets([FromRoute] Guid rewardId)
         {
-            var id = rewardId.ToString();
-            var assets = _rewardService.FindAssetsByRewardId(id);
+            var assets = await _rewardService.FindAssetsByRewardId(rewardId.ToString());
             return Ok(assets);
         }
 
@@ -67,42 +65,41 @@ namespace StreamDroid.Application.API.Reward
             if (!assetForm.Files.Any())
                 return NoContent();
 
-            var id = rewardId.ToString();
             var fileMap = assetForm.Files.ToDictionary(x => FileName.FromString(x.FileName), _ => assetForm.Volume);
-            var tuple = _rewardService.AddRewardAssets(id, fileMap);
+            var tuple = await _rewardService.AddRewardAssets(rewardId.ToString(), fileMap);
             await SaveAssetFiles(tuple.Item1, assetForm.Files);
             return CreatedAtAction(nameof(AddAssets), tuple.Item2);
         }
 
         [HttpPut("{rewardId}/speech")]
-        public IActionResult UpdateSpeech([FromRoute] Guid rewardId,
+        public async Task<IActionResult> UpdateSpeech([FromRoute] Guid rewardId,
                                           [FromBody][Required] Speech speech)
         {
             var id = rewardId.ToString();
-            _rewardService.UpdateRewardSpeech(id, speech);
+            await _rewardService.UpdateRewardSpeech(id, speech);
             return Ok();
         }
 
         [HttpPut("{rewardId}/assets")]
-        public IActionResult UpdateAssets([FromRoute] Guid rewardId,
+        public async Task<IActionResult> UpdateAssets([FromRoute] Guid rewardId,
                                           [FromBody][Required] IDictionary<string, int> payload)
         {
             var id = rewardId.ToString();
             var fileMap = payload.ToDictionary(x => FileName.FromString(x.Key), x => x.Value);
-            _rewardService.RemoveRewardAssets(id, fileMap.Keys);
-            var tuple = _rewardService.AddRewardAssets(id, fileMap);
+            await _rewardService.RemoveRewardAssets(id, fileMap.Keys);
+            var tuple = await _rewardService.AddRewardAssets(id, fileMap);
             return Ok();
         }
 
         [HttpDelete("{rewardId}/assets")]
-        public IActionResult DeleteAsset([FromRoute] Guid rewardId,
+        public async Task<IActionResult> DeleteAsset([FromRoute] Guid rewardId,
                                          [FromHeader(Name = ASSET_NAME)] string assetName)
         {
             var id = rewardId.ToString();
             var decodedName = HttpUtility.UrlDecode(assetName);
             var fileName = new FileName[] { FileName.FromString(decodedName) };
-            var reward = _rewardService.FindRewardById(id);
-            _rewardService.RemoveRewardAssets(id, fileName);
+            var reward = await _rewardService.FindRewardById(id);
+            await _rewardService.RemoveRewardAssets(id, fileName);
             DeleteAssetFile(reward.Title, fileName[0]);
             return Ok();
         }

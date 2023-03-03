@@ -36,18 +36,18 @@ namespace StreamDroid.Application.API.User
         }
 
         [HttpGet("me")]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var claim = User.Claims.First(c => c.Type.Equals(ID));
-            var me = _userService.FindById(claim.Value);
+            var me = await _userService.FindById(claim.Value);
             return Ok(me);
         }
 
         [HttpPost("me/preferences")]
-        public IActionResult UpdatePreferences([Required][FromBody] Preferences preferences)
+        public async Task<IActionResult> UpdatePreferences([Required][FromBody] Preferences preferences)
         {
             var claim = User.Claims.First(c => c.Type.Equals(ID));
-            var userPreferences = _userService.UpdatePreferences(claim.Value, preferences);
+            var userPreferences = await _userService.UpdatePreferences(claim.Value, preferences);
             return Ok(userPreferences);
         }
 

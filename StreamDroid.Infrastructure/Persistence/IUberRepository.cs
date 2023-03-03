@@ -5,9 +5,9 @@ namespace StreamDroid.Infrastructure.Persistence
 {
     public interface IUberRepository : IDisposable
     {
-        IReadOnlyCollection<T> FindAll<T>() where T : EntityBase;
-        IReadOnlyCollection<T> Find<T>(Expression<Func<T, bool>> expression) where T : EntityBase;
-        T Save<T>(T entity) where T : EntityBase;
-        void Delete<T>(T entity) where T : EntityBase;
+        Task<IReadOnlyCollection<T>> FindAll<T>() where T : EntityBase;
+        Task<IReadOnlyCollection<T>> Find<T>(Expression<Func<T, bool>> expression) where T : EntityBase;
+        Task<T> Save<T>(T entity) where T : EntityBase;
+        Task Delete<T>(T entity) where T : EntityBase;
     }
 }

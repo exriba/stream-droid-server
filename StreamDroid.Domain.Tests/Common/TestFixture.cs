@@ -1,6 +1,6 @@
 ﻿using Mapster;
 using Microsoft.Extensions.Configuration;
-using Moq;
+using Microsoft.Extensions.Options;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Infrastructure.Settings;
@@ -15,7 +15,7 @@ namespace StreamDroid.Domain.Tests.Common
         private readonly string _filePath;
         private readonly ConfigurationManager _configurationManager;
 
-        protected readonly UberRepository _uberRepository;
+        protected readonly LiteDbUberRepository _uberRepository;
 
         protected TestFixture(string databaseName)
         {
@@ -31,9 +31,9 @@ namespace StreamDroid.Domain.Tests.Common
             var fileStream = new FileStream(_filePath, FileMode.Create);
             fileStream.Dispose();
 
-            var persistenceSettings = new Mock<IPersistenceSettings>();
-            persistenceSettings.Setup(x => x.ConnectionString).Returns($"Filename={_filePath}");
-            _uberRepository = new UberRepository(persistenceSettings.Object);
+            var liteDbSettings = new LiteDbSettings() { ConnectionString = $"Filename={_filePath}" };
+            IOptions<LiteDbSettings> options = Options.Create(liteDbSettings);
+            _uberRepository = new LiteDbUberRepository(options);
 
             _configurationManager = new ConfigurationManager();
             _configurationManager.SetBasePath(Directory.GetCurrentDirectory())

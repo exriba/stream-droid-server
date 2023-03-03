@@ -21,9 +21,9 @@ namespace StreamDroid.Domain.Services.User
             _uberRepository = uberRepository;
         }
 
-        public UserDto? FindById(string userId)
+        public async Task<UserDto?> FindById(string userId)
         {
-            var user = FindUserById(userId);
+            var user = await FindUserById(userId);
             return user is not null ? UserDto.FromEntity(user) : null;
         }
 
@@ -34,18 +34,18 @@ namespace StreamDroid.Domain.Services.User
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
             
-            var user = FindUserById(userData.UserId) ?? new Entities.User { Id = userData.UserId };
+            var user = await FindUserById(userData.UserId) ?? new Entities.User { Id = userData.UserId };
             user.Name = userData.Login;
             user.AccessToken = token.AccessToken;
             user.RefreshToken = token.RefreshToken;
-            user = _uberRepository.Save(user);
+            user = await _uberRepository.Save(user);
 
             return UserDto.FromEntity(user);
         }
 
-        public TokenRefreshPolicy CreateTokenRefreshPolicy(string userId)
+        public async Task<TokenRefreshPolicy> CreateTokenRefreshPolicy(string userId)
         {
-            var user = FindUser(userId);
+            var user = await FindUser(userId);
 
             async Task<string> refreshToken(string userId)
             {
@@ -53,7 +53,7 @@ namespace StreamDroid.Domain.Services.User
                 var token = await _authApi.RefreshAccessTokenAsync(refreshToken, CancellationToken.None);
                 user.AccessToken = token.AccessToken;
                 user.RefreshToken = token.RefreshToken;
-                user = _uberRepository.Save(user);
+                user = await _uberRepository.Save(user);
                 return token.AccessToken;
             };
 
@@ -61,25 +61,25 @@ namespace StreamDroid.Domain.Services.User
             return new TokenRefreshPolicy(userId, accessToken, refreshToken);
         }
 
-        public Preferences UpdatePreferences(string userId, Preferences preferences)
+        public async Task<Preferences> UpdatePreferences(string userId, Preferences preferences)
         {
             Guard.Against.Null(preferences, nameof(preferences));
 
-            var user = FindUser(userId);
+            var user = await FindUser(userId);
             user.Preferences = preferences;
-            user = _uberRepository.Save(user);
+            user = await _uberRepository.Save(user);
             return user.Preferences;
         }
 
-        private Entities.User FindUser(string userId)
+        private async Task<Entities.User> FindUser(string userId)
         {
-            return FindUserById(userId) ?? throw new EntityNotFoundException(userId);
+            return await FindUserById(userId) ?? throw new EntityNotFoundException(userId);
         }
 
-        private Entities.User? FindUserById(string userId)
+        private async Task<Entities.User?> FindUserById(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
-            var users = _uberRepository.Find<Entities.User>(u => u.Id.Equals(userId));
+            var users = await _uberRepository.Find<Entities.User>(u => u.Id.Equals(userId));
             return users.FirstOrDefault();
         }
     }

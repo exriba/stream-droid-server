@@ -26,16 +26,16 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             var userService = new UserService(_authApi.Object, _uberRepository);
 
-            Assert.ThrowsAny<ArgumentException>(() => userService.FindById(userId));
+            Assert.ThrowsAnyAsync<ArgumentException>(async() => await userService.FindById(userId));
         }
 
         [Fact]
-        public void UserService_FindById()
+        public async Task UserService_FindById()
         {
-            var user = CreateUser();
-
+            var user = await CreateUser();
             var userService = new UserService(_authApi.Object, _uberRepository);
-            var entity = userService.FindById(user.Id);
+
+            var entity = await userService.FindById(user.Id);
 
             Assert.Equal(user.Id, entity!.Id);
         }
@@ -48,13 +48,13 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             var userService = new UserService(_authApi.Object, _uberRepository);
             
-            Assert.ThrowsAnyAsync<ArgumentException>(async () => await userService.Authenticate(code));
+            Assert.ThrowsAnyAsync<ArgumentException>(async() => await userService.Authenticate(code));
         }
 
         [Fact]
         public async Task UserService_Authenticate()
         {
-            var user = CreateUser();
+            var user = await CreateUser();
             var accessTokenResponseJson = new JsonObject
             {
                 { "AccessToken", user.AccessToken },
@@ -73,7 +73,6 @@ namespace StreamDroid.Domain.Tests.Services.User
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(accessTokenResponse!));
-
             _authApi.Setup(x => x.ValidateAccessTokenAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
@@ -87,41 +86,41 @@ namespace StreamDroid.Domain.Tests.Services.User
         }
 
         [Fact]
-        public void UserService_CreateTokenRefreshPolicy()
+        public async Task UserService_CreateTokenRefreshPolicy()
         {
-            var user = CreateUser();
-
+            var user = await CreateUser();
             var userService = new UserService(_authApi.Object, _uberRepository);
-            var policy = userService.CreateTokenRefreshPolicy(user.Id);
+
+            var policy = await userService.CreateTokenRefreshPolicy(user.Id);
 
             Assert.NotNull(policy.Policy);
             Assert.Equal(2, policy.ContextData.Keys.Count);
         }
 
         [Fact]
-        public void UserService_UpdatePreferences_Throws_InvalidArgs()
+        public async Task UserService_UpdatePreferences_Throws_InvalidArgs()
         {
-            var user = CreateUser();
+            var user = await CreateUser();
             Preferences? preferences = null;
-
             var userService = new UserService(_authApi.Object, _uberRepository);
 
-            Assert.ThrowsAny<ArgumentException>(() => userService.UpdatePreferences(user.Id, preferences));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async() 
+                => await userService.UpdatePreferences(user.Id, preferences));
         }
 
         [Fact]
-        public void UserService_UpdatePreferences()
+        public async Task UserService_UpdatePreferences()
         {
-            var user = CreateUser();
+            var user = await CreateUser();
             var preferences = new Preferences();
-
             var userService = new UserService(_authApi.Object, _uberRepository);
-            var data = userService.UpdatePreferences(user.Id, preferences);
+
+            var data = await userService.UpdatePreferences(user.Id, preferences);
 
             Assert.Equal(preferences, data);
         }
 
-        private Core.Entities.User CreateUser()
+        private async Task<Core.Entities.User> CreateUser()
         {
             var user = new Core.Entities.User
             {
@@ -131,7 +130,7 @@ namespace StreamDroid.Domain.Tests.Services.User
                 RefreshToken = "accessToken"
             };
              
-            return _uberRepository.Save(user);
+            return await _uberRepository.Save(user);
         }
     }
 }
