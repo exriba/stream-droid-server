@@ -30,7 +30,7 @@ namespace StreamDroid.Infrastructure.Persistence
             Guard.Against.Null(expression);
 
             var collection = _database.GetCollection<T>();
-            var entities = collection.FindAll().ToList();
+            var entities = collection.Find(expression).ToList();
             return Task.FromResult<IReadOnlyCollection<T>>(entities);
         }
 
@@ -52,6 +52,6 @@ namespace StreamDroid.Infrastructure.Persistence
             return Task.CompletedTask;
         }
 
-        public virtual void Dispose() => _database?.Dispose();
+        public void Dispose() => _database?.Dispose();
     }
 }
