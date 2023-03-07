@@ -99,7 +99,7 @@ namespace StreamDroid.Domain.Services.User
                             FileName = new
                             {
                                 a.FileName.Name,
-                                Extension = a.FileName.Extension == Extension.MP3 ? MediaExtension.MP3.Name : MediaExtension.MP4.Name
+                                MediaExtension = a.FileName.Extension == Extension.MP3 ? MediaExtension.MP3 : MediaExtension.MP4
                             }
                         };
                     })
