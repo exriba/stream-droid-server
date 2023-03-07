@@ -11,6 +11,9 @@ using System.ComponentModel.DataAnnotations;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Shared.Extensions;
+using System.Text.Json;
+using System.Text;
+using System.Net.Mime;
 
 namespace StreamDroid.Application.API.User
 {
@@ -61,6 +64,23 @@ namespace StreamDroid.Application.API.User
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
             var loginUrl = AuthUtils.GenerateAuthorizationUrl(_coreSettings.ClientId, _coreSettings.RedirectUri, _coreSettings.Scopes, encodedState);
             return Redirect(loginUrl);
+        }
+
+        [HttpGet("me/export")]
+        public async Task<IActionResult> DataExport()
+        {
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
+            var json = await _userService.DataExport(claim.Value);
+            
+            var stream = new MemoryStream();
+            var writer = new Utf8JsonWriter(stream);
+            json.WriteTo(writer);
+            writer.Flush();
+            writer.Dispose();
+
+            stream.Seek(0, SeekOrigin.Begin);
+
+            return File(stream, MediaTypeNames.Application.Json, "StreamDroid.json");
         }
 
         [HttpPost("logout")]

@@ -7,6 +7,9 @@ using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.Exceptions;
 using SharpTwitch.Auth;
 using StreamDroid.Domain.DTOs;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using StreamDroid.Core.Enums;
 
 namespace StreamDroid.Domain.Services.User
 {
@@ -71,6 +74,43 @@ namespace StreamDroid.Domain.Services.User
             user = await _uberRepository.Save(user);
 
             return user.Preferences;
+        }
+
+        public async Task<JsonObject> DataExport(string userId)
+        {
+            var user = await FindUser(userId);
+            var userDto = UserDto.FromEntity(user);
+            var rewards = await _uberRepository.Find<Entities.Reward>(r => r.StreamerId.Equals(userId));
+            var rewardsExt = rewards.Select(r =>
+            {
+                return new
+                {
+                    r.Id,
+                    r.Title,
+                    r.Prompt,
+                    r.Speech,
+                    r.ImageUrl,
+                    r.BackgroundColor,
+                    Assets = r.Assets.Select(a =>
+                    {
+                        return new
+                        {
+                            a.Volume,
+                            FileName = new
+                            {
+                                a.FileName.Name,
+                                MediaExtension = a.FileName.Extension == Extension.MP3 ? MediaExtension.MP3 : MediaExtension.MP4
+                            }
+                        };
+                    })
+                };
+            });
+
+            return new JsonObject
+            {
+                { "user", JsonSerializer.SerializeToNode(userDto) },
+                { "rewards", JsonSerializer.SerializeToNode(rewardsExt) }
+            };
         }
 
         private async Task<Entities.User> FindUser(string userId)
