@@ -15,7 +15,7 @@ using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Application.Tests.API.User
 {
-    public class UserControllerTests : TestFixture
+    public class UserControllerTests : IClassFixture<TestFixture>
     {
         private const string ID = "Id";
         private const string REFERER = "Referer";
@@ -25,7 +25,7 @@ namespace StreamDroid.Application.Tests.API.User
         private readonly UserController _userController;
         private readonly Mock<IUserService> _mockUserService;
 
-        public UserControllerTests() : base()
+        public UserControllerTests()
         {
             var id = Guid.NewGuid();
             var user = CreateUser(id);
@@ -42,7 +42,7 @@ namespace StreamDroid.Application.Tests.API.User
             mockCoreSettings.Setup(x => x.Scopes).Returns(new List<Scope> { Scope.BITS_READ } );
 
             _mockUserService = new Mock<IUserService>();
-            _mockUserService.Setup(x => x.FindById(It.IsAny<string>())).ReturnsAsync(user);
+            _mockUserService.Setup(x => x.FindUserByIdAsync(It.IsAny<string>())).ReturnsAsync(user);
 
             _userController = new UserController(_mockUserService.Object, mockCoreSettings.Object, mockLogger.Object)
             {
@@ -56,19 +56,19 @@ namespace StreamDroid.Application.Tests.API.User
         }
 
         [Fact]
-        public async Task UserController_Index()
+        public async Task UserController_FindUserByIdAsync()
         {
-            var result = await _userController.Index();
+            var result = await _userController.FindUserByIdAsync();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public async Task UserController_UpdatePreferences()
+        public async Task UserController_UpdateUserPreferencesAsync()
         {
             var preferences = new Preferences();
 
-            var result = await _userController.UpdatePreferences(preferences);
+            var result = await _userController.UpdateUserPreferencesAsync(preferences);
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
@@ -82,11 +82,11 @@ namespace StreamDroid.Application.Tests.API.User
         }
 
         [Fact]
-        public void UserController_AuthError()
+        public void UserController_AuthenticationError()
         {
             var encryptedState = "state".Base64Encrypt();
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
-            var result = _userController.AuthError("error", "errorDescription", encodedState);
+            var result = _userController.AuthenticationError("error", "errorDescription", encodedState);
 
             Assert.Equal(typeof(RedirectResult), result.GetType());
         }
@@ -96,7 +96,9 @@ namespace StreamDroid.Application.Tests.API.User
             return new UserDto
             {
                 Id = id.ToString(),
-                Name = "Name"
+                Name = "Name",
+                UserKey = Guid.NewGuid(),
+                Preferences = new Preferences()
             };
         }
     }

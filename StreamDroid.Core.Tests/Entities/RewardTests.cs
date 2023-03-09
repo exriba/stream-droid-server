@@ -6,10 +6,13 @@ namespace StreamDroid.Core.Tests.Entities
 {
     public class RewardTests
     {
-        private const string MP4_FILE = "file.mp4";
+        private const string TITLE = "Reward";
+        private const string MP4FILE = "file.mp4";
+        private const string DESCRIPTION = "Description";
+        private const string BACKGROUND_COLOR = "#6441A4";
 
         [Theory]
-        [InlineData("Reward", "Description", "red")]
+        [InlineData(TITLE, DESCRIPTION, BACKGROUND_COLOR)]
         public void Reward_Created(string title, string prompt, string backgroundColor)
         {
             var speech = new Speech();
@@ -25,6 +28,7 @@ namespace StreamDroid.Core.Tests.Entities
             Assert.Equal(prompt, reward.Prompt); 
             Assert.Equal(streamerId, reward.StreamerId);
             Assert.Equal(backgroundColor, reward.BackgroundColor);
+            Assert.Empty(reward.Redemptions);
         }
 
         [Fact]
@@ -52,7 +56,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_AddAsset_Throws_DuplicateAsset()
         {
             var reward = CreateReward();
-            var fileName = FileName.FromString(MP4_FILE);
+            var fileName = FileName.FromString(MP4FILE);
 
             reward.AddAsset(fileName, 100);
 
@@ -63,7 +67,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_AddAsset()
         {
             var reward = CreateReward();
-            var fileName = FileName.FromString(MP4_FILE);
+            var fileName = FileName.FromString(MP4FILE);
 
             reward.AddAsset(fileName, 100);
 
@@ -85,7 +89,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_GetAsset()
         {
             var reward = CreateReward();
-            var fileName = FileName.FromString(MP4_FILE);
+            var fileName = FileName.FromString(MP4FILE);
             reward.AddAsset(fileName, 100);
 
             var asset = reward.GetAsset(fileName.ToString());
@@ -97,7 +101,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_GetRandomAsset()
         {
             var reward = CreateReward();
-            var fileName = FileName.FromString(MP4_FILE);
+            var fileName = FileName.FromString(MP4FILE);
             reward.AddAsset(fileName, 100);
 
             var asset = reward.GetRandomAsset();
@@ -120,7 +124,7 @@ namespace StreamDroid.Core.Tests.Entities
         public void Reward_RemoveAsset()
         {
             var reward = CreateReward();
-            var fileName = FileName.FromString(MP4_FILE);
+            var fileName = FileName.FromString(MP4FILE);
             reward.AddAsset(fileName, 100);
 
             reward.RemoveAsset(fileName.ToString());

@@ -13,9 +13,11 @@ namespace StreamDroid.Core.Entities
 
         public string BackgroundColor { get; set; } = string.Empty;
 
-        public string StreamerId { get; set; } = string.Empty;
+        public string StreamerId { get; init; } = string.Empty;
 
         public Speech Speech { get; set; } = new Speech();
+
+        public IReadOnlyCollection<Redemption> Redemptions { get; private init; } = new List<Redemption>();
 
         private string? _imageUrl;
         public string? ImageUrl
@@ -30,9 +32,9 @@ namespace StreamDroid.Core.Entities
         }
 
         private ISet<Asset> _assets = new HashSet<Asset>();
-        public IReadOnlyList<Asset> Assets
+        public IReadOnlySet<Asset> Assets
         {
-            get => _assets.ToList();
+            get => _assets.ToHashSet();
             private set
             {
                 if (value is null)

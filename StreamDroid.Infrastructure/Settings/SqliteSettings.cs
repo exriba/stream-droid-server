@@ -1,7 +1,9 @@
 ﻿namespace StreamDroid.Infrastructure.Settings
 {
-    public abstract class PersistenceSettings
+    public class SqliteSettings
     {
+        public const string Key = "SqliteSettings";
+
         public string ConnectionString { get; set; } = string.Empty;
     }
 }

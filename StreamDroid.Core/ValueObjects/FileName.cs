@@ -5,39 +5,35 @@ namespace StreamDroid.Core.ValueObjects
 {
     public sealed class FileName : ValueObject
     {
-        public string Name { get; private set; }
-        public Extension Extension { get; private set; }
+        public string Name { get; private init; }
+        public MediaExtension MediaExtension { get; private init; }
 
-        public FileName(string name, Extension extension)
+        public FileName(string name, MediaExtension mediaExtension)
         {
             Guard.Against.NullOrWhiteSpace(name, nameof(name));
+            Guard.Against.Null(mediaExtension, nameof(mediaExtension));
 
             Name = name.Trim();
-            Extension = extension;
+            MediaExtension = mediaExtension;
         }
 
         public static FileName FromString(string fileName)
         {
             Guard.Against.NullOrWhiteSpace(fileName, nameof(fileName));
 
-            var fileExtension = Path.GetExtension(fileName);
-            Guard.Against.NullOrWhiteSpace(fileExtension, nameof(fileExtension));
-
+            var fileExtension = Path.GetExtension(fileName).Substring(1);
+            var mediaExtension = MediaExtension.FromName(fileExtension.ToUpper());
             var filename = Path.GetFileNameWithoutExtension(fileName);
             Guard.Against.NullOrWhiteSpace(filename, nameof(filename));
-
-            if (!Enum.TryParse(fileExtension[1..].ToUpper(), out Extension extension))
-                throw new ArgumentException("Invalid file extension.");
-
-            return new FileName(filename, extension);
+            return new FileName(filename, mediaExtension);
         }
 
-        public override string ToString() => $"{Name}{Extension.GetExtension()}";
+        public override string ToString() => $"{Name}{MediaExtension}";
 
         protected override IEnumerable<object> GetEqualityComponents()
         {
             yield return Name;
-            yield return Extension;
+            yield return MediaExtension;
         }
     }
 }

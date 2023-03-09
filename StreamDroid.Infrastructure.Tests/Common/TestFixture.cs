@@ -1,28 +1,33 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using StreamDroid.Core.Entities;
 using StreamDroid.Infrastructure.Persistence;
-using StreamDroid.Infrastructure.Settings;
 
 namespace StreamDroid.Infrastructure.Tests.Common
 {
-    public abstract class TestFixture : IDisposable
+    public sealed class TestFixture : IDisposable
     {
-        private readonly string _filePath;
-        protected readonly LiteDbUberRepository _uberRepository;
+        private const string FilePath = "Common/appsettings.Test.json";
 
-        protected TestFixture()
+        private readonly ServiceProvider _serviceProvider;
+        internal readonly IRepository<Reward> rewardRepository;
+
+        public TestFixture()
         {
-            _filePath = @$"{Directory.GetCurrentDirectory()}/database.db";
-            var fileStream = new FileStream(_filePath, FileMode.Create);
-            fileStream.Dispose();
-            var liteDbSettings = new LiteDbSettings(){ ConnectionString = $"Filename={_filePath}" };
-            IOptions<LiteDbSettings> options = Options.Create(liteDbSettings);
-            _uberRepository = new LiteDbUberRepository(options);
+            using var configurationManager = new ConfigurationManager();
+            configurationManager.SetBasePath(Directory.GetCurrentDirectory())
+                                .AddJsonFile(FilePath)
+                                .Build();
+
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddInfrastructureConfiguration(configurationManager);
+            _serviceProvider = serviceCollection.BuildServiceProvider();
+            rewardRepository = _serviceProvider.GetRequiredService<IRepository<Reward>>();
         }
 
         public void Dispose()
         {
-            _uberRepository.Dispose();
-            File.Delete(_filePath);
+            _serviceProvider.Dispose();
         }
     }
 }

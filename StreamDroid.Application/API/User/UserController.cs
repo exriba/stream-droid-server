@@ -28,27 +28,13 @@ namespace StreamDroid.Application.API.User
         private readonly ICoreSettings _coreSettings;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, ICoreSettings coreSettings, ILogger<UserController> logger)
+        public UserController(IUserService userService, 
+                              ICoreSettings coreSettings, 
+                              ILogger<UserController> logger)
         {
             _logger = logger;
             _userService = userService;
             _coreSettings = coreSettings;
-        }
-
-        [HttpGet("me")]
-        public async Task<IActionResult> Index()
-        {
-            var claim = User.Claims.First(c => c.Type.Equals(ID));
-            var me = await _userService.FindById(claim.Value);
-            return Ok(me);
-        }
-
-        [HttpPost("me/preferences")]
-        public async Task<IActionResult> UpdatePreferences([Required][FromBody] Preferences preferences)
-        {
-            var claim = User.Claims.First(c => c.Type.Equals(ID));
-            var userPreferences = await _userService.UpdatePreferences(claim.Value, preferences);
-            return Ok(userPreferences);
         }
 
         [AllowAnonymous]
@@ -64,7 +50,7 @@ namespace StreamDroid.Application.API.User
         }
 
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> LogoutAsync()
         {
             await HttpContext.SignOutAsync();
             return Ok();
@@ -73,13 +59,13 @@ namespace StreamDroid.Application.API.User
         [AllowAnonymous]
         [HttpGet("redirect")]
         [QueryParameter("code", "state")]
-        public async Task<IActionResult> AuthSuccess([FromQuery] string code, 
-                                                     [FromQuery] string state)
+        public async Task<IActionResult> AuthenticationSuccessAsync([FromQuery] string code, 
+                                                                    [FromQuery] string state)
         {
             var encryptedState = Base64UrlEncoder.Decode(state);
             var referer = encryptedState.Base64Decrypt();
 
-            var user = await _userService.Authenticate(code);
+            var user = await _userService.AuthenticateUserAsync(code);
 
             var claims = new List<Claim>
             {
@@ -103,14 +89,30 @@ namespace StreamDroid.Application.API.User
 
         [AllowAnonymous]
         [HttpGet("redirect")]
-        public IActionResult AuthError([FromQuery] string error, 
-                                       [FromQuery(Name = "error_description")] string errorDescription, 
-                                       [FromQuery] string state)
+        public IActionResult AuthenticationError([FromQuery] string error, 
+                                                 [FromQuery(Name = "error_description")] string errorDescription, 
+                                                 [FromQuery] string state)
         {
             _logger.LogError("Error ocurred during login {error}. Details: {errorDescription}.", error, errorDescription);
             var encryptedState = Base64UrlEncoder.Decode(state);
             var referer = encryptedState.Base64Decrypt();
             return Redirect(referer);
+        }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> FindUserByIdAsync()
+        {
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
+            var user = await _userService.FindUserByIdAsync(claim.Value);
+            return Ok(user);
+        }
+
+        [HttpPost("me/preferences")]
+        public async Task<IActionResult> UpdateUserPreferencesAsync([Required][FromBody] Preferences preferences)
+        {
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
+            var userPreferences = await _userService.UpdateUserPreferencesAsync(claim.Value, preferences);
+            return Ok(userPreferences);
         }
     }
 }

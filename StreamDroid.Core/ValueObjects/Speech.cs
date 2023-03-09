@@ -2,9 +2,9 @@
 {
     public sealed class Speech : ValueObject
     {
-        public bool Enabled { get; } 
+        public bool Enabled { get; private init; } 
 
-        public int VoiceIndex { get; }
+        public int VoiceIndex { get; private init; }
 
         public Speech(bool enabled = false, int voiceIndex = 0) 
         {

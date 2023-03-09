@@ -6,9 +6,9 @@ namespace StreamDroid.Domain.Services.User
 {
     public interface IUserService
     {
-        Task<UserDto?> FindById(string userId);
-        Task<UserDto> Authenticate(string code);
-        Task<TokenRefreshPolicy> CreateTokenRefreshPolicy(string userId);
-        Task<Preferences> UpdatePreferences(string userId, Preferences preferences);
+        Task<UserDto?> FindUserByIdAsync(string userId);
+        Task<UserDto> AuthenticateUserAsync(string code);
+        Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId);
+        Task<Preferences> UpdateUserPreferencesAsync(string userId, Preferences preferences);
     }
 }
