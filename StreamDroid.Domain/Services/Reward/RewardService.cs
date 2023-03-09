@@ -15,86 +15,56 @@ namespace StreamDroid.Domain.Services.Reward
     {
         private readonly HelixApi _helixApi;
         private readonly IUserService _userService;
-        private readonly IUberRepository _uberRepository;
+        private readonly IRepository<Entities.Reward> _repository;
 
-        public RewardService(HelixApi helixApi, IUserService userService, IUberRepository uberRepository)
+        public RewardService(HelixApi helixApi, 
+                             IUserService userService, 
+                             IRepository<Entities.Reward> repository)
         {
             _helixApi = helixApi;
+            _repository = repository;
             _userService = userService;
-            _uberRepository = uberRepository;
         }
 
-        public async Task<RewardDto> FindRewardById(string rewardId)
+        #region Rewards
+        public async Task<RewardDto> FindRewardByIdAsync(Guid rewardId)
         {
-            var reward = await FindById(rewardId);
+            var reward = await FetchRewardAsync(rewardId);
             return RewardDto.FromEntity(reward);
         }
 
-        public async Task<IReadOnlyCollection<Asset>> FindAssetsByRewardId(string rewardId)
-        {
-            var reward = await FindById(rewardId);
-            return reward.Assets;
-        }
-
-        public async Task<IReadOnlyCollection<RewardDto>> FindRewardsByUserId(string userId)
+        public async Task<IReadOnlyCollection<RewardDto>> FindRewardsByStreamerIdAsync(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
 
-            var entities = await _uberRepository.Find<Entities.Reward>(r => r.StreamerId.Equals(userId));
+            var entities = await _repository.FindAsync(r => r.StreamerId.Equals(userId));
             var rewards = entities.AsQueryable(); 
             return rewards.ProjectToType<RewardDto>().ToList();
         }
 
-        public async Task UpdateRewardSpeech(string rewardId, Speech speech)
+        public async Task UpdateRewardSpeechAsync(Guid rewardId, Speech speech)
         {
-            var reward = await FindById(rewardId);
-
+            var reward = await FetchRewardAsync(rewardId);
             reward.Speech = speech;
-            await _uberRepository.Save(reward);
+            await _repository.UpdateAsync(reward);
         }
 
-        public async Task<Tuple<string, IReadOnlyCollection<Asset>>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap)
+        public async Task SynchronizeRewardsAsync(string userId)
         {
-            var reward = await FindById(rewardId);
-            var assets = new List<Asset>();
+            var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicyAsync(userId);
 
-            foreach (var entry in fileMap)
-            {
-                var asset = reward.AddAsset(entry.Key, entry.Value);
-                assets.Add(asset);
-            }
-
-            await _uberRepository.Save(reward);
-
-            return Tuple.Create<string, IReadOnlyCollection<Asset>>(reward.Title, assets);
-        }
-
-        public async Task RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames)
-        {
-            var reward = await FindById(rewardId);
-
-            foreach (var fileName in fileNames)
-                reward.RemoveAsset(fileName.ToString());
-
-            await _uberRepository.Save(reward);
-        }
-
-        public async Task SyncRewards(string userId)
-        {
-            var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicy(userId);
-
-            var users = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+            var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
                 await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-            if (users.Any())
+            if (twitchUsers.Any())
             {
-                var user = users.First();
+                var twitchUser = twitchUsers.First();
 
-                if (user.UserBroadcasterType is not BroadcasterType.NORMAL)
+                if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
                 {
-                    var data = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None);
+                    var twitchRewards = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None);
 
-                    var externalRewards = data.Select(customReward =>
+                    var rewards = twitchRewards.Select(customReward =>
                     {
                         var imageUrl = customReward.Image == null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
                         return new Entities.Reward
@@ -109,33 +79,71 @@ namespace StreamDroid.Domain.Services.Reward
                         };
                     });
 
-                    foreach (var reward in externalRewards)
+                    foreach (var reward in rewards)
                     {
-                        var rewards = await _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(reward.Id));
+                        var rewardId = Guid.Parse(reward.Id);
+                        var rewardEntity = await FetchRewardByIdAsync(rewardId);
 
-                        if (!rewards.Any())
-                            await _uberRepository.Save(reward);
+                        if (rewardEntity is null)
+                            await _repository.AddAsync(reward);
                         else
                         {
-                            var current = rewards.First();
-                            current.Title = reward.Title;
-                            current.Prompt = reward.Prompt;
-                            current.ImageUrl = reward.ImageUrl;
-                            current.BackgroundColor = reward.BackgroundColor;
-                            current.Speech = new Speech(reward.Speech.Enabled, current.Speech.VoiceIndex);
-                            await _uberRepository.Save(current);
+                            rewardEntity.Title = reward.Title;
+                            rewardEntity.Prompt = reward.Prompt;
+                            rewardEntity.ImageUrl = reward.ImageUrl;
+                            rewardEntity.BackgroundColor = reward.BackgroundColor;
+                            rewardEntity.Speech = new Speech(reward.Speech.Enabled, rewardEntity.Speech.VoiceIndex);
+                            await _repository.UpdateAsync(rewardEntity);
                         }
                     }
                 }
             }
         }
+        #endregion
 
-        private async Task<Entities.Reward> FindById(string rewardId)
+        #region Assets
+        public async Task<IReadOnlyCollection<Asset>> FindAssetsByRewardIdAsync(Guid rewardId)
         {
-            Guard.Against.NullOrWhiteSpace(rewardId, nameof(rewardId));
-
-            var rewards = await _uberRepository.Find<Entities.Reward>(r => r.Id.Equals(rewardId));
-            return rewards.Any() ? rewards.First() : throw new EntityNotFoundException(rewardId);
+            var reward = await FetchRewardAsync(rewardId);
+            return reward.Assets;
         }
+
+        public async Task<Tuple<string, IReadOnlyCollection<Asset>>> AddAssetsToRewardAsync(Guid rewardId, IDictionary<FileName, int> fileMap)
+        {
+            var reward = await FetchRewardAsync(rewardId);
+            var assets = new List<Asset>();
+
+            foreach (var entry in fileMap)
+            {
+                var asset = reward.AddAsset(entry.Key, entry.Value);
+                assets.Add(asset);
+            }
+
+            await _repository.UpdateAsync(reward);
+            return Tuple.Create<string, IReadOnlyCollection<Asset>>(reward.Title, assets);
+        }
+
+        public async Task RemoveAssetsFromRewardAsync(Guid rewardId, IEnumerable<FileName> fileNames)
+        {
+            var reward = await FetchRewardAsync(rewardId);
+            foreach (var fileName in fileNames)
+                reward.RemoveAsset(fileName.ToString());
+            await _repository.UpdateAsync(reward);
+        }
+        #endregion
+
+        #region Helpers
+        private async Task<Entities.Reward> FetchRewardAsync(Guid rewardId)
+        {
+            return await FetchRewardByIdAsync(rewardId) ?? throw new EntityNotFoundException(rewardId.ToString());
+        }
+
+        private async Task<Entities.Reward?> FetchRewardByIdAsync(Guid rewardId)
+        {
+            if (rewardId == Guid.Empty)
+                throw new ArgumentException("Invalid Reward Id.", nameof(rewardId));
+            return await _repository.FindByIdAsync(rewardId.ToString());
+        }
+        #endregion
     }
 }

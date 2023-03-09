@@ -130,8 +130,8 @@ namespace StreamDroid.Application.Services
             _logger.LogInformation("Received custom reward add notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
-            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            await SaveReward(customReward, uberRepository);
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Reward>>();
+            await SaveReward(customReward, repository);
         }
 
         private async void OnCustomRewardUpdate(object? sender, CustomRewardUpdateArgs e)
@@ -141,15 +141,14 @@ namespace StreamDroid.Application.Services
             _logger.LogInformation("Received custom reward update notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
-            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            await SaveReward(customReward, uberRepository);
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Reward>>();
+            await SaveReward(customReward, repository);
         }
 
-        private static async Task SaveReward(CustomReward customReward, IUberRepository uberRepository)
+        private static async Task SaveReward(CustomReward customReward, IRepository<Reward> repository)
         {
             // var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
-            var rewards = await uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
-            var reward = rewards.FirstOrDefault();
+            var reward = await repository.FindByIdAsync(customReward.Id);
 
             if (reward is not null)
             {
@@ -158,6 +157,7 @@ namespace StreamDroid.Application.Services
                 reward.Prompt = customReward.Prompt;
                 reward.BackgroundColor = customReward.BackgroundColor;
                 reward.Speech = new Speech(customReward.IsUserInputRequired, reward.Speech.VoiceIndex);
+                await repository.UpdateAsync(reward);
             }
             else
             {
@@ -171,9 +171,8 @@ namespace StreamDroid.Application.Services
                     BackgroundColor = customReward.BackgroundColor,
                     Speech = new Speech(customReward.IsUserInputRequired)
                 };
+                await repository.AddAsync(reward);
             }
-
-            await uberRepository.Save(reward);
         }
 
         private async void OnCustomRewardRemove(object? sender, CustomRewardRemoveArgs e)
@@ -183,12 +182,8 @@ namespace StreamDroid.Application.Services
             _logger.LogInformation("Received custom reward delete notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
-            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            var rewards = await uberRepository.Find<Reward>(r => r.Id.Equals(customReward.Id));
-            var reward = rewards.FirstOrDefault();
-
-            if (reward is not null)
-                await uberRepository.Delete(reward);
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Reward>>();
+            await repository.DeleteAsync(customReward.Id);
         }
 
         private async void OnChannelPointsCustomRewardRedemption(object? sender, CustomRewardRedemptionArgs e)
@@ -199,13 +194,11 @@ namespace StreamDroid.Application.Services
                 redemption.BroadcasterUserName, redemption.UserName, redemption.Reward.Title, redemption.RedeemedAt);
 
             using var scope = _serviceScopeFactory.CreateScope();
-            var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-            var rewards = await uberRepository.Find<Reward>(r => r.Id.Equals(redemption.Reward.Id));
+            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Reward>>();
+            var reward = await repository.FindByIdAsync(redemption.Reward.Id);
 
-            if (!rewards.Any())
+            if (reward is null)
                 return;
-
-            var reward = rewards.First();
 
             if (reward.Speech.Enabled)
             {
@@ -231,7 +224,7 @@ namespace StreamDroid.Application.Services
                 AssetUri = new Uri(string.Join("/", _appSettings.StaticAssetUri, reward.Title, asset.ToString())),
             };
 
-            if (asset.FileName.Extension.Equals(Extension.MP3))
+            if (asset.FileName.MediaExtension.Equals(MediaExtension.MP3))
                 await _hubContext.Clients.All.SendAsync(AUDIO_EVENT, data);
             else
                 await _hubContext.Clients.All.SendAsync(VIDEO_EVENT, data);
@@ -243,18 +236,18 @@ namespace StreamDroid.Application.Services
             {
                 using var scope = _serviceScopeFactory.CreateScope();
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-                var uberRepository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
-                var users = await uberRepository.FindAll<User>();
+                var repository = scope.ServiceProvider.GetRequiredService<IRepository<User>>();
+                var users = await repository.FindAsync();
 
                 while (!users.Any())
                 {
-                    await Task.Delay(1000, cancellationToken);
-                    users = await uberRepository.FindAll<User>();
+                    await Task.Delay(10000, cancellationToken);
+                    users = await repository.FindAsync();
                 }
 
                 var user = users.First();
 
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicy(user.Id);
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(user.Id);
 
                 var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context => 
                     await _helixApi.Users.GetUsersAsync(Array.Empty<string>(), tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);

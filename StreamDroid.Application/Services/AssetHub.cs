@@ -6,11 +6,11 @@ namespace StreamDroid.Application.Services
 {
     public sealed class AssetHub : Hub
     {
-        private readonly IUberRepository _uberRepository;
+        private readonly IRepository<User> _repository;
         
-        public AssetHub(IUberRepository uberRepository)
+        public AssetHub(IRepository<User> repository)
         {
-            _uberRepository = uberRepository;
+            _repository = repository;
         }
 
         // Create connection map from this to support multiple users
@@ -20,7 +20,7 @@ namespace StreamDroid.Application.Services
             {
                 if (Guid.TryParse(id.ToString(), out var guid))
                 {
-                    var users = await _uberRepository.Find<User>(u => u.UserKey.Equals(guid.ToString()));
+                    var users = await _repository.FindAsync(u => u.UserKey.Equals(guid));
 
                     if (users.Any())
                     {

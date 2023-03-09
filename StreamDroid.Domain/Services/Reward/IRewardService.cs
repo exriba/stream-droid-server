@@ -5,12 +5,17 @@ namespace StreamDroid.Domain.Services.Reward
 {
     public interface IRewardService
     {
-        Task SyncRewards(string userId);
-        Task<RewardDto> FindRewardById(string rewardId);
-        Task UpdateRewardSpeech(string rewardId, Speech speech);
-        Task<IReadOnlyCollection<Asset>> FindAssetsByRewardId(string rewardId);
-        Task<IReadOnlyCollection<RewardDto>> FindRewardsByUserId(string userId);
-        Task<Tuple<string, IReadOnlyCollection<Asset>>> AddRewardAssets(string rewardId, IDictionary<FileName, int> fileMap);
-        Task RemoveRewardAssets(string rewardId, IEnumerable<FileName> fileNames);
+        #region Rewards
+        Task<RewardDto> FindRewardByIdAsync(Guid rewardId);
+        Task<IReadOnlyCollection<RewardDto>> FindRewardsByStreamerIdAsync(string userId);
+        Task UpdateRewardSpeechAsync(Guid rewardId, Speech speech);
+        Task SynchronizeRewardsAsync(string userId);
+        #endregion
+
+        #region Assets
+        Task<IReadOnlyCollection<Asset>> FindAssetsByRewardIdAsync(Guid rewardId);
+        Task RemoveAssetsFromRewardAsync(Guid rewardId, IEnumerable<FileName> fileNames);
+        Task<Tuple<string, IReadOnlyCollection<Asset>>> AddAssetsToRewardAsync(Guid rewardId, IDictionary<FileName, int> fileMap);
+        #endregion
     }
 }

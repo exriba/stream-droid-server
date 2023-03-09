@@ -5,13 +5,13 @@ namespace StreamDroid.Domain.DTOs
 {
     public class RewardDto : BaseDto<RewardDto, Reward>
     {
-        public Guid Id { get; set; } = Guid.Empty;
-        public string Title { get; set; } = string.Empty;
-        public string Prompt { get; set; } = string.Empty;
-        public string? ImageUrl { get; set; }
-        public string BackgroundColor { get; set; } = string.Empty;
-        public string StreamerId { get; set; } = string.Empty;
-        public Speech Speech { get; set; } = new Speech();
+        public Guid Id { get; init; } = Guid.Empty;
+        public string Title { get; init; } = string.Empty;
+        public string Prompt { get; init; } = string.Empty;
+        public string? ImageUrl { get; init; }
+        public string BackgroundColor { get; init; } = string.Empty;
+        public string StreamerId { get; init; } = string.Empty;
+        public Speech Speech { get; init; } = new Speech();
 
         public override void AddCustomMappings()
         {

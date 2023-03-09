@@ -27,7 +27,7 @@ else
     builder.Logging.AddLog4Net();
 
 // Add Services to the Container.
-builder.Services.AddHostedService<EventSubHostedService>();
+// builder.Services.AddHostedService<EventSubHostedService>();
 builder.Services.AddTwitchCore(builder.Configuration);
 builder.Services.AddTwitchEventSub();
 builder.Services.AddDirectoryBrowser();

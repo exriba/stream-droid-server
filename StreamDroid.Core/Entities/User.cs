@@ -11,15 +11,7 @@ namespace StreamDroid.Core.Entities
 
         public Preferences Preferences { get; set; } = new Preferences();
 
-        private string _userKey = string.Empty;
-        public string UserKey
-        {
-            get => _userKey;
-            set
-            {
-                _userKey = string.IsNullOrWhiteSpace(value) ? Guid.NewGuid().ToString() : value;
-            }
-        }
+        public Guid UserKey { get; private init; } = Guid.NewGuid();
 
         private string _accessToken = string.Empty;
         public string AccessToken
