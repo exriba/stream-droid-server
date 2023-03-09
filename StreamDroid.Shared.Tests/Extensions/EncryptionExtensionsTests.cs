@@ -3,12 +3,10 @@ using StreamDroid.Shared.Tests.Common;
 
 namespace StreamDroid.Shared.Tests.Extensions
 {
-    public class EncryptionExtensionsTests : TestFixture
+    public class EncryptionExtensionsTests : IClassFixture<TestFixture>
     {
         private const string TEXT = "EncryptMe";
         private const string SECRET_KEY = "/A?D(G+KbPeShVmY";
-
-        public EncryptionExtensionsTests() : base() { }
 
         [Theory]
         [InlineData("")]

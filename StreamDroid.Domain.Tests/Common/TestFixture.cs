@@ -1,50 +1,44 @@
 ﻿using Mapster;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using StreamDroid.Domain.DTOs;
+using StreamDroid.Infrastructure;
 using StreamDroid.Infrastructure.Persistence;
-using StreamDroid.Infrastructure.Settings;
 using StreamDroid.Shared;
-using System.Reflection;
+using StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Tests.Common
 {
-    public abstract class TestFixture : IDisposable
+    public sealed class TestFixture : IDisposable
     {
-        private static bool Initialized;
-        private readonly string _filePath;
+        private const string FilePath = "Common/appsettings.Test.json";
 
-        protected readonly LiteDbUberRepository _uberRepository;
+        private readonly ServiceProvider _serviceProvider;
+        internal readonly IRepository<User> userRepository;
+        internal readonly IRepository<Reward> rewardRepository;
 
-        protected TestFixture(string databaseName)
+        public TestFixture()
         {
-            if (!Initialized)
-            {
-                var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
-                Assembly applicationAssembly = typeof(BaseDto<,>).Assembly;
-                typeAdapterConfig.Scan(applicationAssembly);
-                Initialized = true;
-            }
-
-            _filePath = @$"{Directory.GetCurrentDirectory()}/{databaseName}";
-            var fileStream = new FileStream(_filePath, FileMode.Create);
-            fileStream.Dispose();
-
-            var liteDbSettings = new LiteDbSettings() { ConnectionString = $"Filename={_filePath}" };
-            IOptions<LiteDbSettings> options = Options.Create(liteDbSettings);
-            _uberRepository = new LiteDbUberRepository(options);
+            var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
+            var applicationAssembly = typeof(BaseDto<,>).Assembly;
+            typeAdapterConfig.Scan(applicationAssembly);
 
             using var configurationManager = new ConfigurationManager();
             configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("Common/appsettings.Test.json")
-                .Build();
+                                .AddJsonFile(FilePath)
+                                .Build();
             configurationManager.Configure();
+
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddInfrastructureConfiguration(configurationManager);
+            _serviceProvider = serviceCollection.BuildServiceProvider();
+            userRepository = _serviceProvider.GetRequiredService<IRepository<User>>();
+            rewardRepository = _serviceProvider.GetRequiredService<IRepository<Reward>>();
         }
 
         public void Dispose()
         {
-            _uberRepository.Dispose();
-            File.Delete(_filePath);
+            _serviceProvider.Dispose();
         }
     }
 }

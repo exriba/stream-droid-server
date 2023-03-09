@@ -4,10 +4,8 @@ using StreamDroid.Shared.Extensions;
 
 namespace StreamDroid.Core.Tests.Entities
 {
-    public class UserTests : TestFixture
+    public class UserTests : IClassFixture<TestFixture>
     {
-        public UserTests() : base() { }
-
         [Fact]
         public void User_Created()
         {
@@ -17,16 +15,15 @@ namespace StreamDroid.Core.Tests.Entities
             {
                 Id = id,
                 Name = "User",
-                UserKey = null,
                 AccessToken = "encryptMe",
                 RefreshToken = "encryptMe"
             };
 
             Assert.Equal(id, user.Id);
-            Assert.NotNull(user.UserKey);
             Assert.True(user.AccessToken.IsBase64String());
             Assert.True(user.RefreshToken.IsBase64String());
             Assert.Equal(100, user.Preferences.DefaultVolume);
+            Assert.NotEqual(Guid.Empty, user.UserKey);
         }
     }
 }

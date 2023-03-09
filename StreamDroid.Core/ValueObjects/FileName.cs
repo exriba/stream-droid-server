@@ -21,8 +21,8 @@ namespace StreamDroid.Core.ValueObjects
         {
             Guard.Against.NullOrWhiteSpace(fileName, nameof(fileName));
 
-            var fileExtension = Path.GetExtension(fileName);
-            var mediaExtension = MediaExtension.FromName(fileExtension);
+            var fileExtension = Path.GetExtension(fileName).Substring(1);
+            var mediaExtension = MediaExtension.FromName(fileExtension.ToUpper());
             var filename = Path.GetFileNameWithoutExtension(fileName);
             Guard.Against.NullOrWhiteSpace(filename, nameof(filename));
             return new FileName(filename, mediaExtension);

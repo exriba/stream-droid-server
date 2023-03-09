@@ -29,8 +29,8 @@ namespace StreamDroid.Application.Tests.API.Reward
             var reward = CreateRewardDto(id);
             var rewards = new List<RewardDto> { reward };
             _mockRewardService = new Mock<IRewardService>();
-            _mockRewardService.Setup(x => x.FindRewardById(It.IsAny<string>())).ReturnsAsync(reward);
-            _mockRewardService.Setup(x => x.FindRewardsByUserId(It.IsAny<string>())).ReturnsAsync(rewards);
+            _mockRewardService.Setup(x => x.FindRewardByIdAsync(It.IsAny<Guid>())).ReturnsAsync(reward);
+            _mockRewardService.Setup(x => x.FindRewardsByStreamerIdAsync(It.IsAny<string>())).ReturnsAsync(rewards);
 
             _mockEnvironment = new Mock<IWebHostEnvironment>();
             _mockEnvironment.Setup(x => x.WebRootPath).Returns(".");
@@ -47,50 +47,53 @@ namespace StreamDroid.Application.Tests.API.Reward
         [Fact]
         public async Task RewardController_SyncRewards()
         {
-            _mockRewardService.Setup(x => x.SyncRewards(It.IsAny<string>())).Returns(Task.CompletedTask);
+            _mockRewardService.Setup(x => x.SynchronizeRewardsAsync(It.IsAny<string>()))
+                              .Returns(Task.CompletedTask);
 
-            var result = await _rewardController.SyncRewards();
+            var result = await _rewardController.SynchronizeRewardsAsync();
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }
 
         [Fact]
-        public async Task RewardController_Index()
+        public async Task RewardController_FindRewardsByStreamerIdAsync()
         {
-            var result = await _rewardController.Index();
+            var result = await _rewardController.FindRewardsByStreamerIdAsync();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public async Task RewardController_GetReward()
+        public async Task RewardController_FindRewardByIdAsync()
         {
-            var result = await _rewardController.GetReward(Guid.NewGuid());
+            var result = await _rewardController.FindRewardByIdAsync(Guid.NewGuid());
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public async Task RewardController_GetRewardAssets()
+        public async Task RewardController_FindAssetsByRewardIdAsync()
         {
             var id = Guid.NewGuid();
 
-            var result = await _rewardController.GetRewardAssets(id);
+            var result = await _rewardController.FindAssetsByRewardIdAsync(id);
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
-        public async Task RewardController_AddAssets()
+        public async Task RewardController_AddAssetsToRewardAsync()
         {
             var id = Guid.NewGuid();
             var tuple = CreateAssets(id);
 
             var mockFile = new Mock<IFormFile>();
             mockFile.Setup(x => x.FileName).Returns(tuple.Item2.First().FileName.ToString());
-            _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).ReturnsAsync(tuple);
 
-            var result = await _rewardController.AddAssets(id, new AssetForm { Files = new IFormFile[] { mockFile.Object } });
+            _mockRewardService.Setup(x => x.AddAssetsToRewardAsync(It.IsAny<Guid>(), It.IsAny<IDictionary<FileName, int>>()))
+                              .ReturnsAsync(tuple);
+
+            var result = await _rewardController.AddAssetsToRewardAsync(id, new AssetForm { Files = new IFormFile[] { mockFile.Object } });
 
             Assert.Equal(typeof(CreatedAtActionResult), result.GetType());
 
@@ -103,18 +106,18 @@ namespace StreamDroid.Application.Tests.API.Reward
         }
 
         [Fact]
-        public async Task RewardController_UpdateSpeech()
+        public async Task RewardController_UpdateRewardSpeechAsync()
         {
             var id = Guid.NewGuid();
             var speech = new Speech();
 
-            var result = await _rewardController.UpdateSpeech(id, speech);
+            var result = await _rewardController.UpdateRewardSpeechAsync(id, speech);
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }
 
         [Fact]
-        public async Task RewardController_UpdateAssets()
+        public async Task RewardController_UpdateAssetsFromRewardAsync()
         {
             var id = Guid.NewGuid();
             var tuple = CreateAssets(id);
@@ -122,20 +125,22 @@ namespace StreamDroid.Application.Tests.API.Reward
             {
                 { "file.mp4", 50 }
             };
-            _mockRewardService.Setup(x => x.AddRewardAssets(It.IsAny<string>(), It.IsAny<IDictionary<FileName, int>>())).ReturnsAsync(tuple);
 
-            var result = await _rewardController.UpdateAssets(id, dictionary);
+            _mockRewardService.Setup(x => x.AddAssetsToRewardAsync(It.IsAny<Guid>(), It.IsAny<IDictionary<FileName, int>>()))
+                              .ReturnsAsync(tuple);
+
+            var result = await _rewardController.UpdateAssetsFromRewardAsync(id, dictionary);
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }
 
         [Fact]
-        public async Task RewardController_DeleteAsset()
+        public async Task RewardController_RemoveAssetsFromRewardAsync()
         {
             var id = Guid.NewGuid();
             var tuple = CreateAssets(id);
 
-            var result = await _rewardController.DeleteAsset(id, tuple.Item2.First().FileName.ToString());
+            var result = await _rewardController.RemoveAssetsFromRewardAsync(id, tuple.Item2.First().FileName.ToString());
 
             Assert.Equal(typeof(OkResult), result.GetType());
         }
@@ -145,7 +150,12 @@ namespace StreamDroid.Application.Tests.API.Reward
             return new RewardDto
             {
                 Id = id,
-                Title = "Title"
+                Title = "Title",
+                Prompt = "Prompt",
+                ImageUrl = null,
+                Speech = new Speech(),
+                StreamerId = id.ToString(),
+                BackgroundColor = "#6441A4"
             };
         }
 
