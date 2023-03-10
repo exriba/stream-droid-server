@@ -7,19 +7,29 @@ using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.Exceptions;
 using SharpTwitch.Auth;
 using StreamDroid.Domain.DTOs;
+using StreamDroid.Domain.Services.Stream;
+using SharpTwitch.Helix;
+using SharpTwitch.Core.Enums;
+using StreamDroid.Core.Enums;
 
 namespace StreamDroid.Domain.Services.User
 {
     public sealed class UserService : IUserService
     {
         private readonly IAuthApi _authApi;
+        private readonly HelixApi _helixApi;
+        private readonly ITwitchEventSub _twitchEventSub;
         private readonly IRepository<Entities.User> _repository;
 
-        public UserService(IAuthApi authApi, 
+        public UserService(HelixApi helixApi,
+                           IAuthApi authApi,
+                           ITwitchEventSub twitchEventSub,
                            IRepository<Entities.User> repository)
         {
             _authApi = authApi;
+            _helixApi = helixApi;
             _repository = repository;
+            _twitchEventSub = twitchEventSub;
         }
 
         public async Task<UserDto?> FindUserByIdAsync(string userId)
@@ -34,7 +44,22 @@ namespace StreamDroid.Domain.Services.User
 
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
-            var user = await FetchUserByIdAsync(userData.UserId);
+            var userDetailsTask = _helixApi.Users.GetUsersAsync(Array.Empty<string>(), token.AccessToken, CancellationToken.None);
+            var userTask = FetchUserByIdAsync(userData.UserId);
+            var userDetails = await userDetailsTask;
+            var user = await userTask;
+
+            var userBroadcasterType = userDetails.First().UserBroadcasterType;
+            static UserType convert(BroadcasterType userBroadcasterType)
+            {
+                return userBroadcasterType switch
+                {
+                    BroadcasterType.NORMAL => UserType.NORMAL,
+                    BroadcasterType.AFFILIATE => UserType.AFFILIATE,
+                    BroadcasterType.PARTNER => UserType.PARTNER,
+                    _ => throw new ArgumentException($"Invalid User Broadcaster Type ({userBroadcasterType})")
+                };
+            }
 
             if (user is null)
             {
@@ -42,6 +67,7 @@ namespace StreamDroid.Domain.Services.User
                 {
                     Id = userData.UserId,
                     Name = userData.Login,
+                    UserType = convert(userBroadcasterType),
                     AccessToken = token.AccessToken,
                     RefreshToken = token.RefreshToken,
                 };
@@ -52,7 +78,13 @@ namespace StreamDroid.Domain.Services.User
             user.Name = userData.Login;
             user.AccessToken = token.AccessToken;
             user.RefreshToken = token.RefreshToken;
+            user.UserType = convert(userBroadcasterType);
             user = await _repository.UpdateAsync(user);
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            Task.Run(async () => await _twitchEventSub.ConnectAsync(user)).ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            
             return UserDto.FromEntity(user);
         }
 

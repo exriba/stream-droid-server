@@ -7,12 +7,20 @@ using System.Text.Json;
 using SharpTwitch.Auth;
 using System.Text.Json.Nodes;
 using Entities = StreamDroid.Core.Entities;
+using StreamDroid.Domain.Services.Stream;
+using SharpTwitch.Helix;
+using SharpTwitch.Core.Settings;
+using SharpTwitch.Core;
+using SharpTwitch.Helix.Models;
+using SharpTwitch.Core.Enums;
+using HelixModels = SharpTwitch.Helix.Models;
 
 namespace StreamDroid.Domain.Tests.Services.User
 {
     [Collection(TestCollectionFixture.Definition)]
     public class UserServiceTests
     {
+        private readonly Mock<IApiCore> _apiCore;
         private readonly Mock<IAuthApi> _authApi;
         private readonly UserService _userService;
         private readonly TestFixture _testFixture;
@@ -21,7 +29,11 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             _testFixture = testFixture;
             _authApi = new Mock<IAuthApi>();
-            _userService = new UserService(_authApi.Object, _testFixture.userRepository);
+            _apiCore = new Mock<IApiCore>();
+            var coreSettings = new Mock<ICoreSettings>();
+            var twitchEventSub = new Mock<ITwitchEventSub>();
+            var helixApi = new HelixApi(coreSettings.Object, _apiCore.Object);
+            _userService = new UserService(helixApi, _authApi.Object, twitchEventSub.Object, _testFixture.userRepository);
         }
 
         [Theory]
@@ -73,15 +85,30 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString());;
 
+            var helixUser = new SharpTwitch.Helix.Models.User.User
+            {
+                BroadcasterType = string.Empty
+            };
+
+            var helixUserCollectionResponse = new HelixCollectionResponse<HelixModels.User.User>
+            {
+                Data = new HelixModels.User.User[] { helixUser }
+            };
+
             _authApi.Setup(x => x.GetAccessTokenFromCodeAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(accessTokenResponse!));
-
+                .ReturnsAsync(accessTokenResponse!);
             _authApi.Setup(x => x.ValidateAccessTokenAsync(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(validateTokenResponse!));
+                .ReturnsAsync(validateTokenResponse!);
+            _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<HelixModels.User.User>>(
+                    It.IsAny<UrlFragment>(),
+                    It.IsAny<IDictionary<Header, string>>(),
+                    It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(helixUserCollectionResponse);
 
             var userDto = await _userService.AuthenticateUserAsync(user.AccessToken);
 

@@ -1,5 +1,6 @@
 ﻿using Ardalis.GuardClauses;
 using StreamDroid.Core.Common;
+using StreamDroid.Core.Enums;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Shared.Extensions;
 
@@ -10,6 +11,8 @@ namespace StreamDroid.Core.Entities
         public string Name { get; set; } = string.Empty;
 
         public Preferences Preferences { get; set; } = new Preferences();
+
+        public UserType UserType { get; set; } = UserType.NORMAL;
 
         public Guid UserKey { get; private init; } = Guid.NewGuid();
 

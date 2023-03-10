@@ -54,14 +54,16 @@ namespace StreamDroid.Core.Entities
             Speech = new Speech(false, Speech.VoiceIndex);
         }
 
-        public Asset? GetRandomAsset()
+        public bool TryGetRandomAsset(out Asset? asset)
         {
+            asset = null;
             if (_assets.Count is 0)
-                return null;
+                return false;
 
             var random = new Random();
             var index = random.Next(_assets.Count);
-            return _assets.ToList()[index];
+            asset = _assets.ToList()[index];
+            return true;
         }
 
         public Asset? GetAsset(string assetName)

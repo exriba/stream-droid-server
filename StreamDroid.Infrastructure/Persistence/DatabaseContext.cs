@@ -6,8 +6,9 @@ namespace StreamDroid.Infrastructure.Persistence
     internal class DatabaseContext : DbContext
     {
         public DatabaseContext(DbContextOptions options) : base(options)
-        {
-            Database.EnsureCreated();
+        {            
+            if (!Database.EnsureCreated())
+                Database.Migrate();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
