@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace StreamDroid.Infrastructure.Persistence
 {
-    public interface IRepository<TEntity> where TEntity : EntityBase
+    public interface IRepository<TEntity> : IDisposable where TEntity : EntityBase
     {
         Task<TEntity?> FindByIdAsync(string id);
         Task<IReadOnlyCollection<TEntity>> FindAsync(Expression<Func<TEntity, bool>>? expression = null);

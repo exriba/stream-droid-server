@@ -58,5 +58,10 @@ namespace StreamDroid.Infrastructure.Persistence
                 await _databaseContext.SaveChangesAsync();
             }
         }
+
+        public void Dispose()
+        {
+            _databaseContext.Dispose();
+        }
     }
 }

@@ -176,7 +176,7 @@ namespace StreamDroid.Domain.Services.Stream
         {
             // var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
             using var scope = _serviceScopeFactory.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
+            using var repository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
             var reward = await repository.FindByIdAsync(customReward.Id);
 
             if (reward is not null)
@@ -210,7 +210,7 @@ namespace StreamDroid.Domain.Services.Stream
             _logger.LogInformation("Received custom reward delete notification. Reward: {id} - {name}", customReward.Id, customReward.Title);
 
             using var scope = _serviceScopeFactory.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
+            using var repository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
             await repository.DeleteAsync(customReward.Id);
         }
 
@@ -221,8 +221,8 @@ namespace StreamDroid.Domain.Services.Stream
                 redeem.BroadcasterUserName, redeem.UserName, redeem.Reward.Title, redeem.RedeemedAt);
 
             using var scope = _serviceScopeFactory.CreateScope();
-            var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
-            var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Redemption>>();
+            using var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
+            using var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Redemption>>();
             var reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
 
             if (reward is null)
