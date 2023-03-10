@@ -480,3 +480,4 @@ $RECYCLE.BIN/
 NuGet.Config
 **/appsettings.*.json
 [Dd]atabase/
+Migrations/

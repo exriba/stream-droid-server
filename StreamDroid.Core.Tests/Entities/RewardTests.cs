@@ -98,15 +98,28 @@ namespace StreamDroid.Core.Tests.Entities
         }
 
         [Fact]
-        public void Reward_GetRandomAsset()
+        public void Reward_TryGetRandomAsset_False()
+        {
+            var reward = CreateReward();
+
+            var exists = reward.TryGetRandomAsset(out var asset);
+
+            Assert.Null(asset);
+            Assert.False(exists);
+        }
+
+        [Fact]
+        public void Reward_TryGetRandomAsset_True()
         {
             var reward = CreateReward();
             var fileName = FileName.FromString(MP4FILE);
             reward.AddAsset(fileName, 100);
 
-            var asset = reward.GetRandomAsset();
+            var exists = reward.TryGetRandomAsset(out var asset);
 
-            Assert.Equal(asset?.ToString(), fileName.ToString());
+            Assert.True(exists);
+            Assert.NotNull(asset);
+            Assert.Equal(asset.ToString(), fileName.ToString());
         }
 
         [Theory]

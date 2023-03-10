@@ -4,20 +4,20 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Net;
 using StreamDroid.Shared;
 using StreamDroid.Application.Settings;
-using StreamDroid.Application.Services;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
 using SharpTwitch.EventSub;
 using SharpTwitch.Core;
 using StreamDroid.Application;
+using StreamDroid.Domain.Services.Stream;
+using Microsoft.Extensions.Options;
+using StreamDroid.Domain.Settings;
+
+const string LOGOUT_PATH = "/logout";
+const string COOKIE_NAME = "StreamDroid";
+const string HUB_PATTERN = "/hubs/events/{id}";
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add Shared Configuration
-builder.Configuration.Configure();
-
-// Add Configuration Options
-builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
 
 // Add Logging
 builder.Logging.ClearProviders();
@@ -26,13 +26,19 @@ if (builder.Environment.IsDevelopment())
 else
     builder.Logging.AddLog4Net();
 
+// Add Shared Configuration
+builder.Configuration.Configure();
+
+// Add Configuration Options
+builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
+
 // Add Services to the Container.
-// builder.Services.AddHostedService<EventSubHostedService>();
-builder.Services.AddTwitchCore(builder.Configuration);
-builder.Services.AddTwitchEventSub();
-builder.Services.AddDirectoryBrowser();
+builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddInfrastructureConfiguration(builder.Configuration);
 builder.Services.AddServiceConfiguration();
+builder.Services.AddDirectoryBrowser();
+builder.Services.AddTwitchCore(builder.Configuration);
+builder.Services.AddTwitchEventSub();
 builder.Services.AddHttpClient();
 builder.Services.AddSignalR();
 builder.Services.AddControllers()
@@ -55,9 +61,9 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 }).AddCookie(options =>
 {
-    options.LogoutPath = "/logout";
+    options.LogoutPath = LOGOUT_PATH;
     options.SlidingExpiration = true;
-    options.Cookie.Name = "StreamDroid";
+    options.Cookie.Name = COOKIE_NAME;
     options.Events.OnRedirectToLogin = (context) =>
     {
         context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
@@ -76,7 +82,7 @@ app.UseAuthentication();
 app.UseStaticFileServer();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<AssetHub>("/hubs/events/{id}");
+app.MapHub<AssetHub>(HUB_PATTERN);
 if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 else

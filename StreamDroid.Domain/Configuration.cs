@@ -6,6 +6,7 @@ using SharpTwitch.Helix;
 using Mapster;
 using StreamDroid.Domain.DTOs;
 using System.Reflection;
+using StreamDroid.Domain.Services.Stream;
 
 namespace StreamDroid.Domain
 {
@@ -22,6 +23,7 @@ namespace StreamDroid.Domain
             // services.AddSingleton<IMemoryCache, MemoryCache>(); // Review
             services.AddTwitchAuth();
             services.AddTwitchHelix();
+            services.AddSingleton<ITwitchEventSub, TwitchEventSub>();
             services.AddScoped<IRewardService, RewardService>();
             services.AddScoped<IUserService, UserService>();
             return services;

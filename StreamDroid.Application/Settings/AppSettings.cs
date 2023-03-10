@@ -1,6 +1,8 @@
-﻿namespace StreamDroid.Application.Settings
+﻿using StreamDroid.Domain.Settings;
+
+namespace StreamDroid.Application.Settings
 {
-    public class AppSettings
+    public class AppSettings : IAppSettings
     {
         public const string Key = "AppSettings";
 
