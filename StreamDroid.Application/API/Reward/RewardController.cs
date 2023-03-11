@@ -34,7 +34,6 @@ namespace StreamDroid.Application.API.Reward
             return Ok(rewards);
         }
 
-        [AllowAnonymous]
         [HttpGet("{rewardId}")]
         public async Task<IActionResult> FindRewardByIdAsync([FromRoute] Guid rewardId)
         {

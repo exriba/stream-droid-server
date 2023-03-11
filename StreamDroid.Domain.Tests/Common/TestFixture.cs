@@ -16,6 +16,7 @@ namespace StreamDroid.Domain.Tests.Common
         private readonly ServiceProvider _serviceProvider;
         internal readonly IRepository<User> userRepository;
         internal readonly IRepository<Reward> rewardRepository;
+        internal readonly IRedemptionRepository redemptionRepository;
 
         public TestFixture()
         {
@@ -34,10 +35,12 @@ namespace StreamDroid.Domain.Tests.Common
             _serviceProvider = serviceCollection.BuildServiceProvider();
             userRepository = _serviceProvider.GetRequiredService<IRepository<User>>();
             rewardRepository = _serviceProvider.GetRequiredService<IRepository<Reward>>();
+            redemptionRepository = _serviceProvider.GetRequiredService<IRedemptionRepository>();
         }
 
         public void Dispose()
         {
+            redemptionRepository.Dispose();
             userRepository.Dispose();
             rewardRepository.Dispose();
             _serviceProvider.Dispose();

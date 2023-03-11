@@ -4,7 +4,8 @@ using StreamDroid.Infrastructure.Tests.Common;
 
 namespace StreamDroid.Infrastructure.Tests.Persistence
 {
-    public class RewardRepositoryTests : IClassFixture<TestFixture>
+    [Collection(TestCollectionFixture.Definition)]
+    public class RewardRepositoryTests
     {
         private readonly IRepository<Reward> _repository;
 
@@ -26,7 +27,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         public async Task FindByIdAsync()
         {
             var id = Guid.NewGuid();
-            await CreateReward(id);
+            await SetupDataAsync(id);
 
             var reward = await _repository.FindByIdAsync(id.ToString());
 
@@ -37,7 +38,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         public async Task FindAsync()
         {
             var id = Guid.NewGuid();
-            await CreateReward(id);
+            await SetupDataAsync(id);
 
             var rewards = await _repository.FindAsync();
 
@@ -48,7 +49,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         public async Task FindAsync_Expression()
         {
             var id = Guid.NewGuid();
-            await CreateReward(id);
+            await SetupDataAsync(id);
 
             var rewards = await _repository.FindAsync(x => x.Id.Equals(id.ToString()));
 
@@ -73,9 +74,10 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         public async Task UpdateAsync()
         {
             var id = Guid.NewGuid();
-            var reward = await CreateReward(id);
-            reward.Title = "Test2";
+            await SetupDataAsync(id);
 
+            var reward = await _repository.FindByIdAsync(id.ToString());
+            reward!.Title = "Test2";
             var updatedReward = await _repository.UpdateAsync(reward);
 
             Assert.Equal(reward.Title, updatedReward.Title);
@@ -85,15 +87,15 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         public async Task DeleteAsync()
         {
             var id = Guid.NewGuid();
-            var reward = await CreateReward(id);
+            await SetupDataAsync(id);
 
             await _repository.DeleteAsync(id.ToString());
-            reward = await _repository.FindByIdAsync(id.ToString());
+            var reward = await _repository.FindByIdAsync(id.ToString());
 
             Assert.Null(reward);
         }
 
-        private async Task<Reward> CreateReward(Guid id)
+        private async Task SetupDataAsync(Guid id)
         {
             var reward = new Reward
             {
@@ -105,7 +107,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
                 BackgroundColor = "#6441A4",
             };
 
-            return await _repository.AddAsync(reward);
+            await _repository.AddAsync(reward);
         }
     }
 }
