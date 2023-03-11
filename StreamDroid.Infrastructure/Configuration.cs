@@ -20,7 +20,7 @@ namespace StreamDroid.Infrastructure
             services.AddDbContext<DatabaseContext>(options => options.UseSqlite(sqliteSettings.ConnectionString));
             services.AddScoped<IRepository<User>, Repository<User>>();
             services.AddScoped<IRepository<Reward>, Repository<Reward>>();
-            services.AddScoped<IRepository<Redemption>, Repository<Redemption>>();
+            services.AddScoped<IRedemptionRepository, RedemptionRepository>();
             return services;
         }
     }

@@ -38,6 +38,15 @@ namespace StreamDroid.Domain.Services.Stream
             { SubscriptionStatus.WEBSOCKET_NETWORK_ERROR },
         };
 
+        private static readonly IReadOnlySet<SubscriptionType> SUBSCRIPTION_TYPES = new HashSet<SubscriptionType>
+        {
+            { SubscriptionType.STREAM_OFFLINE },
+            { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_ADD },
+            { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_UPDATE },
+            { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REMOVE },
+            { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REDEMPTION_ADD },
+        };
+
         private Entities.User _user = new();
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
@@ -101,13 +110,10 @@ namespace StreamDroid.Domain.Services.Stream
                 var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
                     await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-                var streamOffline = helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_OFFLINE, CancellationToken.None);
-                var customRewardsAdd = helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_ADD, CancellationToken.None);
-                var customRewardUpdate = helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_UPDATE, CancellationToken.None);
-                var customRewardRemove = helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REMOVE, CancellationToken.None);
-                var customRewardRedeem = helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REDEMPTION_ADD, CancellationToken.None);
+                var tasks = SUBSCRIPTION_TYPES.Select(x =>
+                    helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
 
-                await Task.WhenAll(streamOffline, customRewardsAdd, customRewardUpdate, customRewardRemove, customRewardRedeem);
+                await Task.WhenAll(tasks);
             }
         }
 
@@ -222,7 +228,7 @@ namespace StreamDroid.Domain.Services.Stream
 
             using var scope = _serviceScopeFactory.CreateScope();
             using var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
-            using var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Redemption>>();
+            using var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>();
             var reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
 
             if (reward is null)
@@ -275,12 +281,16 @@ namespace StreamDroid.Domain.Services.Stream
             var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
                 await helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
             var inactiveSubscriptions = helixSubscriptionResponse.Data.Where(x => INACTIVE_SUBSCRIPTION_STATUS.Contains(x.SubscriptionStatus)).ToList();
-
+                        
+            var tasks = new List<Task>();
             foreach (var subscription in inactiveSubscriptions)
             {
                 _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", subscription.Id, subscription.Type, subscription.CreatedAt);
-                await helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(subscription.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, subscription.Id, CancellationToken.None);
+                var task = helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(subscription.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, subscription.Id, CancellationToken.None);
+                tasks.Add(task);
             }
+
+            await Task.WhenAll(tasks);
         }
     }
 }

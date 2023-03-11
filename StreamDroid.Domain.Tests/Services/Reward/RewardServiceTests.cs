@@ -13,6 +13,7 @@ using StreamDroid.Domain.RefreshPolicy;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using Entities = StreamDroid.Core.Entities;
 using Helix = SharpTwitch.Helix.Models;
+using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Tests.Services.Reward
 {
@@ -22,36 +23,36 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         private readonly Mock<IApiCore> _apiCore;
         private readonly RewardService _rewardService;
         private readonly Mock<IUserService> _userService;
-        private readonly TestFixture _testFixture;
+        private readonly IRepository<Entities.Reward> _rewardRepository;
 
         public RewardServiceTests(TestFixture testFixture)
         {
-            _testFixture = testFixture;
             _apiCore = new Mock<IApiCore>();
             _userService = new Mock<IUserService>();
             var coreSettings = new Mock<ICoreSettings>();
+            _rewardRepository = testFixture.rewardRepository;
             var helixApi = new HelixApi(coreSettings.Object, _apiCore.Object);
-            _rewardService = new RewardService(helixApi, _userService.Object, _testFixture.rewardRepository);
+            _rewardService = new RewardService(helixApi, _userService.Object, _rewardRepository);
         }
 
         [Fact]
         public async Task RewardService_FindRewardByIdAsync()
         {
-            var reward = await CreateReward();
-            var rewardId = Guid.Parse(reward.Id);
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
 
-            var rewardDto = await _rewardService.FindRewardByIdAsync(rewardId);
+            var rewardDto = await _rewardService.FindRewardByIdAsync(id);
 
-            Assert.Equal(rewardId, rewardDto.Id);
+            Assert.Equal(id, rewardDto.Id);
         }
 
         [Fact]
         public async Task RewardService_FindAssetsByRewardIdAsync()
         {
-            var reward = await CreateReward();
-            var rewardId = Guid.Parse(reward.Id);
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
 
-            var assets = await _rewardService.FindAssetsByRewardIdAsync(rewardId);
+            var assets = await _rewardService.FindAssetsByRewardIdAsync(id);
 
             Assert.NotEmpty(assets);
         }
@@ -68,9 +69,11 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         [Fact]
         public async Task RewardService_FindRewardsByStreamerIdAsync()
         {
-            var reward = await CreateReward();
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
 
-            var rewards = await _rewardService.FindRewardsByStreamerIdAsync(reward.StreamerId);
+            var reward = await _rewardRepository.FindByIdAsync(id.ToString());
+            var rewards = await _rewardService.FindRewardsByStreamerIdAsync(reward!.StreamerId);
 
             Assert.NotEmpty(rewards);
         }
@@ -78,14 +81,12 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         [Fact]
         public async Task RewardService_UpdateRewardSpeechAsync()
         {
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
             var speech = new Speech(true);
-            var reward = await CreateReward();
-            var rewardId = Guid.Parse(reward.Id);
 
-            Assert.False(reward.Speech.Enabled);
-
-            await _rewardService.UpdateRewardSpeechAsync(rewardId, speech);
-            var rewardDto = await _rewardService.FindRewardByIdAsync(rewardId);
+            await _rewardService.UpdateRewardSpeechAsync(id, speech);
+            var rewardDto = await _rewardService.FindRewardByIdAsync(id);
 
             Assert.True(rewardDto.Speech.Enabled);
         }
@@ -93,36 +94,36 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         [Fact]
         public async Task RewardService_AddAssetsToRewardAsync()
         {
-            var reward = await CreateReward();
-            var rewardId = Guid.Parse(reward.Id);
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
             var dictionary = new Dictionary<FileName, int>
             {
                 { FileName.FromString("file.mp4"), 100 },
             };
 
-            var tuple = await _rewardService.AddAssetsToRewardAsync(rewardId, dictionary);
+            var tuple = await _rewardService.AddAssetsToRewardAsync(id, dictionary);
 
-            Assert.Equal(reward.Title, tuple.Item1);
+            Assert.Equal("Title", tuple.Item1);
             Assert.NotEmpty(tuple.Item2);
         }
 
         [Fact]
         public async Task RewardService_RemoveAssetsFromRewardAsync()
         {
-            var reward = await CreateReward();
-            var rewardId = Guid.Parse(reward.Id);
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
             var dictionary = new Dictionary<FileName, int>
             {
                 { FileName.FromString("file.mp4"), 100 },
             };
 
-            await _rewardService.AddAssetsToRewardAsync(rewardId, dictionary);
-            var assets = await _rewardService.FindAssetsByRewardIdAsync(rewardId);
+            await _rewardService.AddAssetsToRewardAsync(id, dictionary);
+            var assets = await _rewardService.FindAssetsByRewardIdAsync(id);
 
             Assert.Equal(2, assets.Count);
 
-            await _rewardService.RemoveAssetsFromRewardAsync(rewardId, dictionary.Keys);
-            assets = await _rewardService.FindAssetsByRewardIdAsync(rewardId);
+            await _rewardService.RemoveAssetsFromRewardAsync(id, dictionary.Keys);
+            assets = await _rewardService.FindAssetsByRewardIdAsync(id);
 
             Assert.Equal(1, assets.Count);
         }
@@ -191,10 +192,8 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             Assert.Equal(rewardDto.Speech.Enabled, customReward.IsUserInputRequired);
         }
 
-        private async Task<Entities.Reward> CreateReward()
+        private async Task SetupDataAsync(Guid id)
         {
-            var id = Guid.NewGuid();
-
             var reward = new Entities.Reward
             {
                 Id = id.ToString(),
@@ -206,7 +205,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 BackgroundColor = "#6441A4",
             };
             reward.AddAsset(FileName.FromString("file.mp3"), 100);
-            return await _testFixture.rewardRepository.AddAsync(reward);
+            await _rewardRepository.AddAsync(reward);
         }
     }
 }

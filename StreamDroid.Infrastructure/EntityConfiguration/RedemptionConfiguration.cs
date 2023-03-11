@@ -15,6 +15,8 @@ namespace StreamDroid.Infrastructure.EntityConfiguration
             builder.Property(x => x.UserName) 
                    .IsRequired();
             builder.Property(x => x.DateTime);
+
+            builder.HasIndex(x => x.DateTime);
         }
     }
 }

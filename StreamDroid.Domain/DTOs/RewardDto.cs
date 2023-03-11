@@ -3,7 +3,7 @@ using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Domain.DTOs
 {
-    public class RewardDto : BaseDto<RewardDto, Reward>
+    public sealed class RewardDto : BaseDto<RewardDto, Reward>
     {
         public Guid Id { get; init; } = Guid.Empty;
         public string Title { get; init; } = string.Empty;

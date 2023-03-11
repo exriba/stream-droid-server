@@ -11,8 +11,10 @@ using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Application.Tests.API.Reward
 {
-    public class RewardControllerTests
+    public class RewardControllerTests : IDisposable
     {
+        private const string ID = "Id";
+
         private readonly RewardController _rewardController;
         private readonly Mock<IRewardService> _mockRewardService;
         private readonly Mock<IWebHostEnvironment> _mockEnvironment;
@@ -21,7 +23,7 @@ namespace StreamDroid.Application.Tests.API.Reward
         {
             var claims = new List<Claim> 
             {
-                new Claim("Id", Guid.NewGuid().ToString())
+                new Claim(ID, Guid.NewGuid().ToString())
             };
             var claimsIdentity = new ClaimsIdentity(claims);
 
@@ -164,6 +166,11 @@ namespace StreamDroid.Application.Tests.API.Reward
             var reward = new Core.Entities.Reward { Id = id.ToString(), Title = "Title" };
             var asset = reward.AddAsset(FileName.FromString("file.mp4"), 100);
             return Tuple.Create<string, IReadOnlyCollection<Asset>>(reward.Title, new List<Asset> { asset });
+        }
+
+        public void Dispose()
+        {
+            _rewardController.Dispose();
         }
     }
 }

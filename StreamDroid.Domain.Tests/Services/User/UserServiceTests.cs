@@ -14,6 +14,7 @@ using SharpTwitch.Core;
 using SharpTwitch.Helix.Models;
 using SharpTwitch.Core.Enums;
 using HelixModels = SharpTwitch.Helix.Models;
+using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Tests.Services.User
 {
@@ -23,17 +24,17 @@ namespace StreamDroid.Domain.Tests.Services.User
         private readonly Mock<IApiCore> _apiCore;
         private readonly Mock<IAuthApi> _authApi;
         private readonly UserService _userService;
-        private readonly TestFixture _testFixture;
+        private readonly IRepository<Entities.User> _userRepository;
 
         public UserServiceTests(TestFixture testFixture)
         {
-            _testFixture = testFixture;
             _authApi = new Mock<IAuthApi>();
             _apiCore = new Mock<IApiCore>();
+            _userRepository = testFixture.userRepository;
             var coreSettings = new Mock<ICoreSettings>();
             var twitchEventSub = new Mock<ITwitchEventSub>();
             var helixApi = new HelixApi(coreSettings.Object, _apiCore.Object);
-            _userService = new UserService(helixApi, _authApi.Object, twitchEventSub.Object, _testFixture.userRepository);
+            _userService = new UserService(helixApi, _authApi.Object, twitchEventSub.Object, _userRepository);
         }
 
         [Theory]
@@ -48,11 +49,12 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_FindUserByIdAsync()
         {
-            var user = await CreateUser();
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
 
-            var entity = await _userService.FindUserByIdAsync(user.Id);
+            var entity = await _userService.FindUserByIdAsync(id.ToString());
 
-            Assert.Equal(user.Id, entity!.Id);
+            Assert.Equal(id.ToString(), entity!.Id);
         }
 
         [Theory]
@@ -67,7 +69,9 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_AuthenticateUserAsync()
         {
-            var user = await CreateUser();
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
+            var user = await _userRepository.FindByIdAsync(id.ToString());
 
             var accessTokenResponseJson = new JsonObject
             {
@@ -119,9 +123,10 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_CreateTokenRefreshPolicyAsync()
         {
-            var user = await CreateUser();
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
 
-            var policy = await _userService.CreateTokenRefreshPolicyAsync(user.Id);
+            var policy = await _userService.CreateTokenRefreshPolicyAsync(id.ToString());
 
             Assert.Equal(2, policy.ContextData.Keys.Count);
         }
@@ -130,33 +135,35 @@ namespace StreamDroid.Domain.Tests.Services.User
         [InlineData(null)]
         public async Task UserService_UpdateUserPreferencesAsync_Throws_InvalidArgs(Preferences preferences)
         {
-            var user = await CreateUser();
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
 
-            await Assert.ThrowsAnyAsync<ArgumentException>(async() => await _userService.UpdateUserPreferencesAsync(user.Id, preferences));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async() => await _userService.UpdateUserPreferencesAsync(id.ToString(), preferences));
         }
 
         [Fact]
         public async Task UserService_UpdateUserPreferencesAsync()
         {
-            var user = await CreateUser();
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
             var preferences = new Preferences();
 
-            var data = await _userService.UpdateUserPreferencesAsync(user.Id, preferences);
+            var data = await _userService.UpdateUserPreferencesAsync(id.ToString(), preferences);
 
             Assert.Equal(preferences, data);
         }
 
-        private async Task<Entities.User> CreateUser()
+        private async Task SetupDataAsync(Guid id)
         {
             var user = new Entities.User
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = id.ToString(),
                 Name = "user",
                 AccessToken = "accessToken",
                 RefreshToken = "accessToken"
             };
              
-            return await _testFixture.userRepository.AddAsync(user);
+            await _userRepository.AddAsync(user);
         }
     }
 }

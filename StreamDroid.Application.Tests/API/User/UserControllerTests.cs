@@ -15,7 +15,7 @@ using StreamDroid.Domain.DTOs;
 
 namespace StreamDroid.Application.Tests.API.User
 {
-    public class UserControllerTests : IClassFixture<TestFixture>
+    public class UserControllerTests : IClassFixture<TestFixture>, IDisposable
     {
         private const string ID = "Id";
         private const string REFERER = "Referer";
@@ -100,6 +100,11 @@ namespace StreamDroid.Application.Tests.API.User
                 UserKey = Guid.NewGuid(),
                 Preferences = new Preferences()
             };
+        }
+
+        public void Dispose()
+        {
+            _userController.Dispose();
         }
     }
  }
