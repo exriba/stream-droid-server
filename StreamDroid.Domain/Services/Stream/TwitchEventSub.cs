@@ -53,6 +53,8 @@ namespace StreamDroid.Domain.Services.Stream
         private readonly ILogger<TwitchEventSub> _logger;
         private readonly IHubContext<AssetHub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private static readonly SemaphoreSlim connectSemaphore = new(1, 1);
+        private static readonly SemaphoreSlim disconnectSemaphore = new(1, 1);
 
         public TwitchEventSub(EventSub eventSub,
                               IAppSettings appSettings,
@@ -80,20 +82,36 @@ namespace StreamDroid.Domain.Services.Stream
 
         public async Task ConnectAsync(Entities.User user)
         {
-            if (user.UserType == UserType.NORMAL || _eventSub.webSocketClient.Connected)
-                return;
+            await connectSemaphore.WaitAsync();
+            try
+            {
+                if (_eventSub.webSocketClient.Connected || user.UserType == UserType.NORMAL)
+                    return;
 
-            _user = user;
-            await _eventSub.ConnectAsync();
+                _user = user;
+                await _eventSub.ConnectAsync();
+            }
+            finally
+            {
+                connectSemaphore.Release();
+            }
         }
 
         public async Task DisconnectAsync(Entities.User user)
         {
-            if (user.UserType == UserType.NORMAL)
-                return;
+            await disconnectSemaphore.WaitAsync();
+            try
+            {
+                if (!_eventSub.webSocketClient.Connected || user.UserType == UserType.NORMAL)
+                    return;
 
-            await _eventSub.DisconnectAsync();
-            await ClearSubscriptionAsync(user);
+                await _eventSub.DisconnectAsync();
+                await ClearSubscriptionAsync(user);
+            }
+            finally
+            {
+                disconnectSemaphore.Release();
+            }
         }
 
         private async void OnClientConnected(object? sender, ClientConnectedArgs e)
