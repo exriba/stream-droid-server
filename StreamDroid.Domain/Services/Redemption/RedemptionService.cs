@@ -38,7 +38,7 @@ namespace StreamDroid.Domain.Services.Redemption
             {
                 var value = decimal.Divide(y.Count(), redemptions.Count);
                 var percentage = decimal.Multiply(value, 100);
-                var dto = UserRedemptionDto.FromEntity(redemptions.First());
+                var dto = UserRedemptionDto.FromEntity(y.First());
                 dto.Redeems = y.Count();
                 dto.Percentage = decimal.Round(percentage, 2, MidpointRounding.AwayFromZero);
                 return dto;
