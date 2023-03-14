@@ -198,14 +198,14 @@ namespace StreamDroid.Domain.Services.Stream
 
         private async Task SaveReward(CustomReward customReward)
         {
-            // var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
             using var scope = _serviceScopeFactory.CreateScope();
             using var repository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
+            var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
             var reward = await repository.FindByIdAsync(customReward.Id);
 
             if (reward is not null)
             {
-                // reward.ImageUrl = imageUrl;
+                reward.ImageUrl = imageUrl;
                 reward.Title = customReward.Title;
                 reward.Prompt = customReward.Prompt;
                 reward.BackgroundColor = customReward.BackgroundColor;
@@ -217,7 +217,7 @@ namespace StreamDroid.Domain.Services.Stream
                 reward = new Entities.Reward
                 {
                     Id = customReward.Id,
-                    // ImageUrl = imageUrl,
+                    ImageUrl = imageUrl,
                     Title = customReward.Title,
                     Prompt = customReward.Prompt,
                     StreamerId = customReward.BroadcasterUserId,
