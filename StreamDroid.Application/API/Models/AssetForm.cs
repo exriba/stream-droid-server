@@ -2,10 +2,19 @@
 
 namespace StreamDroid.Application.API.Models
 {
+    /// <summary>
+    /// Asset Form
+    /// </summary>
     public class AssetForm
     {
+        /// <summary>
+        /// Volume
+        /// </summary>
         public int Volume { get; set; } = 100;
 
+        /// <summary>
+        /// Files
+        /// </summary>
         [Required]
         [Constraints.FileExtensions(new string[] { ".mp3", ".mp4" })]
         public IEnumerable<IFormFile> Files { get; set; }

@@ -61,19 +61,19 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task RewardService_FindRewardsByStreamerIdAsync_Throws_InvalidArgs(string userId)
+        public async Task RewardService_FindRewardsByUserIdAsync_Throws_InvalidArgs(string userId)
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _rewardService.FindRewardsByStreamerIdAsync(userId));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _rewardService.FindRewardsByUserIdAsync(userId));
         }
 
         [Fact]
-        public async Task RewardService_FindRewardsByStreamerIdAsync()
+        public async Task RewardService_FindRewardsByUserIdAsync()
         {
             var id = Guid.NewGuid();
             await SetupDataAsync(id);
 
             var reward = await _rewardRepository.FindByIdAsync(id.ToString());
-            var rewards = await _rewardService.FindRewardsByStreamerIdAsync(reward!.StreamerId);
+            var rewards = await _rewardService.FindRewardsByUserIdAsync(reward!.StreamerId);
 
             Assert.NotEmpty(rewards);
         }

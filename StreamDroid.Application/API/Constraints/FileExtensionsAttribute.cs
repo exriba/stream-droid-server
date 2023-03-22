@@ -2,6 +2,9 @@
 
 namespace StreamDroid.Application.API.Constraints
 {
+    /// <summary>
+    /// File extension attribute.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property)]
     public class FileExtensionsAttribute : ValidationAttribute
     {
@@ -12,6 +15,12 @@ namespace StreamDroid.Application.API.Constraints
             _extensions = extensions;
         }
 
+        /// <summary>
+        /// Validates that each argument file contains a vakid extension.
+        /// </summary>
+        /// <param name="value">value</param>
+        /// <returns><see langword="true"/> if the files contain valid extensions. Otherwise returns <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentException">If any file has an invalid extension.</exception>
         public override bool IsValid(object? value)
         {
             var files = value as IEnumerable<IFormFile>;

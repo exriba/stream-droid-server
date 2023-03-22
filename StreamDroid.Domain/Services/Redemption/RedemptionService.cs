@@ -4,6 +4,9 @@ using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Services.Redemption
 {
+    /// <summary>
+    /// Default implementation of <see cref="IRedemptionService"/>.
+    /// </summary>
     public sealed class RedemptionService : IRedemptionService
     {
         private readonly IRedemptionRepository _repository;
@@ -13,11 +16,12 @@ namespace StreamDroid.Domain.Services.Redemption
             _repository = repository;
         }
 
-        public async Task<IReadOnlyList<RewardRedemptionDto>> FindRedemptionStatisticsByStreamerIdAsync(string streamerId)
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<RewardRedemptionDto>> FindRedemptionStatisticsByUserIdAsync(string userId)
         {
-            Guard.Against.NullOrWhiteSpace(streamerId, nameof(streamerId));
+            Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
 
-            var redemptions = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(streamerId));
+            var redemptions = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(userId));
             return redemptions.GroupBy(x => x.Reward, (x, y) =>
             {
                 var value = decimal.Divide(y.Count(), redemptions.Count);
@@ -28,6 +32,7 @@ namespace StreamDroid.Domain.Services.Redemption
             }).ToList();
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<UserRedemptionDto>> FindRedemptionStatisticsByRewardIdAsync(Guid rewardId)
         {
             if (rewardId == Guid.Empty)

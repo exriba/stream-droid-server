@@ -6,17 +6,35 @@ using StreamDroid.Shared.Extensions;
 
 namespace StreamDroid.Core.Entities
 {
-    public partial class User : EntityBase
+    /// <summary>
+    /// An entity that contains user details. 
+    /// </summary>
+    public class User : EntityBase
     {
+        /// <summary>
+        /// Name
+        /// </summary>
         public string Name { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Preferences
+        /// </summary>
         public Preferences Preferences { get; set; } = new Preferences();
 
+        /// <summary>
+        /// User type
+        /// </summary>
         public UserType UserType { get; set; } = UserType.NORMAL;
 
+        /// <summary>
+        /// User streaming key
+        /// </summary>
         public Guid UserKey { get; private init; } = Guid.NewGuid();
 
         private string _accessToken = string.Empty;
+        /// <summary>
+        /// Encrypted access token
+        /// </summary>
         public string AccessToken
         {
             get => _accessToken;
@@ -28,6 +46,9 @@ namespace StreamDroid.Core.Entities
         }
 
         private string _refreshToken = string.Empty;
+        /// <summary>
+        /// Encrypted access token
+        /// </summary>
         public string RefreshToken
         {
             get => _refreshToken;

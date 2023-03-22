@@ -2,6 +2,9 @@
 
 namespace StreamDroid.Domain.DTOs
 {
+    /// <summary>
+    /// DTO representation of a user redemption. See also <see cref="Redemption"/>.
+    /// </summary>
     public sealed class UserRedemptionDto : BaseDto<UserRedemptionDto, Redemption>
     {
         public int Id { get; set; }

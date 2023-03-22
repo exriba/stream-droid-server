@@ -5,38 +5,68 @@ using System.Text;
 
 namespace StreamDroid.Shared.Extensions
 {
+    /// <summary>
+    /// Utility class for encryption extensions.
+    /// </summary>
     public static class EncryptionExtensions
     {
         private static byte[] _key = Array.Empty<byte>();
 
+        /// <summary>
+        /// Initializes encryption properties. 
+        /// </summary>
+        /// <param name="encryptionSettings">encryption settings</param>
+        /// <exception cref="ArgumentNullException">If the encryption settings are null</exception>
         internal static void Configure(EncryptionSettings encryptionSettings)
         {
             Guard.Against.Null(encryptionSettings, nameof(encryptionSettings));
             _key = Encoding.UTF8.GetBytes(encryptionSettings.KeyPhrase);
         }
 
-        public static bool IsBase64String(this string text)
+        /// <summary>
+        /// Verifies whether or not a string is in base64.
+        /// </summary>
+        /// <param name="str">string</param>
+        /// <returns><see langword="true"/> if the string is in base64. Otherwise returns <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">If the string is null</exception>
+        /// <exception cref="ArgumentException">If the string is empty or whitespace string</exception>
+        public static bool IsBase64String(this string str)
         {
-            Guard.Against.NullOrWhiteSpace(text, nameof(text));
-            var buffer = new Span<byte>(new byte[text.Length]);
-            return Convert.TryFromBase64String(text, buffer, out _);
+            Guard.Against.NullOrWhiteSpace(str, nameof(str));
+            var buffer = new Span<byte>(new byte[str.Length]);
+            return Convert.TryFromBase64String(str, buffer, out _);
         }
 
-        public static string Base64Encrypt(this string text)
+        /// <summary>
+        /// Encrypts a string using the default key.
+        /// </summary>
+        /// <param name="str">string</param>
+        /// <returns>A base64 encrypted string.</returns>
+        /// <exception cref="ArgumentNullException">If the string is null</exception>
+        /// <exception cref="ArgumentException">If the string is empty or whitespace string</exception>
+        public static string Base64Encrypt(this string str)
         {
-            Guard.Against.NullOrWhiteSpace(text, nameof(text));
-            return Base64Encrypt(text, _key);
+            Guard.Against.NullOrWhiteSpace(str, nameof(str));
+            return Base64Encrypt(str, _key);
         }
 
-        public static string Base64Encrypt(this string text, string keyPhrase)
+        /// <summary>
+        /// Encrypts a string using the given key.
+        /// </summary>
+        /// <param name="str">string</param>
+        /// <param name="keyPhrase">keyphrase</param>
+        /// <returns>A base64 encrypted string.</returns>
+        /// <exception cref="ArgumentNullException">If the string or keyphrase is null</exception>
+        /// <exception cref="ArgumentException">If the string or keyphrase is empty or whitespace string</exception>
+        public static string Base64Encrypt(this string str, string keyPhrase)
         {
-            Guard.Against.NullOrWhiteSpace(text, nameof(text));
+            Guard.Against.NullOrWhiteSpace(str, nameof(str));
             Guard.Against.NullOrWhiteSpace(keyPhrase, nameof(keyPhrase));
             var key = Encoding.UTF8.GetBytes(keyPhrase);
-            return Base64Encrypt(text, key);
+            return Base64Encrypt(str, key);
         }
 
-        private static string Base64Encrypt(string text, byte[] key)
+        private static string Base64Encrypt(string str, byte[] key)
         {
             using var aesAlg = Aes.Create();
             using var encryptor = aesAlg.CreateEncryptor(key, aesAlg.IV);
@@ -44,7 +74,7 @@ namespace StreamDroid.Shared.Extensions
             using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
             using (var streamWriter = new StreamWriter(cryptoStream))
             {
-                streamWriter.Write(text);
+                streamWriter.Write(str);
             }
 
             var iv = aesAlg.IV;
@@ -57,23 +87,38 @@ namespace StreamDroid.Shared.Extensions
             return Convert.ToBase64String(result);
         }
 
-        public static string Base64Decrypt(this string cipherText)
+        /// <summary>
+        /// Decrypts an encrypted string using the default key.
+        /// </summary>
+        /// <param name="str">encrypted string</param>
+        /// <returns>A decrypted string.</returns>
+        /// <exception cref="ArgumentNullException">If the string is null</exception>
+        /// <exception cref="ArgumentException">If the string is empty or whitespace string</exception>
+        public static string Base64Decrypt(this string str)
         {
-            Guard.Against.NullOrWhiteSpace(cipherText, nameof(cipherText));
-            return Base64Decrypt(cipherText, _key);
+            Guard.Against.NullOrWhiteSpace(str, nameof(str));
+            return Base64Decrypt(str, _key);
         }
 
-        public static string Base64Decrypt(this string cipherText, string keyPhrase)
+        /// <summary>
+        /// Decrypts an encrypted string using the given key.
+        /// </summary>
+        /// <param name="str">encrypted string</param>
+        /// <param name="keyPhrase">keyphrase</param>
+        /// <returns>A decrypted string.</returns>
+        /// <exception cref="ArgumentNullException">If the string or keyphrase is null</exception>
+        /// <exception cref="ArgumentException">If the string or keyphrase is empty or whitespace string</exception>
+        public static string Base64Decrypt(this string str, string keyPhrase)
         {
-            Guard.Against.NullOrWhiteSpace(cipherText, nameof(cipherText));
+            Guard.Against.NullOrWhiteSpace(str, nameof(str));
             Guard.Against.NullOrWhiteSpace(keyPhrase, nameof(keyPhrase));
             var key = Encoding.UTF8.GetBytes(keyPhrase);
-            return Base64Decrypt(cipherText, key);
+            return Base64Decrypt(str, key);
         }
 
-        private static string Base64Decrypt(string cipherText, byte[] key)
+        private static string Base64Decrypt(string str, byte[] key)
         {
-            var encrypted = Convert.FromBase64String(cipherText);
+            var encrypted = Convert.FromBase64String(str);
 
             var iv = new byte[16];
             var cipher = new byte[encrypted.Length - iv.Length];

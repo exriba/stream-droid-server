@@ -7,37 +7,41 @@ using StreamDroid.Application.Settings;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
 using SharpTwitch.EventSub;
-using SharpTwitch.Core;
 using StreamDroid.Application;
 using StreamDroid.Domain.Services.Stream;
 using Microsoft.Extensions.Options;
 using StreamDroid.Domain.Settings;
 
+// StreamDroid.Application Configuration
+var builder = WebApplication.CreateBuilder(args);
+
+#region Constants
 const string LOGOUT_PATH = "/logout";
 const string COOKIE_NAME = "StreamDroid";
 const string HUB_PATTERN = "/hubs/events/{id}";
+#endregion
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add Logging
+#region Logging
 builder.Logging.ClearProviders();
 if (builder.Environment.IsDevelopment())
     builder.Logging.AddConsole();
 else
     builder.Logging.AddLog4Net();
+#endregion
 
-// Add Shared Configuration
-builder.Configuration.Configure();
-
-// Add Configuration Options
+#region Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
+#endregion
 
-// Add Services to the Container.
+#region Shared
+builder.Configuration.Configure();
+#endregion
+
+#region Register Services
 builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddInfrastructureConfiguration(builder.Configuration);
-builder.Services.AddServiceConfiguration();
+builder.Services.AddServiceConfiguration(builder.Configuration);
 builder.Services.AddDirectoryBrowser();
-builder.Services.AddTwitchCore(builder.Configuration);
 builder.Services.AddTwitchEventSub();
 builder.Services.AddHttpClient();
 builder.Services.AddSignalR();
@@ -70,11 +74,10 @@ builder.Services.AddAuthentication(options =>
         return Task.CompletedTask;
     };
 });
+#endregion
 
-// Build WebApplication
+#region Configure HTTP pipeline.
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
 // app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors();
@@ -87,5 +90,6 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 else
     app.UseMiddleware<GlobalRequestHandler>();
-app.Run();
+#endregion
 
+app.Run();

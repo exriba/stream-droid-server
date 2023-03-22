@@ -20,6 +20,9 @@ using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Services.Stream
 {
+    /// <summary>
+    /// Default implementation of <see cref="ITwitchEventSub"/>.
+    /// </summary>
     internal class TwitchEventSub : ITwitchEventSub
     {
         private const string AUDIO_EVENT = "AUDIO_EVENT";
@@ -80,6 +83,7 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub.OnChannelPointsCustomRewardRedemption += OnChannelPointsCustomRewardRedemption;
         }
 
+        /// <inheritdoc/>
         public async Task ConnectAsync(Entities.User user)
         {
             await connectSemaphore.WaitAsync();
@@ -97,6 +101,7 @@ namespace StreamDroid.Domain.Services.Stream
             }
         }
 
+        /// <inheritdoc/>
         public async Task DisconnectAsync(Entities.User user)
         {
             await disconnectSemaphore.WaitAsync();

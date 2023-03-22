@@ -14,6 +14,9 @@ using StreamDroid.Shared.Extensions;
 
 namespace StreamDroid.Application.API.User
 {
+    /// <summary>
+    /// User controller.
+    /// </summary>
     [Authorize]
     [ApiController]
     [Route("/")]
@@ -37,6 +40,10 @@ namespace StreamDroid.Application.API.User
             _coreSettings = coreSettings;
         }
 
+        /// <summary>
+        /// Handles login.
+        /// </summary>
+        /// <returns>Redirects to authentication url.</returns>
         [AllowAnonymous]
         [HttpGet("login")]  
         public IActionResult Login()
@@ -49,6 +56,9 @@ namespace StreamDroid.Application.API.User
             return Redirect(loginUrl);
         }
 
+        /// <summary>
+        /// Handles logout.
+        /// </summary>
         [HttpPost("logout")]
         public async Task<IActionResult> LogoutAsync()
         {
@@ -56,6 +66,12 @@ namespace StreamDroid.Application.API.User
             return Ok();
         }
 
+        /// <summary>
+        /// Handles successful authentication.
+        /// </summary>
+        /// <param name="code">code</param>
+        /// <param name="state">state</param>
+        /// <returns>Redirects to referer url.</returns>
         [AllowAnonymous]
         [HttpGet("redirect")]
         [QueryParameter("code", "state")]
@@ -87,6 +103,13 @@ namespace StreamDroid.Application.API.User
             return Redirect(referer);
         }
 
+        /// <summary>
+        /// Handles unsuccessful authentication.
+        /// </summary>
+        /// <param name="error">error</param>
+        /// <param name="errorDescription">error description</param>
+        /// <param name="state">state</param>
+        /// <returns>Redirects to referer url.</returns>
         [AllowAnonymous]
         [HttpGet("redirect")]
         public IActionResult AuthenticationError([FromQuery] string error, 
@@ -99,6 +122,10 @@ namespace StreamDroid.Application.API.User
             return Redirect(referer);
         }
 
+        /// <summary>
+        /// Finds a user by the given id.
+        /// </summary>
+        /// <returns>A user DTO.</returns>
         [HttpGet("me")]
         public async Task<IActionResult> FindUserByIdAsync()
         {
@@ -107,6 +134,11 @@ namespace StreamDroid.Application.API.User
             return Ok(user);
         }
 
+        /// <summary>
+        /// Updates user preferences for the given user.
+        /// </summary>
+        /// <param name="preferences">preferences</param>
+        /// <returns>The user's preferences.</returns>
         [HttpPost("me/preferences")]
         public async Task<IActionResult> UpdateUserPreferencesAsync([Required][FromBody] Preferences preferences)
         {

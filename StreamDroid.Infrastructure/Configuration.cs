@@ -7,8 +7,17 @@ using StreamDroid.Infrastructure.Settings;
 
 namespace StreamDroid.Infrastructure
 {
+    /// <summary>
+    /// StreamDroid.Infrastructure Configuration.
+    /// </summary>
     public static class Configuration
     {
+        /// <summary>
+        /// Configures the database context and repositories.
+        /// </summary>
+        /// <param name="services">service collection</param>
+        /// <param name="configurationManager">configuration manager</param>
+        /// <returns>The service collection</returns>
         public static IServiceCollection AddInfrastructureConfiguration(this IServiceCollection services, ConfigurationManager configurationManager)
         {
             // Add Configuration Options

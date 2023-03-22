@@ -32,7 +32,7 @@ namespace StreamDroid.Application.Tests.API.Reward
             var rewards = new List<RewardDto> { reward };
             _mockRewardService = new Mock<IRewardService>();
             _mockRewardService.Setup(x => x.FindRewardByIdAsync(It.IsAny<Guid>())).ReturnsAsync(reward);
-            _mockRewardService.Setup(x => x.FindRewardsByStreamerIdAsync(It.IsAny<string>())).ReturnsAsync(rewards);
+            _mockRewardService.Setup(x => x.FindRewardsByUserIdAsync(It.IsAny<string>())).ReturnsAsync(rewards);
 
             _mockEnvironment = new Mock<IWebHostEnvironment>();
             _mockEnvironment.Setup(x => x.WebRootPath).Returns(".");
@@ -58,9 +58,9 @@ namespace StreamDroid.Application.Tests.API.Reward
         }
 
         [Fact]
-        public async Task RewardController_FindRewardsByStreamerIdAsync()
+        public async Task RewardController_FindRewardsByUserIdAsync()
         {
-            var result = await _rewardController.FindRewardsByStreamerIdAsync();
+            var result = await _rewardController.FindRewardsByUserIdAsync();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }

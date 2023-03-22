@@ -5,6 +5,9 @@ using StreamDroid.Core.Enums;
 
 namespace StreamDroid.Infrastructure.EntityConfiguration
 {
+    /// <summary>
+    /// Defines <see cref="User"/> table configuration.
+    /// </summary>
     internal class UserConfiguration : IEntityTypeConfiguration<User>
     {
         public void Configure(EntityTypeBuilder<User> builder)

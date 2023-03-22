@@ -4,6 +4,9 @@ using StreamDroid.Core.Entities;
 
 namespace StreamDroid.Infrastructure.EntityConfiguration
 {
+    /// <summary>
+    /// Defines <see cref="Redemption"/> table configuration.
+    /// </summary>
     internal class RedemptionConfiguration : IEntityTypeConfiguration<Redemption>
     {
         public void Configure(EntityTypeBuilder<Redemption> builder)

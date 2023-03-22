@@ -3,6 +3,9 @@ using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Domain.DTOs
 {
+    /// <summary>
+    /// DTO representation of a reward. See also <see cref="Reward"/>.
+    /// </summary>
     public sealed class RewardDto : BaseDto<RewardDto, Reward>
     {
         public Guid Id { get; init; } = Guid.Empty;

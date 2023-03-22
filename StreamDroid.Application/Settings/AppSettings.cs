@@ -2,6 +2,9 @@
 
 namespace StreamDroid.Application.Settings
 {
+    /// <summary>
+    /// App Settings POCO.
+    /// </summary>
     public class AppSettings : IAppSettings
     {
         public const string Key = "AppSettings";

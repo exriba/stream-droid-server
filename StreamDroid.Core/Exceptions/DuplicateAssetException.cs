@@ -1,11 +1,13 @@
-﻿using StreamDroid.Core.Entities;
-using StreamDroid.Core.ValueObjects;
+﻿using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Core.Exceptions
 {
+    /// <summary>
+    /// Duplicate asset exception. 
+    /// </summary>
     public class DuplicateAssetException : Exception
     {
-        public DuplicateAssetException(Reward reward, FileName fileName) : base($"Reward {reward.Title} contains asset {fileName}.")
+        public DuplicateAssetException(FileName fileName) : base($"The collection already contains asset {fileName}.")
         {
         }
     }

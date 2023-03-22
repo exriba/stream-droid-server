@@ -2,9 +2,19 @@
 
 namespace StreamDroid.Core.ValueObjects
 {
+    /// <summary>
+    /// Asset value object.
+    /// </summary>
     public sealed class Asset : ValueObject
     {
+        /// <summary>
+        /// Volume
+        /// </summary>
         public int Volume { get; private init; }
+
+        /// <summary>
+        /// FileName
+        /// </summary>
         public FileName FileName { get; private init; }
 
         internal Asset(FileName fileName, int volume)
