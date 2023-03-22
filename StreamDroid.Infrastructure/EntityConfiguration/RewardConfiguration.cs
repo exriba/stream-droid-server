@@ -5,6 +5,9 @@ using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Infrastructure.EntityConfiguration
 {
+    /// <summary>
+    /// Defines <see cref="Reward"/> table configuration.
+    /// </summary>
     internal class RewardConfiguration : IEntityTypeConfiguration<Reward>
     {
         private const string ID = "Id";

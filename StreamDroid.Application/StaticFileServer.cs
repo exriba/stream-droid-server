@@ -6,10 +6,14 @@ namespace StreamDroid.Application
 {
     /// <summary>
     /// Static File Server for local use. 
-    /// Use Amazon S3 or other solutions for Cloud.   
     /// </summary>
+    /// TODO: Replace with Amazon S3 or other CDN solutions for Cloud.   
     internal static class StaticFileServer
     {
+        /// <summary>
+        /// Configure file server middleware.
+        /// </summary>
+        /// <param name="app">web application</param>
         public static void UseStaticFileServer(this WebApplication app)
         {
             var options = app.Services.GetRequiredService<IOptions<AppSettings>>();

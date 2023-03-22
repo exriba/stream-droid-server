@@ -3,7 +3,10 @@ using System.Net;
 
 namespace StreamDroid.Application.Middleware
 {
-    public class GlobalRequestHandler
+    /// <summary>
+    /// Global middleware to handle request and exceptions
+    /// </summary>
+    public sealed class GlobalRequestHandler
     {
         private const string NAME = "Name";
         private const string CorrelationIdHeaderKey = "X-Correlation-ID";
@@ -17,6 +20,10 @@ namespace StreamDroid.Application.Middleware
             _logger = loggerFactory.CreateLogger<GlobalRequestHandler>();
         }
 
+        /// <summary>
+        /// Invokes http request delegates and handles exceptions globally. 
+        /// </summary>
+        /// <param name="context">http context</param>
         public async Task InvokeAsync(HttpContext context)
         {
             string? correlationId;

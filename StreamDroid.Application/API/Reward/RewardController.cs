@@ -8,6 +8,9 @@ using System.Web;
 
 namespace StreamDroid.Application.API.Reward
 {
+    /// <summary>
+    /// Reward controller.
+    /// </summary>
     [Authorize]
     [ApiController]
     [Route("/rewards")]
@@ -26,14 +29,23 @@ namespace StreamDroid.Application.API.Reward
             _rewardService = rewardService;
         }
 
+        /// <summary>
+        /// Finds a collection of rewards for the given user id.
+        /// </summary>
+        /// <returns>A collection of reward DTOs.</returns>
         [HttpGet]
-        public async Task<IActionResult> FindRewardsByStreamerIdAsync()
+        public async Task<IActionResult> FindRewardsByUserIdAsync()
         {
             var claim = User.Claims.First(c => c.Type.Equals(ID));
-            var rewards = await _rewardService.FindRewardsByStreamerIdAsync(claim.Value);
+            var rewards = await _rewardService.FindRewardsByUserIdAsync(claim.Value);
             return Ok(rewards);
         }
 
+        /// <summary>
+        /// Finds a reward by the given user id.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <returns>A reward DTO.</returns>
         [HttpGet("{rewardId}")]
         public async Task<IActionResult> FindRewardByIdAsync([FromRoute] Guid rewardId)
         {
@@ -41,6 +53,9 @@ namespace StreamDroid.Application.API.Reward
             return Ok(reward);
         }
 
+        /// <summary>
+        /// Synchronizes external rewards for the given user.
+        /// </summary>
         [HttpGet("sync")]
         public async Task<IActionResult> SynchronizeRewardsAsync()
         {
@@ -49,6 +64,11 @@ namespace StreamDroid.Application.API.Reward
             return Ok();
         }
 
+        /// <summary>
+        /// Updates the speech for the given reward.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <param name="speech">speech</param>
         [HttpPut("{rewardId}/speech")]
         public async Task<IActionResult> UpdateRewardSpeechAsync([FromRoute] Guid rewardId,
                                                                  [FromBody][Required] Speech speech)
@@ -57,6 +77,11 @@ namespace StreamDroid.Application.API.Reward
             return Ok();
         }
 
+        /// <summary>
+        /// Finds a collection of assets by the given reward id.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <returns>A collection of assets.</returns>
         [HttpGet("{rewardId}/assets")]
         public async Task<IActionResult> FindAssetsByRewardIdAsync([FromRoute] Guid rewardId)
         {
@@ -64,6 +89,12 @@ namespace StreamDroid.Application.API.Reward
             return Ok(assets);
         }
 
+        /// <summary>
+        /// Adds a collection of assets to the given reward.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <param name="assetForm">asset form</param>
+        /// <returns>Created response with the new assets.</returns>
         [HttpPost("{rewardId}/assets")]
         [DisableRequestSizeLimit]
         [RequestFormLimits(ValueLengthLimit = int.MaxValue, MultipartBodyLengthLimit = long.MaxValue)]
@@ -79,6 +110,11 @@ namespace StreamDroid.Application.API.Reward
             return CreatedAtAction(nameof(AddAssetsToRewardAsync), tuple.Item2);
         }
 
+        /// <summary>
+        /// Updates assets for the given reward.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <param name="payload">payload</param>
         [HttpPut("{rewardId}/assets")]
         public async Task<IActionResult> UpdateAssetsFromRewardAsync([FromRoute] Guid rewardId,
                                                                      [FromBody][Required] IDictionary<string, int> payload)
@@ -89,6 +125,11 @@ namespace StreamDroid.Application.API.Reward
             return Ok();
         }
 
+        /// <summary>
+        /// Removes an asset from the given reward.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <param name="assetName">asset name</param>
         [HttpDelete("{rewardId}/assets")]
         public async Task<IActionResult> RemoveAssetsFromRewardAsync([FromRoute] Guid rewardId,
                                                                      [FromHeader(Name = ASSET_NAME)] string assetName)
@@ -101,6 +142,11 @@ namespace StreamDroid.Application.API.Reward
             return Ok();
         }
 
+        /// <summary>
+        /// Saves asset files. 
+        /// </summary>
+        /// <param name="rewardName">reward name</param>
+        /// <param name="files">files</param>
         private async Task SaveAssetFiles(string rewardName, IEnumerable<IFormFile> files)
         {
             var basePath = Path.Combine(_environment.WebRootPath, rewardName);
@@ -113,6 +159,11 @@ namespace StreamDroid.Application.API.Reward
             }
         }
 
+        /// <summary>
+        /// Deletes an asset file.
+        /// </summary>
+        /// <param name="rewardName">reward name</param>
+        /// <param name="fileName">file name</param>
         private void DeleteAssetFile(string rewardName, FileName fileName)
         {
             var basePath = Path.Combine(_environment.WebRootPath, rewardName);

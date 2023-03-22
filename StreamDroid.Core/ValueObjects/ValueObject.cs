@@ -1,5 +1,8 @@
 ﻿namespace StreamDroid.Core.ValueObjects
 {
+    /// <summary>
+    /// Value object base class.
+    /// </summary>
     public abstract class ValueObject
     {
         protected static bool EqualOperator(ValueObject left, ValueObject right)

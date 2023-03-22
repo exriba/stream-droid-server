@@ -7,7 +7,6 @@ using System.Text.Json;
 using SharpTwitch.Auth;
 using System.Text.Json.Nodes;
 using Entities = StreamDroid.Core.Entities;
-using StreamDroid.Domain.Services.Stream;
 using SharpTwitch.Helix;
 using SharpTwitch.Core.Settings;
 using SharpTwitch.Core;
@@ -32,9 +31,8 @@ namespace StreamDroid.Domain.Tests.Services.User
             _apiCore = new Mock<IApiCore>();
             _userRepository = testFixture.userRepository;
             var coreSettings = new Mock<ICoreSettings>();
-            var twitchEventSub = new Mock<ITwitchEventSub>();
             var helixApi = new HelixApi(coreSettings.Object, _apiCore.Object);
-            _userService = new UserService(helixApi, _authApi.Object, twitchEventSub.Object, _userRepository);
+            _userService = new UserService(helixApi, _authApi.Object, _userRepository);
         }
 
         [Theory]

@@ -23,18 +23,18 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task RedemptionService_FindRedemptionStatisticsByStreamerIdAsync_Throws_InvalidArgs(string id)
+        public async Task RedemptionService_FindRedemptionStatisticsByUserIdAsync_Throws_InvalidArgs(string id)
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _redemptionService.FindRedemptionStatisticsByStreamerIdAsync(id));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _redemptionService.FindRedemptionStatisticsByUserIdAsync(id));
         }
 
         [Fact]
-        public async Task RedemptionService_FindRedemptionStatisticsByStreamerIdAsync()
+        public async Task RedemptionService_FindRedemptionStatisticsByUserIdAsync()
         {
             var id = Guid.NewGuid();
             await SetupDataAsync(id);
 
-            var rewardRedemptionDtos = await _redemptionService.FindRedemptionStatisticsByStreamerIdAsync(id.ToString());
+            var rewardRedemptionDtos = await _redemptionService.FindRedemptionStatisticsByUserIdAsync(id.ToString());
 
             Assert.NotEmpty(rewardRedemptionDtos);
 

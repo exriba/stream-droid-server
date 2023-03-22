@@ -3,6 +3,9 @@ using StreamDroid.Core.ValueObjects;
 
 namespace StreamDroid.Domain.DTOs
 {
+    /// <summary>
+    /// DTO representation of a user. See also <see cref="User"/>.
+    /// </summary>
     public sealed class UserDto : BaseDto<UserDto, User>
     {
         public string Id { get; init; } = string.Empty;

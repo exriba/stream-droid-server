@@ -3,9 +3,19 @@ using StreamDroid.Core.Enums;
 
 namespace StreamDroid.Core.ValueObjects
 {
+    /// <summary>
+    /// FileName value object.
+    /// </summary>
     public sealed class FileName : ValueObject
     {
+        /// <summary>
+        /// Name
+        /// </summary>
         public string Name { get; private init; }
+        
+        /// <summary>
+        /// Media extension
+        /// </summary>
         public MediaExtension MediaExtension { get; private init; }
 
         public FileName(string name, MediaExtension mediaExtension)
@@ -17,6 +27,13 @@ namespace StreamDroid.Core.ValueObjects
             MediaExtension = mediaExtension;
         }
 
+        /// <summary>
+        /// Creates a FileName from the given string.
+        /// </summary>
+        /// <param name="fileName">file name</param>
+        /// <returns>A FileName</returns>
+        /// <exception cref="ArgumentNullException">If the fileName is null</exception>
+        /// <exception cref="ArgumentException">If the fileName is an empty or whitespace string. In addition, this exception will be thrown if the argument is not formatted properly as a file name</exception>
         public static FileName FromString(string fileName)
         {
             Guard.Against.NullOrWhiteSpace(fileName, nameof(fileName));

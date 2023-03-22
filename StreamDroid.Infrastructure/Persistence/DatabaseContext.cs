@@ -3,6 +3,9 @@ using System.Reflection;
 
 namespace StreamDroid.Infrastructure.Persistence
 {
+    /// <summary>
+    /// Database context.
+    /// </summary>
     internal class DatabaseContext : DbContext
     {
         public DatabaseContext(DbContextOptions options) : base(options)

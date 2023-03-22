@@ -7,37 +7,38 @@ using StreamDroid.Shared.Extensions;
 using StreamDroid.Core.Exceptions;
 using SharpTwitch.Auth;
 using StreamDroid.Domain.DTOs;
-using StreamDroid.Domain.Services.Stream;
 using SharpTwitch.Helix;
 using SharpTwitch.Core.Enums;
 using StreamDroid.Core.Enums;
 
 namespace StreamDroid.Domain.Services.User
 {
+    /// <summary>
+    /// Default implementation of <see cref="IUserService"/>.
+    /// </summary>
     public sealed class UserService : IUserService
     {
         private readonly IAuthApi _authApi;
         private readonly HelixApi _helixApi;
-        private readonly ITwitchEventSub _twitchEventSub;
         private readonly IRepository<Entities.User> _repository;
 
         public UserService(HelixApi helixApi,
                            IAuthApi authApi,
-                           ITwitchEventSub twitchEventSub,
                            IRepository<Entities.User> repository)
         {
             _authApi = authApi;
             _helixApi = helixApi;
             _repository = repository;
-            _twitchEventSub = twitchEventSub;
         }
 
+        /// <inheritdoc/>
         public async Task<UserDto?> FindUserByIdAsync(string userId)
         {
             var user = await FetchUserByIdAsync(userId);
             return user is not null ? UserDto.FromEntity(user) : null;
         }
 
+        /// <inheritdoc/>
         public async Task<UserDto> AuthenticateUserAsync(string code)
         {
             Guard.Against.NullOrWhiteSpace(code, nameof(code));
@@ -80,14 +81,10 @@ namespace StreamDroid.Domain.Services.User
             user.RefreshToken = token.RefreshToken;
             user.UserType = convert(userBroadcasterType);
             user = await _repository.UpdateAsync(user);
-
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            Task.Run(async () => await _twitchEventSub.ConnectAsync(user)).ConfigureAwait(false);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            
             return UserDto.FromEntity(user);
         }
 
+        /// <inheritdoc/>
         public async Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId)
         {
             var user = await FetchUserAsync(userId);
@@ -106,6 +103,7 @@ namespace StreamDroid.Domain.Services.User
             return new TokenRefreshPolicy(userId, accessToken, refreshToken);
         }
 
+        /// <inheritdoc/>
         public async Task<Preferences> UpdateUserPreferencesAsync(string userId, Preferences preferences)
         {
             Guard.Against.Null(preferences, nameof(preferences));
@@ -117,11 +115,24 @@ namespace StreamDroid.Domain.Services.User
         }
 
         #region Helpers
+        /// <summary>
+        /// Finds a user by the given id.
+        /// </summary>
+        /// <param name="userId">user id</param>
+        /// <returns>A user entity</returns>
+        /// <exception cref="EntityNotFoundException">If the user is not found</exception>
         private async Task<Entities.User> FetchUserAsync(string userId)
         {
             return await FetchUserByIdAsync(userId) ?? throw new EntityNotFoundException(userId);
         }
 
+        /// <summary>
+        /// Finds a user by the given id.
+        /// </summary>
+        /// <param name="userId">user id</param>
+        /// <returns>A user entity.</returns>
+        /// <exception cref="ArgumentNullException">If the user id is null</exception>
+        /// <exception cref="ArgumentException">If the user id is an empty or whitespace string</exception>
         private async Task<Entities.User?> FetchUserByIdAsync(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));

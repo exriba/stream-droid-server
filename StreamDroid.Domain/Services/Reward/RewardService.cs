@@ -11,6 +11,9 @@ using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Services.Reward
 {
+    /// <summary>
+    /// Default implementation of <see cref="IRewardService"/>.
+    /// </summary>
     public sealed class RewardService : IRewardService
     {
         private readonly HelixApi _helixApi;
@@ -27,13 +30,15 @@ namespace StreamDroid.Domain.Services.Reward
         }
 
         #region Rewards
+        /// <inheritdoc/>
         public async Task<RewardDto> FindRewardByIdAsync(Guid rewardId)
         {
             var reward = await FetchRewardAsync(rewardId);
             return RewardDto.FromEntity(reward);
         }
 
-        public async Task<IReadOnlyCollection<RewardDto>> FindRewardsByStreamerIdAsync(string userId)
+        /// <inheritdoc/>
+        public async Task<IReadOnlyCollection<RewardDto>> FindRewardsByUserIdAsync(string userId)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
 
@@ -42,6 +47,7 @@ namespace StreamDroid.Domain.Services.Reward
             return rewards.ProjectToType<RewardDto>().ToList();
         }
 
+        /// <inheritdoc/>
         public async Task UpdateRewardSpeechAsync(Guid rewardId, Speech speech)
         {
             var reward = await FetchRewardAsync(rewardId);
@@ -49,6 +55,7 @@ namespace StreamDroid.Domain.Services.Reward
             await _repository.UpdateAsync(reward);
         }
 
+        /// <inheritdoc/>
         public async Task SynchronizeRewardsAsync(string userId)
         {
             var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicyAsync(userId);
@@ -102,12 +109,14 @@ namespace StreamDroid.Domain.Services.Reward
         #endregion
 
         #region Assets
+        /// <inheritdoc/>
         public async Task<IReadOnlyCollection<Asset>> FindAssetsByRewardIdAsync(Guid rewardId)
         {
             var reward = await FetchRewardAsync(rewardId);
             return reward.Assets;
         }
 
+        /// <inheritdoc/>
         public async Task<Tuple<string, IReadOnlyCollection<Asset>>> AddAssetsToRewardAsync(Guid rewardId, IDictionary<FileName, int> fileMap)
         {
             var reward = await FetchRewardAsync(rewardId);
@@ -123,6 +132,7 @@ namespace StreamDroid.Domain.Services.Reward
             return Tuple.Create<string, IReadOnlyCollection<Asset>>(reward.Title, assets);
         }
 
+        /// <inheritdoc/>
         public async Task RemoveAssetsFromRewardAsync(Guid rewardId, IEnumerable<FileName> fileNames)
         {
             var reward = await FetchRewardAsync(rewardId);
@@ -133,11 +143,23 @@ namespace StreamDroid.Domain.Services.Reward
         #endregion
 
         #region Helpers
+        /// <summary>
+        /// Finds a reward by the given id.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <returns>A reward entity</returns>
+        /// <exception cref="EntityNotFoundException">If the reward is not found</exception>
         private async Task<Entities.Reward> FetchRewardAsync(Guid rewardId)
         {
             return await FetchRewardByIdAsync(rewardId) ?? throw new EntityNotFoundException(rewardId.ToString());
         }
 
+        /// <summary>
+        /// Finds a reward by the given id.
+        /// </summary>
+        /// <param name="rewardId">reward id</param>
+        /// <returns>A reward entity.</returns>
+        /// <exception cref="ArgumentException">If the reward id is an empty GUID</exception>
         private async Task<Entities.Reward?> FetchRewardByIdAsync(Guid rewardId)
         {
             if (rewardId == Guid.Empty)

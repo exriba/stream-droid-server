@@ -2,6 +2,11 @@
 
 namespace StreamDroid.Domain.DTOs
 {
+    /// <summary>
+    /// Base class to handle mappings between entities and DTOs.
+    /// </summary>
+    /// <typeparam name="TDto"></typeparam>
+    /// <typeparam name="TEntity"></typeparam>
     public abstract class BaseDto<TDto, TEntity> : IRegister
         where TDto : class, new()
         where TEntity : class, new()

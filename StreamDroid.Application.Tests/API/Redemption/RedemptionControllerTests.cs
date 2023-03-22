@@ -35,7 +35,7 @@ namespace StreamDroid.Application.Tests.API.Redemption
         }
 
         [Fact]
-        public async Task RedemptionController_FindRedemptionStatisticsByStreamerIdAsync()
+        public async Task RedemptionController_FindRedemptionStatisticsByUserIdAsync()
         {
             var rewardRedemptionDtos = new List<RewardRedemptionDto>
             {
@@ -49,10 +49,10 @@ namespace StreamDroid.Application.Tests.API.Redemption
                 }
             };
 
-            _mockRedemptionService.Setup(x => x.FindRedemptionStatisticsByStreamerIdAsync(It.IsAny<string>()))
+            _mockRedemptionService.Setup(x => x.FindRedemptionStatisticsByUserIdAsync(It.IsAny<string>()))
                 .ReturnsAsync(rewardRedemptionDtos);
 
-            var result = await _redemptionController.FindRedemptionStatisticsByStreamerIdAsync();
+            var result = await _redemptionController.FindRedemptionStatisticsByUserIdAsync();
 
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
