@@ -7,6 +7,7 @@ namespace StreamDroid.Domain.DTOs
     /// </summary>
     public sealed class RewardRedemptionDto : BaseDto<RewardRedemptionDto, Reward>
     {
+        public string Id { get; set; } = string.Empty;
         public string Name { get; init; } = string.Empty;
         public string Fill { get; init; } = string.Empty;
         public decimal Value { get; set; }
