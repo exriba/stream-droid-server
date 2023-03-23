@@ -42,6 +42,7 @@ namespace StreamDroid.Application.Tests.API.Redemption
                 {
                     new RewardRedemptionDto
                     {
+                        Id = "123",
                         Name = "Name",
                         Fill = "#6441A4",
                         Value = 100
