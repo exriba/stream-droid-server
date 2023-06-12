@@ -74,6 +74,10 @@ builder.Services.AddAuthentication(options =>
         return Task.CompletedTask;
     };
 });
+builder.Services.AddMvc(options =>
+{
+    options.SuppressAsyncSuffixInActionNames = false;
+});
 #endregion
 
 #region Configure HTTP pipeline.
