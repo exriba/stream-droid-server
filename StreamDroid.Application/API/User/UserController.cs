@@ -53,7 +53,7 @@ namespace StreamDroid.Application.API.User
             var encryptedState = state.Base64Encrypt();
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
             var loginUrl = AuthUtils.GenerateAuthorizationUrl(_coreSettings.ClientId, _coreSettings.RedirectUri, _coreSettings.Scopes, encodedState);
-            return Redirect(loginUrl);
+            return Ok(loginUrl);
         }
 
         /// <summary>

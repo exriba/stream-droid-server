@@ -78,7 +78,7 @@ namespace StreamDroid.Application.Tests.API.User
         {
             var result = _userController.Login();
 
-            Assert.Equal(typeof(RedirectResult), result.GetType());
+            Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
         [Fact]
