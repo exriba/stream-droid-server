@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using StreamDroid.Application.Settings;
+using System.Text;
 
 namespace StreamDroid.Application
 {
@@ -14,7 +15,7 @@ namespace StreamDroid.Application
         /// Configure file server middleware.
         /// </summary>
         /// <param name="app">web application</param>
-        public static void UseStaticFileServer(this WebApplication app)
+        public static void UseRemoteFileServer(this WebApplication app)
         {
             var options = app.Services.GetRequiredService<IOptions<AppSettings>>();
             var appSettings = options.Value;
@@ -24,6 +25,34 @@ namespace StreamDroid.Application
                 EnableDirectoryBrowsing = true,
                 RequestPath = appSettings.StaticAssetPath,
                 FileProvider = new PhysicalFileProvider(app.Environment.WebRootPath),
+            });
+        }
+
+        /// <summary>
+        /// Configure local file server.
+        /// </summary>
+        /// <param name="app">web application</param>
+        public static void UseLocalFileServer(this WebApplication app)
+        {
+            var options = app.Services.GetRequiredService<IOptions<AppSettings>>();
+            var appSettings = options.Value;
+
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var path = Path.Combine(appDataPath, appSettings.ApplicationName);
+            Directory.CreateDirectory(path);
+
+            var fileProvider = new PhysicalFileProvider(path);
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = fileProvider,
+                RequestPath = appSettings.StaticAssetPath,
+            });
+
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions
+            {
+                FileProvider = fileProvider,
+                RequestPath = appSettings.StaticAssetPath
             });
         }
     }
