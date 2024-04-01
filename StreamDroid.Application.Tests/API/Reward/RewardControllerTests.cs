@@ -1,5 +1,4 @@
 ﻿using Moq;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using StreamDroid.Application.API.Reward;
@@ -8,6 +7,7 @@ using System.Security.Claims;
 using StreamDroid.Application.API.Models;
 using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.DTOs;
+using StreamDroid.Domain.Services.Data;
 
 namespace StreamDroid.Application.Tests.API.Reward
 {
@@ -17,7 +17,7 @@ namespace StreamDroid.Application.Tests.API.Reward
 
         private readonly RewardController _rewardController;
         private readonly Mock<IRewardService> _mockRewardService;
-        private readonly Mock<IWebHostEnvironment> _mockEnvironment;
+        private readonly Mock<IDataService> _mockDataService;
 
         public RewardControllerTests()
         {
@@ -34,9 +34,8 @@ namespace StreamDroid.Application.Tests.API.Reward
             _mockRewardService.Setup(x => x.FindRewardByIdAsync(It.IsAny<Guid>())).ReturnsAsync(reward);
             _mockRewardService.Setup(x => x.FindRewardsByUserIdAsync(It.IsAny<string>())).ReturnsAsync(rewards);
 
-            _mockEnvironment = new Mock<IWebHostEnvironment>();
-            _mockEnvironment.Setup(x => x.WebRootPath).Returns(".");
-            _rewardController = new RewardController(_mockRewardService.Object, _mockEnvironment.Object)
+            _mockDataService = new Mock<IDataService>();
+            _rewardController = new RewardController(_mockRewardService.Object, _mockDataService.Object)
             {
                 ControllerContext = new ControllerContext()
             };
@@ -98,13 +97,6 @@ namespace StreamDroid.Application.Tests.API.Reward
             var result = await _rewardController.AddAssetsToRewardAsync(id, new AssetForm { Files = new IFormFile[] { mockFile.Object } });
 
             Assert.Equal(typeof(CreatedAtActionResult), result.GetType());
-
-            var directoryPath = @$"{Directory.GetCurrentDirectory()}\{tuple.Item1}";
-            var filePath = @$"{directoryPath}\{tuple.Item2.First().FileName}";
-            Directory.Delete(directoryPath, true);
-
-            Assert.False(File.Exists(filePath));
-            Assert.False(Directory.Exists(directoryPath));
         }
 
         [Fact]
