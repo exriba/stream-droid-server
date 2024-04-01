@@ -10,6 +10,7 @@ using StreamDroid.Domain.Services.Stream;
 using StreamDroid.Domain.Services.Redemption;
 using SharpTwitch.Core;
 using Microsoft.Extensions.Configuration;
+using StreamDroid.Domain.Services.Data;
 
 namespace StreamDroid.Domain
 {
@@ -40,6 +41,7 @@ namespace StreamDroid.Domain
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IRewardService, RewardService>();
             services.AddScoped<IRedemptionService, RedemptionService>();
+            services.AddScoped<IDataService, DataService>();
             return services;
         }
     }
