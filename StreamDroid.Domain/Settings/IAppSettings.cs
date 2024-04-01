@@ -6,5 +6,7 @@
     public interface IAppSettings
     {
         string StaticAssetUri { get; set; }
+
+        string ApplicationName { get; set; }
     }
 }
