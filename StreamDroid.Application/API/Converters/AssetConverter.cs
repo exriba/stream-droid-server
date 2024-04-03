@@ -25,6 +25,8 @@ namespace StreamDroid.Application.API.Converters
             var asset = new
             {
                 id = Guid.NewGuid().ToString(),
+                extension = value.FileName.MediaExtension.Name,
+                name = value.FileName.Name,
                 fileName = value.ToString(),
                 volume = value.Volume,
             };
