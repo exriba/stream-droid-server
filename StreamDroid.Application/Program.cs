@@ -86,7 +86,7 @@ var app = builder.Build();
 app.UseRouting();
 app.UseCors();
 app.UseAuthentication();
-app.UseStaticFileServer();
+app.UseLocalFileServer();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<AssetHub>(HUB_PATTERN);

@@ -5,6 +5,7 @@ using StreamDroid.Core.ValueObjects;
 using StreamDroid.Application.API.Models;
 using StreamDroid.Domain.Services.Reward;
 using System.Web;
+using StreamDroid.Domain.Services.Data;
 
 namespace StreamDroid.Application.API.Reward
 {
@@ -19,13 +20,13 @@ namespace StreamDroid.Application.API.Reward
         private const string ID = "Id";
         private const string ASSET_NAME = "ASSET_NAME";
 
+        private readonly IDataService _dataService;
         private readonly IRewardService _rewardService;
-        private readonly IWebHostEnvironment _environment;
 
-        public RewardController(IRewardService rewardService, 
-                                IWebHostEnvironment environment)
+        public RewardController(IRewardService rewardService,
+                                IDataService dataService)
         {
-            _environment = environment;
+            _dataService = dataService;
             _rewardService = rewardService;
         }
 
@@ -104,9 +105,11 @@ namespace StreamDroid.Application.API.Reward
             if (!assetForm.Files.Any())
                 return NoContent();
 
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
+
             var fileMap = assetForm.Files.ToDictionary(x => FileName.FromString(x.FileName), _ => assetForm.Volume);
             var tuple = await _rewardService.AddAssetsToRewardAsync(rewardId, fileMap);
-            await SaveAssetFiles(tuple.Item1, assetForm.Files);
+            await _dataService.AddRewardAssetsAsync(claim.Value, tuple.Item1, assetForm.Files);
             return CreatedAtAction(nameof(AddAssetsToRewardAsync), tuple.Item2);
         }
 
@@ -134,42 +137,14 @@ namespace StreamDroid.Application.API.Reward
         public async Task<IActionResult> RemoveAssetsFromRewardAsync([FromRoute] Guid rewardId,
                                                                      [FromHeader(Name = ASSET_NAME)] string assetName)
         {
+            var claim = User.Claims.First(c => c.Type.Equals(ID));
+
             var decodedName = HttpUtility.UrlDecode(assetName);
             var fileName = new FileName[] { FileName.FromString(decodedName) };
             var reward = await _rewardService.FindRewardByIdAsync(rewardId);
             await _rewardService.RemoveAssetsFromRewardAsync(rewardId, fileName);
-            DeleteAssetFile(reward.Title, fileName.First());
+            _dataService.DeleteRewardAsset(claim.Value, reward.Title, fileName.First());
             return Ok();
-        }
-
-        /// <summary>
-        /// Saves asset files. 
-        /// </summary>
-        /// <param name="rewardName">reward name</param>
-        /// <param name="files">files</param>
-        private async Task SaveAssetFiles(string rewardName, IEnumerable<IFormFile> files)
-        {
-            var basePath = Path.Combine(_environment.WebRootPath, rewardName);
-            Directory.CreateDirectory(basePath);
-            foreach (var file in files)
-            {
-                var filePath = Path.Combine(basePath, file.FileName);
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await file.CopyToAsync(stream);
-            }
-        }
-
-        /// <summary>
-        /// Deletes an asset file.
-        /// </summary>
-        /// <param name="rewardName">reward name</param>
-        /// <param name="fileName">file name</param>
-        private void DeleteAssetFile(string rewardName, FileName fileName)
-        {
-            var basePath = Path.Combine(_environment.WebRootPath, rewardName);
-            var filePath = Path.Combine(basePath, fileName.ToString());
-            if (System.IO.File.Exists(filePath))
-                System.IO.File.Delete(filePath);
         }
     }
 }
