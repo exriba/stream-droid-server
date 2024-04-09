@@ -138,15 +138,5 @@ namespace StreamDroid.Core.Entities
             var asset = _assets.FirstOrDefault(asset => asset.ToString().Equals(assetName));
             _assets.Remove(asset);
         }
-
-        public override bool Equals(object? obj)
-        {
-            if (obj == null || obj.GetType() != GetType()) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            var that = obj as Reward;
-            return Id.Equals(that.Id);
-        }
-
-        public override int GetHashCode() => Id.GetHashCode();
     }
 }
