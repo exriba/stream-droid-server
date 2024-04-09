@@ -311,13 +311,6 @@ namespace StreamDroid.Domain.Services.Stream
 
         public async ValueTask DisposeAsync()
         {
-            await DisposeAsyncCore();
-
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual async ValueTask DisposeAsyncCore()
-        {
             var tasks = new List<Task>();
 
             foreach (var userId in _usersSubscribed.Keys)
