@@ -1,6 +1,7 @@
 ﻿using Ardalis.GuardClauses;
 using Microsoft.EntityFrameworkCore;
 using StreamDroid.Core.Common;
+using System.Diagnostics;
 using System.Linq.Expressions;
 
 namespace StreamDroid.Infrastructure.Persistence
@@ -71,6 +72,11 @@ namespace StreamDroid.Infrastructure.Persistence
         public void Dispose()
         {
             _databaseContext.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _databaseContext.DisposeAsync();
         }
     }
 }
