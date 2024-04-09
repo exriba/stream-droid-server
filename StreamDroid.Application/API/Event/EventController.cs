@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using StreamDroid.Core.Enums;
 using StreamDroid.Domain.Services.Stream;
+using StreamDroid.Domain.Services.Stream.Events;
 using StreamDroid.Domain.Services.User;
 using System.Text.Json;
 
@@ -34,6 +36,11 @@ namespace StreamDroid.Application.API.Event
         {
             var claim = User.Claims.First(c => c.Type.Equals(ID));
 
+            var user = await _userService.FindUserByIdAsync(claim.Value);
+
+            if (user!.UserType == UserType.NORMAL)
+                return;
+
             async Task SerializeData(dynamic sse)
             {
                 await Response.WriteAsync("data: ");
@@ -44,7 +51,7 @@ namespace StreamDroid.Application.API.Event
             }
 
             await _twitchEventSub.ConnectAsync();
-            await _twitchEventSub.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
+            await _twitchEventSub.SubscribeAsync(user.Id, notificationHandler: SerializeData);
 
             Response.Headers.Add(HeaderNames.Connection, CONNECTION);
             Response.Headers.Add(HeaderNames.CacheControl, CACHE_CONTROL);
