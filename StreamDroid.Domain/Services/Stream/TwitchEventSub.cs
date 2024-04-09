@@ -101,22 +101,26 @@ namespace StreamDroid.Domain.Services.Stream
             if (_usersSubscribed.ContainsKey(userId))
                 return;
 
-            using var scope = _serviceScopeFactory.CreateScope();
-            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-            var user = await userService.FindUserByIdAsync(userId);
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
 
-            if (user.UserType == UserType.NORMAL)
-                throw new ArgumentException("Normal users cannot interact with twitch event sub.");
+                using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var user = await userService.FindUserByIdAsync(userId);
 
-            var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
-            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                if (user.UserType == UserType.NORMAL)
+                    throw new ArgumentException("Normal users cannot interact with twitch event sub.");
 
-            var tasks = SUBSCRIPTION_TYPES.Select(x =>
-                helixApi.Subscriptions.CreateEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+                var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                    await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-            await Task.WhenAll(tasks);
+                var tasks = SUBSCRIPTION_TYPES.Select(x =>
+                    helixApi.Subscriptions.CreateEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
+
+                await Task.WhenAll(tasks);
+            }
+
             _usersSubscribed.Add(userId, notificationHandler);
         }
 
@@ -126,28 +130,30 @@ namespace StreamDroid.Domain.Services.Stream
             if (!_usersSubscribed.ContainsKey(userId))
                 return;
 
-            using var scope = _serviceScopeFactory.CreateScope();
-            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-            var user = await userService.FindUserByIdAsync(userId);
-
-            if (user.UserType == UserType.NORMAL)
-                throw new ArgumentException("Normal users cannot interact with twitch event sub.");
-
-            var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(user.Id);
-            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                await helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-            var inactiveSubscriptions = helixSubscriptionResponse.Data.Where(x => INACTIVE_SUBSCRIPTION_STATUS.Contains(x.SubscriptionStatus)).ToList();
-
-            var tasks = new List<Task>();
-            foreach (var subscription in inactiveSubscriptions)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", subscription.Id, subscription.Type, subscription.CreatedAt);
-                var task = helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(subscription.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, subscription.Id, CancellationToken.None);
-                tasks.Add(task);
+                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+
+                using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var user = await userService.FindUserByIdAsync(userId);
+
+                if (user.UserType == UserType.NORMAL)
+                    throw new ArgumentException("Normal users cannot interact with twitch event sub.");
+
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(user.Id);
+                var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                    await helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                var inactiveSubscriptions = helixSubscriptionResponse.Data.Where(x => INACTIVE_SUBSCRIPTION_STATUS.Contains(x.SubscriptionStatus)).ToList();
+
+                var tasks = inactiveSubscriptions.Select(x =>
+                {
+                    _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", x.Id, x.Type, x.CreatedAt);
+                    return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
+                });
+
+                await Task.WhenAll(tasks);
             }
 
-            await Task.WhenAll(tasks);
             _usersSubscribed.Remove(userId);
         }
 
@@ -216,9 +222,10 @@ namespace StreamDroid.Domain.Services.Stream
 
         private async Task SaveReward(CustomReward customReward)
         {
+            var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
+
             using var scope = _serviceScopeFactory.CreateScope();
             using var repository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
-            var imageUrl = customReward.Image is null ? customReward.DefaultImage.Url1x : customReward.Image.Url1x;
             var reward = await repository.FindByIdAsync(customReward.Id);
 
             if (reward is not null)
@@ -262,10 +269,14 @@ namespace StreamDroid.Domain.Services.Stream
             _logger.LogInformation("Streamer {streamer}: {user} redeemed {title} at {redeemedAt}.",
                 redeem.BroadcasterUserName, redeem.UserName, redeem.Reward.Title, redeem.RedeemedAt);
 
+            Entities.Reward? reward = null;
+
             using var scope = _serviceScopeFactory.CreateScope();
-            using var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
-            using var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>();
-            var reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
+
+            using (var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>())
+            {
+                reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
+            }
 
             if (reward is null)
                 return;
@@ -278,7 +289,10 @@ namespace StreamDroid.Domain.Services.Stream
                 Reward = reward
             };
 
-            await redemptionRepository.AddAsync(redemption);
+            using (var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>())
+            {
+                await redemptionRepository.AddAsync(redemption);
+            }
 
             _usersSubscribed.TryGetValue(redeem.BroadcasterUserId, out var handler);
 
