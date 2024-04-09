@@ -49,5 +49,15 @@ namespace StreamDroid.Domain.Services.Redemption
                 return dto;
             }).ToList();
         }
+
+        public void Dispose()
+        {
+            _repository.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _repository.DisposeAsync();
+        }
     }
 }

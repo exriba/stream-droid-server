@@ -8,7 +8,7 @@ namespace StreamDroid.Domain.Services.User
     /// <summary>
     /// Defines <see cref="Core.Entities.User"/> business logic.
     /// </summary>
-    public interface IUserService
+    public interface IUserService : IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// Finds a user by the given id.
