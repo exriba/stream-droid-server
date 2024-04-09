@@ -41,5 +41,10 @@ namespace StreamDroid.Infrastructure.Persistence
         {
             _databaseContext.Dispose();
         }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _databaseContext.DisposeAsync();
+        }
     }
 }

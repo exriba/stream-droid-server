@@ -6,7 +6,7 @@ namespace StreamDroid.Infrastructure.Persistence
     /// <summary>
     /// Defines Redemption persistence operations.
     /// </summary>
-    public interface IRedemptionRepository : IDisposable
+    public interface IRedemptionRepository : IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// Saves a redemption to the database.
