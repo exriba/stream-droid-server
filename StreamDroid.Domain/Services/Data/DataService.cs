@@ -28,9 +28,12 @@ namespace StreamDroid.Domain.Services.Data
             foreach (var file in files)
             {
                 var filePath = Path.Combine(basePath, file.FileName);
-                using var stream = new FileStream(filePath, FileMode.Create);
-                var task = file.CopyToAsync(stream);
-                tasks.Add(task); 
+                var stream = new FileStream(filePath, FileMode.Create);
+                var task = file.CopyToAsync(stream).ContinueWith(task =>
+                {
+                    stream.DisposeAsync();
+                });
+                tasks.Add(task);
             }
 
             await Task.WhenAll(tasks);
