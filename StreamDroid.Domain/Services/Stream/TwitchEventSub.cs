@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.EventSub;
@@ -12,12 +11,14 @@ using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using StreamDroid.Core.Enums;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.Services.Stream.Events;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
 
+// TODO: Review all the using statements in this class
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
@@ -25,10 +26,6 @@ namespace StreamDroid.Domain.Services.Stream
     /// </summary>
     internal class TwitchEventSub : ITwitchEventSub
     {
-        private const string AUDIO_EVENT = "AUDIO_EVENT";
-        private const string VIDEO_EVENT = "VIDEO_EVENT";
-        private const string TEXT_TO_SPEECH_EVENT = "TEXT_TO_SPEECH_EVENT";
-
         private static readonly IReadOnlySet<SubscriptionStatus> INACTIVE_SUBSCRIPTION_STATUS = new HashSet<SubscriptionStatus>
         {
             { SubscriptionStatus.AUTHORIZATION_REVOKED },
@@ -50,26 +47,23 @@ namespace StreamDroid.Domain.Services.Stream
             { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REDEMPTION_ADD },
         };
 
-        private Entities.User _user = new();
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
-        private readonly IHubContext<AssetHub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private static readonly SemaphoreSlim connectSemaphore = new(1, 1);
-        private static readonly SemaphoreSlim disconnectSemaphore = new(1, 1);
+        private readonly IDictionary<string, Func<EventBase, Task>> _usersSubscribed;
 
         public TwitchEventSub(EventSub eventSub,
                               IAppSettings appSettings,
-                              IHubContext<AssetHub> hubContext,
                               IServiceScopeFactory serviceScopeFactory,
                               ILogger<TwitchEventSub> logger)
         {
             _logger = logger;
             _eventSub = eventSub;
-            _hubContext = hubContext;
             _appSettings = appSettings;
             _serviceScopeFactory = serviceScopeFactory;
+            _usersSubscribed = new Dictionary<string, Func<EventBase, Task>>();
 
             _eventSub.OnRevocation += OnRevocation;
             _eventSub.OnErrorMessage += OnErrorMessage;
@@ -84,16 +78,16 @@ namespace StreamDroid.Domain.Services.Stream
         }
 
         /// <inheritdoc/>
-        public async Task ConnectAsync(Entities.User user)
+        public async Task ConnectAsync()
         {
             await connectSemaphore.WaitAsync();
+
             try
             {
-                if (_eventSub.webSocketClient.Connected || user.UserType == UserType.NORMAL)
+                if (_eventSub.webSocketClient.Connected)
                     return;
-
-                _user = user;
-                await _eventSub.ConnectAsync();
+                
+                await _eventSub.ConnectAsync();              
             }
             finally
             {
@@ -102,42 +96,64 @@ namespace StreamDroid.Domain.Services.Stream
         }
 
         /// <inheritdoc/>
-        public async Task DisconnectAsync(Entities.User user)
+        public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
         {
-            await disconnectSemaphore.WaitAsync();
-            try
-            {
-                if (!_eventSub.webSocketClient.Connected || user.UserType == UserType.NORMAL)
-                    return;
+            if (_usersSubscribed.ContainsKey(userId))
+                return;
 
-                await _eventSub.DisconnectAsync();
-                await ClearSubscriptionAsync(user);
-            }
-            finally
-            {
-                disconnectSemaphore.Release();
-            }
+            using var scope = _serviceScopeFactory.CreateScope();
+            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+            var user = await userService.FindUserByIdAsync(userId);
+
+            if (user.UserType == UserType.NORMAL)
+                throw new ArgumentException("Normal users cannot interact with twitch event sub.");
+
+            var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
+
+            var tasks = SUBSCRIPTION_TYPES.Select(x =>
+                helixApi.Subscriptions.CreateEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
+
+            await Task.WhenAll(tasks);
+            _usersSubscribed.Add(userId, notificationHandler);
         }
 
-        private async void OnClientConnected(object? sender, ClientConnectedArgs e)
+        /// <inheritdoc/>
+        public async Task UnsubscribeAsync(string userId)
+        {
+            if (!_usersSubscribed.ContainsKey(userId))
+                return;
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+            var user = await userService.FindUserByIdAsync(userId);
+
+            if (user.UserType == UserType.NORMAL)
+                throw new ArgumentException("Normal users cannot interact with twitch event sub.");
+
+            var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(user.Id);
+            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                await helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+            var inactiveSubscriptions = helixSubscriptionResponse.Data.Where(x => INACTIVE_SUBSCRIPTION_STATUS.Contains(x.SubscriptionStatus)).ToList();
+
+            var tasks = new List<Task>();
+            foreach (var subscription in inactiveSubscriptions)
+            {
+                _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", subscription.Id, subscription.Type, subscription.CreatedAt);
+                var task = helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(subscription.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, subscription.Id, CancellationToken.None);
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks);
+            _usersSubscribed.Remove(userId);
+        }
+
+        private void OnClientConnected(object? sender, ClientConnectedArgs e)
         {
             _logger.LogInformation("EventSub client connected");
-
-            if (!e.ReconnectionRequested)
-            {
-                using var scope = _serviceScopeFactory.CreateScope();
-                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(_user.Id);
-                var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
-
-                var tasks = SUBSCRIPTION_TYPES.Select(x =>
-                    helixApi.Subscriptions.CreateEventSubSubscriptionAsync(_user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
-
-                await Task.WhenAll(tasks);
-            }
         }
 
         private async void OnClientDisconnected(object? sender, ClientDisconnectedArgs e)
@@ -146,10 +162,7 @@ namespace StreamDroid.Domain.Services.Stream
             _logger.LogWarning("EventSub client disconnected. Status {status}. Reason {reason}.", e.WebSocketCloseStatus, reason);
 
             if (e.WebSocketCloseStatus is WebSocketCloseStatus.Empty)
-            {
-                await ClearSubscriptionAsync(_user);
                 await _eventSub.ReconnectAsync();
-            }
         }
 
         private void OnStreamOnline(object? sender, StreamOnlineArgs e)
@@ -267,53 +280,56 @@ namespace StreamDroid.Domain.Services.Stream
 
             await redemptionRepository.AddAsync(redemption);
 
+            _usersSubscribed.TryGetValue(redeem.BroadcasterUserId, out var handler);
+
+            if (handler is null)
+                return;
+
             if (reward.Speech.Enabled)
             {
-                var textToSpeechEvent = new
+                var textToSpeechEvent = new SpeechEvent
                 {
-                    reward.Speech.VoiceIndex,
-                    Message = redeem.UserInput
+                    Message = redeem.UserInput,
+                    VoiceIndex = reward.Speech.VoiceIndex
                 };
 
-                await _hubContext.Clients.All.SendAsync(TEXT_TO_SPEECH_EVENT, textToSpeechEvent);
+                await handler(textToSpeechEvent);
             }
 
             if (!reward.TryGetRandomAsset(out var asset)) 
                 return;
 
-            var data = new
+           var eventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.AUDIO : EventType.VIDEO;
+           var assetEvent = new AssetEvent(eventType)
             {
-                asset!.Volume,
-                Id = Guid.NewGuid().ToString(),
-                AssetUri = new Uri(string.Join("/", _appSettings.StaticAssetUri, reward.Title, asset.ToString())),
+                Volume = asset.Volume,
+                Uri = new Uri(string.Join("/", _appSettings.StaticAssetUri, redeem.UserId, reward.Title, asset.ToString()))
             };
 
-            if (asset.FileName.MediaExtension.Equals(MediaExtension.MP3))
-                await _hubContext.Clients.All.SendAsync(AUDIO_EVENT, data);
-            else
-                await _hubContext.Clients.All.SendAsync(VIDEO_EVENT, data);
+            await handler(assetEvent);
         }
 
-        private async Task ClearSubscriptionAsync(Entities.User user)
+        public async ValueTask DisposeAsync()
         {
-            using var scope = _serviceScopeFactory.CreateScope();
-            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+            await DisposeAsyncCore();
 
-            var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(user.Id);
-            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                await helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-            var inactiveSubscriptions = helixSubscriptionResponse.Data.Where(x => INACTIVE_SUBSCRIPTION_STATUS.Contains(x.SubscriptionStatus)).ToList();
-                        
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
             var tasks = new List<Task>();
-            foreach (var subscription in inactiveSubscriptions)
+
+            foreach (var userId in _usersSubscribed.Keys)
             {
-                _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", subscription.Id, subscription.Type, subscription.CreatedAt);
-                var task = helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(subscription.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, subscription.Id, CancellationToken.None);
+                var task = UnsubscribeAsync(userId);
                 tasks.Add(task);
             }
 
             await Task.WhenAll(tasks);
+
+            _logger.LogInformation("Disposing event sub with session {id}.", _eventSub.SessionId);
+            await _eventSub.DisposeAsync();
         }
     }
 }

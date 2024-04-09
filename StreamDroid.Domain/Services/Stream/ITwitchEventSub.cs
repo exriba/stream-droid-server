@@ -1,22 +1,28 @@
-﻿using Entities = StreamDroid.Core.Entities;
+﻿using StreamDroid.Domain.Services.Stream.Events;
 
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
     /// Defines <see cref="SharpTwitch.EventSub.EventSub"/> business logic.
     /// </summary>
-    public interface ITwitchEventSub
+    public interface ITwitchEventSub : IAsyncDisposable
     {
         /// <summary>
-        /// Connects a user to twitch event sub.
+        /// Connects to twitch event sub.
         /// </summary>
-        /// <param name="user">user</param>
-        Task ConnectAsync(Entities.User user);
+        Task ConnectAsync();
 
         /// <summary>
-        /// Disconnects a user from twitch event sub.
+        /// Registers a user and handler to listen for incoming events from twitch subscriptions.
         /// </summary>
-        /// <param name="user">user</param>
-        Task DisconnectAsync(Entities.User user);
+        /// <param name="userId">user id</param>
+        /// <param name="notificationHandler">notification handler</param>
+        Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler);
+
+        /// <summary>
+        /// Unregisters a user to stop listening for incoming events from twitch subscriptions.
+        /// </summary>
+        /// <param name="userId">user id</param>
+        Task UnsubscribeAsync(string userId);
     }
 }
