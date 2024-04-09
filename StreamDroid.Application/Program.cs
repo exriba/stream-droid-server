@@ -6,11 +6,10 @@ using StreamDroid.Shared;
 using StreamDroid.Application.Settings;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
-using SharpTwitch.EventSub;
 using StreamDroid.Application;
-using StreamDroid.Domain.Services.Stream;
 using Microsoft.Extensions.Options;
 using StreamDroid.Domain.Settings;
+using SharpTwitch.EventSub;
 
 // StreamDroid.Application Configuration
 var builder = WebApplication.CreateBuilder(args);
@@ -89,7 +88,6 @@ app.UseAuthentication();
 app.UseLocalFileServer();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<AssetHub>(HUB_PATTERN);
 if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 else
