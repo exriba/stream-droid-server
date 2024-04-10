@@ -11,7 +11,6 @@ namespace StreamDroid.Application.Settings
 
         public string ClientUri { get; set; } = string.Empty;
         public string StaticAssetPath { get; set; } = string.Empty;
-        public string StaticAssetUri { get; set; } = string.Empty;
         public string ApplicationName { get; set; } = string.Empty;
     }
 }
