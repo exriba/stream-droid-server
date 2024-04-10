@@ -11,22 +11,28 @@ using Microsoft.Extensions.Options;
 using StreamDroid.Domain.Settings;
 using SharpTwitch.EventSub;
 
-// StreamDroid.Application Configuration
-var builder = WebApplication.CreateBuilder(args);
-
 #region Constants
 const string LOGOUT_PATH = "/logout";
 const string COOKIE_NAME = "StreamDroid";
-const string HUB_PATTERN = "/hubs/events/{id}";
+const string LOG4NET_CONFIG = "log4net.config";
+const string APP_SETTINGS_JSON = "appsettings.json";
 #endregion
 
-#region Logging
+// StreamDroid.Application Configuration
+var builder = WebApplication.CreateBuilder(args);
+
 builder.Logging.ClearProviders();
 if (builder.Environment.IsDevelopment())
     builder.Logging.AddConsole();
 else
-    builder.Logging.AddLog4Net();
-#endregion
+{
+    var pathToExe = Environment.ProcessPath;
+    var pathToContentRoot = Path.GetDirectoryName(pathToExe);
+    Directory.SetCurrentDirectory(pathToContentRoot);
+    builder.Configuration.SetBasePath(Directory.GetCurrentDirectory());
+    builder.Configuration.AddJsonFile(APP_SETTINGS_JSON, optional: false, reloadOnChange: true);
+    builder.Logging.AddLog4Net(LOG4NET_CONFIG);
+}
 
 #region Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
@@ -37,6 +43,7 @@ builder.Configuration.Configure();
 #endregion
 
 #region Register Services
+builder.Services.AddWindowsService();
 builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddInfrastructureConfiguration(builder.Configuration);
 builder.Services.AddServiceConfiguration(builder.Configuration);
