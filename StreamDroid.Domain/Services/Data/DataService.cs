@@ -20,7 +20,7 @@ namespace StreamDroid.Domain.Services.Data
         public async Task AddRewardAssetsAsync(string userId, string rewardName, IEnumerable<IFormFile> files)
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var basePath = Path.Combine(appDataPath, _appSettings.ApplicationName, userId, rewardName);
+            var basePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName);
             Directory.CreateDirectory(basePath);
 
             var tasks = new List<Task>();
@@ -43,7 +43,7 @@ namespace StreamDroid.Domain.Services.Data
         public void DeleteRewardAsset(string userId, string rewardName, FileName fileName)
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var filePath = Path.Combine(appDataPath, _appSettings.ApplicationName, userId, rewardName, fileName.ToString());
+            var filePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName, fileName.ToString());
 
             if (File.Exists(filePath))
             {
