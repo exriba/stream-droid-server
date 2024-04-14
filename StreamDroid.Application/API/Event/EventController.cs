@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using StreamDroid.Core.Enums;
 using StreamDroid.Domain.Services.Stream;
-using StreamDroid.Domain.Services.Stream.Events;
 using StreamDroid.Domain.Services.User;
 using System.Text.Json;
 

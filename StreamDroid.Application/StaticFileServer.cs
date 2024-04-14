@@ -45,13 +45,13 @@ namespace StreamDroid.Application
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = fileProvider,
-                RequestPath = appSettings.StaticAssetPath,
+                RequestPath = $"/{appSettings.StaticAssetPath}",
             });
 
             app.UseDirectoryBrowser(new DirectoryBrowserOptions
             {
                 FileProvider = fileProvider,
-                RequestPath = appSettings.StaticAssetPath
+                RequestPath = $"/{appSettings.StaticAssetPath}",
             });
         }
     }
