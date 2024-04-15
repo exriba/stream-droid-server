@@ -31,7 +31,7 @@ else
     Directory.SetCurrentDirectory(pathToContentRoot);
     builder.Configuration.SetBasePath(Directory.GetCurrentDirectory());
     builder.Configuration.AddJsonFile(APP_SETTINGS_JSON, optional: false, reloadOnChange: true);
-    builder.Logging.AddLog4Net(LOG4NET_CONFIG);
+    builder.Logging.AddLog4Net(LOG4NET_CONFIG, watch: true);
 }
 
 #region Options
