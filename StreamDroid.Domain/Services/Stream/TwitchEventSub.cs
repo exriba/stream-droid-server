@@ -18,7 +18,6 @@ using StreamDroid.Infrastructure.Persistence;
 using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
 
-// TODO: Review all the using statements in this class
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
@@ -28,7 +27,7 @@ namespace StreamDroid.Domain.Services.Stream
     {
         private const string ASPNETCORE_URLS = "ASPNETCORE_URLS";
 
-        private static readonly IReadOnlySet<SubscriptionStatus> INACTIVE_SUBSCRIPTION_STATUS = new HashSet<SubscriptionStatus>
+        /*private static readonly IReadOnlySet<SubscriptionStatus> INACTIVE_SUBSCRIPTION_STATUS = new HashSet<SubscriptionStatus>
         {
             { SubscriptionStatus.AUTHORIZATION_REVOKED },
             { SubscriptionStatus.WEBSOCKET_DISCONNECTED },
@@ -38,7 +37,7 @@ namespace StreamDroid.Domain.Services.Stream
             { SubscriptionStatus.WEBSOCKET_INTERNAL_ERROR },
             { SubscriptionStatus.WEBSOCKET_NETWORK_TIMEOUT },
             { SubscriptionStatus.WEBSOCKET_NETWORK_ERROR },
-        };
+        };*/
 
         private static readonly IReadOnlySet<SubscriptionType> SUBSCRIPTION_TYPES = new HashSet<SubscriptionType>
         {
@@ -54,8 +53,7 @@ namespace StreamDroid.Domain.Services.Stream
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private static readonly SemaphoreSlim connectSemaphore = new(1, 1);
-        private readonly IDictionary<string, Func<EventBase, Task>> _usersSubscribed;
+        private readonly IDictionary<string, Func<EventBase, Task>?> _usersSubscribed;
 
         public TwitchEventSub(EventSub eventSub,
                               IAppSettings appSettings,
@@ -66,7 +64,7 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub = eventSub;
             _appSettings = appSettings;
             _serviceScopeFactory = serviceScopeFactory;
-            _usersSubscribed = new Dictionary<string, Func<EventBase, Task>>();
+            _usersSubscribed = new Dictionary<string, Func<EventBase, Task>?>();
             _appUrl = Environment.GetEnvironmentVariable(ASPNETCORE_URLS);
 
             _eventSub.OnRevocation += OnRevocation;
@@ -82,54 +80,56 @@ namespace StreamDroid.Domain.Services.Stream
         }
 
         /// <inheritdoc/>
-        public async Task ConnectAsync()
-        {
-            await connectSemaphore.WaitAsync();
-
-            try
-            {
-                if (_eventSub.webSocketClient.Connected)
-                    return;
-                
-                await _eventSub.ConnectAsync();              
-            }
-            finally
-            {
-                connectSemaphore.Release();
-            }
-        }
-
-        /// <inheritdoc/>
-        public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
+        public async Task ConnectAsync(string userId)
         {
             if (_usersSubscribed.ContainsKey(userId))
                 return;
 
             using (var scope = _serviceScopeFactory.CreateScope())
             {
-                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-
                 using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
                 var user = await userService.FindUserByIdAsync(userId);
 
                 if (user.UserType == UserType.NORMAL)
                     throw new ArgumentException("Normal users cannot interact with twitch event sub.");
 
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
-                var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
-
-                var tasks = SUBSCRIPTION_TYPES.Select(x =>
-                    helixApi.Subscriptions.CreateEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
-
-                await Task.WhenAll(tasks);
+                _usersSubscribed.Add(userId, null);
             }
 
-            _usersSubscribed.Add(userId, notificationHandler);
+            if (_eventSub.webSocketClient.Connected)
+                return;
+
+            await _eventSub.ConnectAsync();
         }
 
         /// <inheritdoc/>
-        public async Task UnsubscribeAsync(string userId)
+        public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
+        {
+            if (!_usersSubscribed.ContainsKey(userId))
+                return;
+
+            _usersSubscribed[userId] = notificationHandler;
+
+            if (_eventSub.SessionId != string.Empty)
+            {
+                using (var scope = _serviceScopeFactory.CreateScope())
+                {
+                    var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+                    using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+                    var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                        await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                    var tasks = SUBSCRIPTION_TYPES.Select(x =>
+                        helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
+
+                    await Task.WhenAll(tasks);
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task UnsubscribeAsync(string userId, bool includeActiveSubscriptions = false)
         {
             if (!_usersSubscribed.ContainsKey(userId))
                 return;
@@ -137,19 +137,16 @@ namespace StreamDroid.Domain.Services.Stream
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-
                 using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-                var user = await userService.FindUserByIdAsync(userId);
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
 
-                if (user.UserType == UserType.NORMAL)
-                    throw new ArgumentException("Normal users cannot interact with twitch event sub.");
-
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(user.Id);
                 var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await helixApi.Subscriptions.GetEventSubSubscriptionAsync(user.Id, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-                var inactiveSubscriptions = helixSubscriptionResponse.Data.Where(x => INACTIVE_SUBSCRIPTION_STATUS.Contains(x.SubscriptionStatus)).ToList();
+                    await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                var subscriptions = includeActiveSubscriptions
+                    ? helixSubscriptionResponse.Data
+                    : helixSubscriptionResponse.Data.Where(x => !x.SubscriptionStatus.Equals(SubscriptionStatus.ENABLED)).ToList();
 
-                var tasks = inactiveSubscriptions.Select(x =>
+                var tasks = subscriptions.Select(x =>
                 {
                     _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", x.Id, x.Type, x.CreatedAt);
                     return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
@@ -161,9 +158,29 @@ namespace StreamDroid.Domain.Services.Stream
             _usersSubscribed.Remove(userId);
         }
 
-        private void OnClientConnected(object? sender, ClientConnectedArgs e)
+        private async void OnClientConnected(object? sender, ClientConnectedArgs e)
         {
             _logger.LogInformation("EventSub client connected");
+
+            if (!e.ReconnectionRequested)
+            {
+                using (var scope = _serviceScopeFactory.CreateScope())
+                {
+                    var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+                    using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+                    foreach (var userId in _usersSubscribed.Keys)
+                    {
+                        var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+                        var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                            await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                        var tasks = SUBSCRIPTION_TYPES.Select(x =>
+                           helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
+
+                        await Task.WhenAll(tasks);
+                    }
+                }
+            }
         }
 
         private async void OnClientDisconnected(object? sender, ClientDisconnectedArgs e)
@@ -333,7 +350,7 @@ namespace StreamDroid.Domain.Services.Stream
 
             foreach (var userId in _usersSubscribed.Keys)
             {
-                var task = UnsubscribeAsync(userId);
+                var task = UnsubscribeAsync(userId, includeActiveSubscriptions: true);
                 tasks.Add(task);
             }
 
