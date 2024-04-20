@@ -7,6 +7,7 @@ using SharpTwitch.EventSub.Core.EventArgs.Channel.Redemption;
 using SharpTwitch.EventSub.Core.EventArgs.Channel.Reward;
 using SharpTwitch.EventSub.Core.EventArgs.Stream;
 using SharpTwitch.EventSub.Core.EventMessageArgs;
+using SharpTwitch.EventSub.Core.Handler;
 using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using StreamDroid.Core.Enums;
@@ -133,14 +134,17 @@ namespace StreamDroid.Domain.Services.Stream
 
                 var tasks = subscriptions.Select(x =>
                 {
-                    _logger.LogInformation("Deleting subscription with id {id} and type {type} that was created on {date}.", x.Id, x.Type, x.CreatedAt);
+                    _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} that was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
                     return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
                 });
 
                 await Task.WhenAll(tasks);
             }
 
-            _usersSubscribed.Remove(userId);
+            if (includeActiveSubscriptions)
+                _usersSubscribed.Remove(userId);
+            else
+                _usersSubscribed[userId] = null;
         }
 
         private async void OnClientConnected(object? sender, ClientConnectedArgs e)
@@ -173,8 +177,11 @@ namespace StreamDroid.Domain.Services.Stream
 
                         if (!userIsSubscribed)
                         {
-                            var tasks = SUBSCRIPTION_TYPES.Select(x =>
-                                helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
+                            var tasks = SUBSCRIPTION_TYPES.Select(x => 
+                            {
+                                _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.Now);
+                                return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None);
+                            });
 
                             await Task.WhenAll(tasks);
                         }
