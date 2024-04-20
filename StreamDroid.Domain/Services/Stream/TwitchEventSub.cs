@@ -179,7 +179,7 @@ namespace StreamDroid.Domain.Services.Stream
                         {
                             var tasks = SUBSCRIPTION_TYPES.Select(x => 
                             {
-                                _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.Now);
+                                _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
                                 return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None);
                             });
 
