@@ -54,7 +54,6 @@ namespace StreamDroid.Domain.Services.Stream
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private static readonly SemaphoreSlim connectSemaphore = new(1, 1);
         private readonly IDictionary<string, Func<EventBase, Task>?> _usersSubscribed;
 
         public TwitchEventSub(EventSub eventSub,
@@ -157,23 +156,23 @@ namespace StreamDroid.Domain.Services.Stream
 
         private async Task SubscribeAsync(params string[] userIds)
         {
-            try
+            if (_eventSub.SessionId != string.Empty)
             {
-                await connectSemaphore.WaitAsync();
-
-                if (_eventSub.SessionId != string.Empty)
+                using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    using (var scope = _serviceScopeFactory.CreateScope())
+                    var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+                    using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+                    foreach (var userId in userIds)
                     {
-                        var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                        using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                        var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+                        var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                            await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-                        foreach (var userId in userIds)
+                        var userIsSubscribed = helixSubscriptionResponse.Data?.Any(x => x.Transport.SessionId == _eventSub.SessionId) ?? false;
+
+                        if (!userIsSubscribed)
                         {
-                            var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
-                            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                                await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-
                             var tasks = SUBSCRIPTION_TYPES.Select(x =>
                                 helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None));
 
@@ -181,10 +180,6 @@ namespace StreamDroid.Domain.Services.Stream
                         }
                     }
                 }
-            }
-            finally 
-            {
-                connectSemaphore.Release();
             }
         }
 
