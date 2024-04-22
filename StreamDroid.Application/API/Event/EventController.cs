@@ -40,12 +40,12 @@ namespace StreamDroid.Application.API.Event
                 await Response.Body.FlushAsync();
             }
 
-            await _twitchEventSub.ConnectAsync(claim.Value);
-            await _twitchEventSub.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
-
             Response.Headers.Add(HeaderNames.Connection, CONNECTION);
             Response.Headers.Add(HeaderNames.CacheControl, CACHE_CONTROL);
             Response.Headers.Add(HeaderNames.ContentType, EVENT_STREAM_CONTENT_TYPE);
+
+            await _twitchEventSub.ConnectAsync(claim.Value);
+            await _twitchEventSub.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
 
             while (!cancellationToken.IsCancellationRequested)
             {
