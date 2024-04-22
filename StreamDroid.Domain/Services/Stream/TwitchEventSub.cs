@@ -50,7 +50,6 @@ namespace StreamDroid.Domain.Services.Stream
             { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REDEMPTION_ADD },
         };
 
-        private readonly string? _appUrl;
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
@@ -67,7 +66,6 @@ namespace StreamDroid.Domain.Services.Stream
             _appSettings = appSettings;
             _serviceScopeFactory = serviceScopeFactory;
             _usersSubscribed = new Dictionary<string, Func<EventBase, Task>?>();
-            _appUrl = Environment.GetEnvironmentVariable(ASPNETCORE_URLS);
 
             _eventSub.OnRevocation += OnRevocation;
             _eventSub.OnErrorMessage += OnErrorMessage;
@@ -345,7 +343,7 @@ namespace StreamDroid.Domain.Services.Stream
            var assetEvent = new AssetEvent(eventType)
             {
                 Volume = asset.Volume,
-                Uri = new Uri(string.Join("/", _appUrl, _appSettings.StaticAssetPath, redeem.UserId, reward.Title, asset.ToString()))
+                Uri = new Uri(string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.UserId, reward.Title, asset.ToString()))
             };
 
             await handler(assetEvent);
