@@ -7,7 +7,6 @@ using SharpTwitch.EventSub.Core.EventArgs.Channel.Redemption;
 using SharpTwitch.EventSub.Core.EventArgs.Channel.Reward;
 using SharpTwitch.EventSub.Core.EventArgs.Stream;
 using SharpTwitch.EventSub.Core.EventMessageArgs;
-using SharpTwitch.EventSub.Core.Handler;
 using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using StreamDroid.Core.Enums;
@@ -26,8 +25,6 @@ namespace StreamDroid.Domain.Services.Stream
     /// </summary>
     internal class TwitchEventSub : ITwitchEventSub
     {
-        private const string ASPNETCORE_URLS = "ASPNETCORE_URLS";
-
         /*private static readonly IReadOnlySet<SubscriptionStatus> INACTIVE_SUBSCRIPTION_STATUS = new HashSet<SubscriptionStatus>
         {
             { SubscriptionStatus.AUTHORIZATION_REVOKED },
@@ -292,34 +289,31 @@ namespace StreamDroid.Domain.Services.Stream
             _logger.LogInformation("Streamer {streamer}: {user} redeemed {title} at {redeemedAt}.",
                 redeem.BroadcasterUserName, redeem.UserName, redeem.Reward.Title, redeem.RedeemedAt);
 
-            Entities.Reward? reward = null;
+            Entities.Reward? reward;
 
-            using var scope = _serviceScopeFactory.CreateScope();
-
-            using (var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>())
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
+                using var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
+                using var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>();
                 reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
-            }
 
-            if (reward is null)
-                return;
+                if (reward is not null)
+                {
+                    var redemption = new Entities.Redemption
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        UserId = redeem.UserId,
+                        UserName = redeem.UserName,
+                        Reward = reward
+                    };
 
-            var redemption = new Entities.Redemption
-            {
-                Id = Guid.NewGuid().ToString(),
-                UserId = redeem.UserId,
-                UserName = redeem.UserName,
-                Reward = reward
-            };
-
-            using (var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>())
-            {
-                await redemptionRepository.AddAsync(redemption);
+                    await redemptionRepository.AddAsync(redemption);
+                }
             }
 
             _usersSubscribed.TryGetValue(redeem.BroadcasterUserId, out var handler);
 
-            if (handler is null)
+            if (reward is null || handler is null)
                 return;
 
             if (reward.Speech.Enabled)
@@ -333,14 +327,16 @@ namespace StreamDroid.Domain.Services.Stream
                 await handler(textToSpeechEvent);
             }
 
-            if (!reward.TryGetRandomAsset(out var asset)) 
+            if (!reward.TryGetRandomAsset(out var asset))
                 return;
 
-           var eventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.AUDIO : EventType.VIDEO;
-           var assetEvent = new AssetEvent(eventType)
+            var eventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.AUDIO : EventType.VIDEO;
+            var uriString = string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.UserId, reward.Title, asset.ToString());
+
+            var assetEvent = new AssetEvent(eventType)
             {
                 Volume = asset.Volume,
-                Uri = new Uri(string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.UserId, reward.Title, asset.ToString()))
+                Uri = new Uri(uriString)
             };
 
             await handler(assetEvent);
