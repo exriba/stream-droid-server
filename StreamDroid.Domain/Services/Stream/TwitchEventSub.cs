@@ -118,6 +118,8 @@ namespace StreamDroid.Domain.Services.Stream
             if (!_usersSubscribed.ContainsKey(userId))
                 return;
 
+            _usersSubscribed[userId] = null;
+
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
@@ -138,11 +140,6 @@ namespace StreamDroid.Domain.Services.Stream
 
                 await Task.WhenAll(tasks);
             }
-
-            if (includeActiveSubscriptions)
-                _usersSubscribed.Remove(userId);
-            else
-                _usersSubscribed[userId] = null;
         }
 
         private async void OnClientConnected(object? sender, ClientConnectedArgs e)
@@ -353,6 +350,8 @@ namespace StreamDroid.Domain.Services.Stream
         {
             var tasks = _usersSubscribed.Select(x => UnsubscribeAsync(x.Key, includeActiveSubscriptions: true));
             await Task.WhenAll(tasks);
+
+            _usersSubscribed.Clear();
 
             _logger.LogInformation("Disposing event sub with session {id}.", _eventSub.SessionId);
             await _eventSub.DisposeAsync();
