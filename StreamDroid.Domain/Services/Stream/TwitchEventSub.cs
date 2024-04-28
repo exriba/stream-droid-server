@@ -331,7 +331,7 @@ namespace StreamDroid.Domain.Services.Stream
                 return;
 
             var eventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.AUDIO : EventType.VIDEO;
-            var uriString = string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.UserId, reward.Title, asset.ToString());
+            var uriString = string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.BroadcasterUserId, reward.Title, asset.ToString());
 
             var assetEvent = new AssetEvent(eventType)
             {
