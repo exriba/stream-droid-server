@@ -44,7 +44,6 @@ namespace StreamDroid.Application.API.Event
             Response.Headers.Add(HeaderNames.CacheControl, CACHE_CONTROL);
             Response.Headers.Add(HeaderNames.ContentType, EVENT_STREAM_CONTENT_TYPE);
 
-            await _twitchEventSub.ConnectAsync(claim.Value);
             await _twitchEventSub.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
 
             while (!cancellationToken.IsCancellationRequested)
@@ -52,7 +51,7 @@ namespace StreamDroid.Application.API.Event
                 await Task.Delay(5000);
             }
 
-            await _twitchEventSub.UnsubscribeAsync(claim.Value);
+            _twitchEventSub.UnsubscribeAsync(claim.Value);
         }
     }
 }
