@@ -18,6 +18,11 @@ using StreamDroid.Infrastructure.Persistence;
 using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
 
+// TODO:
+// This class needs to be reimplemented.
+// 1. If the database contains any users, subscriptions should be created on Startup and removed on Shutdown. (Hosted Service)
+// 2. If the database does not contain any users, subscriptions should be created when a user connects for the first time.
+// 3. Review these restrictions https://dev.twitch.tv/docs/eventsub/manage-subscriptions/#subscription-limits (Future updates)
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
@@ -77,66 +82,28 @@ namespace StreamDroid.Domain.Services.Stream
         }
 
         /// <inheritdoc/>
-        public async Task ConnectAsync(string userId)
-        {
-            if (_usersSubscribed.ContainsKey(userId))
-                return;
-
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-                var user = await userService.FindUserByIdAsync(userId);
-
-                if (user.UserType == UserType.NORMAL)
-                    throw new ArgumentException("Normal users cannot interact with twitch event sub.");
-
-                _usersSubscribed.Add(userId, null);
-            }
-
-            if (_eventSub.webSocketClient.Connected)
-                return;
-
-            await _eventSub.ConnectAsync();
-        }
-
-        /// <inheritdoc/>
         public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
         {
-            if (!_usersSubscribed.ContainsKey(userId))
-                return;
+            if (_usersSubscribed.ContainsKey(userId))
+                _usersSubscribed[userId] = notificationHandler;
+            else
+            {
+                _usersSubscribed.Add(userId, notificationHandler);
 
-            _usersSubscribed[userId] = notificationHandler;
-            await SubscribeAsync(userId);
+                if (_eventSub.webSocketClient.Connected)
+                    await SubscribeAsync(userId);
+                else
+                    await _eventSub.ConnectAsync();
+            }
         }
 
         /// <inheritdoc/>
-        public async Task UnsubscribeAsync(string userId, bool includeActiveSubscriptions = false)
+        public void UnsubscribeAsync(string userId)
         {
             if (!_usersSubscribed.ContainsKey(userId))
                 return;
 
             _usersSubscribed[userId] = null;
-
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
-
-                var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-                var subscriptions = includeActiveSubscriptions
-                    ? helixSubscriptionResponse.Data
-                    : helixSubscriptionResponse.Data.Where(x => !x.SubscriptionStatus.Equals(SubscriptionStatus.ENABLED)).ToList();
-
-                var tasks = subscriptions.Select(x =>
-                {
-                    _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} that was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
-                    return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
-                });
-
-                await Task.WhenAll(tasks);
-            }
         }
 
         private async void OnClientConnected(object? sender, ClientConnectedArgs e)
@@ -169,7 +136,7 @@ namespace StreamDroid.Domain.Services.Stream
 
                         if (!userIsSubscribed)
                         {
-                            var tasks = SUBSCRIPTION_TYPES.Select(x => 
+                            var tasks = SUBSCRIPTION_TYPES.Select(x =>
                             {
                                 _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
                                 return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None);
@@ -342,12 +309,36 @@ namespace StreamDroid.Domain.Services.Stream
             await handler(assetEvent);
         }
 
-        public async ValueTask DisposeAsync()
+        private async Task ClearSubscriptionsAsync()
         {
-            var tasks = _usersSubscribed.Select(x => UnsubscribeAsync(x.Key, includeActiveSubscriptions: true));
-            await Task.WhenAll(tasks);
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+                using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+                foreach (var userId in _usersSubscribed.Keys)
+                {
+                    var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                        await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+
+                    var tasks = helixSubscriptionResponse.Data.Select(x =>
+                    {
+                        _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} that was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
+                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
+                    });
+
+                    await Task.WhenAll(tasks);
+                }
+            }
 
             _usersSubscribed.Clear();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await ClearSubscriptionsAsync();
 
             _logger.LogInformation("Disposing event sub with session {id}.", _eventSub.SessionId);
             await _eventSub.DisposeAsync();
