@@ -106,12 +106,12 @@ namespace StreamDroid.Domain.Services.Stream
                 return;
             }
 
-            _usersSubscribed.Add(userId, notificationHandler);
-
             if (_eventSub.webSocketClient.Connected)
                 await SubscribeAsync(userId);
             else
                 await _eventSub.ConnectAsync();
+
+            _usersSubscribed.Add(userId, notificationHandler);
         }
 
         /// <inheritdoc/>
