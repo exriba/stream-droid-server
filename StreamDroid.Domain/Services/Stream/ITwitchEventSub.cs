@@ -5,7 +5,7 @@ namespace StreamDroid.Domain.Services.Stream
     /// <summary>
     /// Defines <see cref="SharpTwitch.EventSub.EventSub"/> business logic.
     /// </summary>
-    public interface ITwitchEventSub : IAsyncDisposable
+    public interface ITwitchEventSub
     {
         /// <summary>
         /// Creates twitch subscriptions and registers a notification handler for incoming events for a given user.

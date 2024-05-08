@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.EventSub;
@@ -15,33 +16,20 @@ using StreamDroid.Domain.Services.Stream.Events;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
+using System.Net.NetworkInformation;
 using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
 
 // TODO:
-// This class needs to be reimplemented.
-// 1. If the database contains any users, subscriptions should be created on Startup and removed on Shutdown. (Hosted Service)
-// 2. If the database does not contain any users, subscriptions should be created when a user connects for the first time.
-// 3. Review these restrictions https://dev.twitch.tv/docs/eventsub/manage-subscriptions/#subscription-limits (Future updates)
+// 1. Handle network errors and exceptions.
+// 2. Review these restrictions https://dev.twitch.tv/docs/eventsub/manage-subscriptions/#subscription-limits (Future updates)
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
     /// Default implementation of <see cref="ITwitchEventSub"/>.
     /// </summary>
-    internal class TwitchEventSub : ITwitchEventSub
+    internal class TwitchEventSub : IHostedService, ITwitchEventSub
     {
-        /*private static readonly IReadOnlySet<SubscriptionStatus> INACTIVE_SUBSCRIPTION_STATUS = new HashSet<SubscriptionStatus>
-        {
-            { SubscriptionStatus.AUTHORIZATION_REVOKED },
-            { SubscriptionStatus.WEBSOCKET_DISCONNECTED },
-            { SubscriptionStatus.WEBSOCKET_FAILED_PING_PONG },
-            { SubscriptionStatus.WEBSOCKET_RECEIVED_INBOUND_TRAFFIC },
-            { SubscriptionStatus.WEBSOCKET_CONNECTION_UNUSED },
-            { SubscriptionStatus.WEBSOCKET_INTERNAL_ERROR },
-            { SubscriptionStatus.WEBSOCKET_NETWORK_TIMEOUT },
-            { SubscriptionStatus.WEBSOCKET_NETWORK_ERROR },
-        };*/
-
         private static readonly IReadOnlySet<SubscriptionType> SUBSCRIPTION_TYPES = new HashSet<SubscriptionType>
         {
             { SubscriptionType.STREAM_ONLINE },
@@ -55,6 +43,7 @@ namespace StreamDroid.Domain.Services.Stream
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
+        private volatile bool NetworkIsAvailable = false;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IDictionary<string, Func<EventBase, Task>?> _usersSubscribed;
 
@@ -80,6 +69,34 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub.OnCustomRewardRemove += OnCustomRewardRemove;
             _eventSub.OnChannelPointsCustomRewardRedemption += OnChannelPointsCustomRewardRedemption;
         }
+
+        ///<Summary>
+        /// Initializes event sub client with twitch.
+        /// Includes workaround for <see cref="TwitchEventSub.StopAsync(CancellationToken)">StopAsync</see>
+        ///</Summary>
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            NetworkIsAvailable = NetworkInterface.GetIsNetworkAvailable();
+            NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (NetworkIsAvailable)
+                {
+                    await ClearSubscriptionsAsync();
+
+                    if (_usersSubscribed.Keys.Any())
+                        await _eventSub.ConnectAsync();
+                    
+                    break;
+                }
+
+                await Task.Delay(1000);
+            }
+        }
+
+        private void NetworkChange_NetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+            => NetworkIsAvailable = e.IsAvailable;
 
         /// <inheritdoc/>
         public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
@@ -309,12 +326,41 @@ namespace StreamDroid.Domain.Services.Stream
             await handler(assetEvent);
         }
 
+        /// <summary>
+        /// Clears all active eventsub subscriptions, then disconnects and disposes client. 
+        /// Due to the following open <see href="https://github.com/dotnet/runtime/issues/83093">issue</see>, Windows Services do not exit/shutdown
+        /// gracefully and thus this method is never called. As a result, StartAsync will handle clean up by removing inactive subscriptions from previous sessions. 
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns>Task</returns>
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            await ClearSubscriptionsAsync();
+            _usersSubscribed.Clear();
+
+            _logger.LogInformation("Disconnecting event sub with session {id}.", _eventSub.SessionId);
+            await _eventSub.DisconnectAsync();
+
+            _logger.LogInformation("Disposing event sub with session {id}.", _eventSub.SessionId);
+            await _eventSub.DisposeAsync();
+        }
+
         private async Task ClearSubscriptionsAsync()
         {
+            _logger.LogInformation("Cleaning up unecessary subscriptions.");
+
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
                 using var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                
+                if (!_usersSubscribed.Keys.Any())
+                {
+                    var users = await userService.FindUsersAsync();
+
+                    foreach (var user in users)
+                        _usersSubscribed.Add(user.Id, null);
+                }
 
                 foreach (var userId in _usersSubscribed.Keys)
                 {
@@ -332,16 +378,6 @@ namespace StreamDroid.Domain.Services.Stream
                     await Task.WhenAll(tasks);
                 }
             }
-
-            _usersSubscribed.Clear();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await ClearSubscriptionsAsync();
-
-            _logger.LogInformation("Disposing event sub with session {id}.", _eventSub.SessionId);
-            await _eventSub.DisposeAsync();
         }
     }
 }
