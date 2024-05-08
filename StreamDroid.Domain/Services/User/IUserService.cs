@@ -11,6 +11,12 @@ namespace StreamDroid.Domain.Services.User
     public interface IUserService : IDisposable, IAsyncDisposable
     {
         /// <summary>
+        /// Finds a collection of users.
+        /// </summary>
+        /// <returns>A collection of user DTOs.</returns>
+        Task<IReadOnlyCollection<UserDto>> FindUsersAsync();
+
+        /// <summary>
         /// Finds a user by the given id.
         /// </summary>
         /// <param name="userId">user id</param>

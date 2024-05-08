@@ -35,6 +35,17 @@ namespace StreamDroid.Domain.Tests.Services.User
             _userService = new UserService(helixApi, _authApi.Object, _userRepository);
         }
 
+        [Fact]
+        public async Task UserService_FindUsersAsync()
+        {
+            var id = Guid.NewGuid();
+            await SetupDataAsync(id);
+
+            var users = await _userService.FindUsersAsync();
+
+            Assert.Equal(1, users.Count);
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
