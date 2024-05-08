@@ -50,7 +50,6 @@ builder.Services.AddServiceConfiguration(builder.Configuration);
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddTwitchEventSub();
 builder.Services.AddHttpClient();
-builder.Services.AddSignalR();
 builder.Services.AddControllers()
                 .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new AssetConverter()));
 builder.Services.AddCors(options =>
