@@ -21,8 +21,7 @@ using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
 
 // TODO:
-// 1. Handle network errors and exceptions.
-// 2. Review these restrictions https://dev.twitch.tv/docs/eventsub/manage-subscriptions/#subscription-limits (Future updates)
+// 1. Review these restrictions https://dev.twitch.tv/docs/eventsub/manage-subscriptions/#subscription-limits (Future updates)
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
@@ -70,6 +69,9 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub.OnChannelPointsCustomRewardRedemption += OnChannelPointsCustomRewardRedemption;
         }
 
+        private void NetworkChange_NetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+            => NetworkIsAvailable = e.IsAvailable;
+
         ///<Summary>
         /// Initializes event sub client with twitch.
         /// Includes workaround for <see cref="TwitchEventSub.StopAsync(CancellationToken)">StopAsync</see>
@@ -87,7 +89,7 @@ namespace StreamDroid.Domain.Services.Stream
 
                     if (_usersSubscribed.Keys.Any())
                         await _eventSub.ConnectAsync();
-                    
+
                     break;
                 }
 
@@ -95,23 +97,21 @@ namespace StreamDroid.Domain.Services.Stream
             }
         }
 
-        private void NetworkChange_NetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
-            => NetworkIsAvailable = e.IsAvailable;
-
         /// <inheritdoc/>
         public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
         {
             if (_usersSubscribed.ContainsKey(userId))
-                _usersSubscribed[userId] = notificationHandler;
-            else
             {
-                _usersSubscribed.Add(userId, notificationHandler);
-
-                if (_eventSub.webSocketClient.Connected)
-                    await SubscribeAsync(userId);
-                else
-                    await _eventSub.ConnectAsync();
+                _usersSubscribed[userId] = notificationHandler;
+                return;
             }
+
+            _usersSubscribed.Add(userId, notificationHandler);
+
+            if (_eventSub.webSocketClient.Connected)
+                await SubscribeAsync(userId);
+            else
+                await _eventSub.ConnectAsync();
         }
 
         /// <inheritdoc/>
@@ -146,13 +146,12 @@ namespace StreamDroid.Domain.Services.Stream
                     foreach (var userId in userIds)
                     {
                         var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
-                        var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                            await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-                        var userIsSubscribed = helixSubscriptionResponse.Data?.Any(x => x.Transport.SessionId == _eventSub.SessionId) ?? false;
-
-                        if (!userIsSubscribed)
+                        try
                         {
+                            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                                await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+
                             var tasks = SUBSCRIPTION_TYPES.Select(x =>
                             {
                                 _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
@@ -161,6 +160,11 @@ namespace StreamDroid.Domain.Services.Stream
 
                             await Task.WhenAll(tasks);
                         }
+                        catch (HttpRequestException ex)
+                        {
+                            _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
+                        }
+                        
                     }
                 }
             }
@@ -204,10 +208,12 @@ namespace StreamDroid.Domain.Services.Stream
             }
         }
 
+        // TODO:
+        // 1. Need to alert user/admin.
         private void OnErrorMessage(object? sender, ErrorMessageArgs e)
         {
             var message = string.IsNullOrWhiteSpace(e.Message) ? "N/A" : e.Message;
-            _logger.LogError("EventSub ran into an error. Message {mesage}. Exception {exception}.", message, e.Exception);
+            _logger.LogError("EventSub ran into an error. Message: {mesage} Exception: {exception}.", message, e.Exception);
         }
 
         private async void OnCustomRewardAdd(object? sender, CustomRewardAddArgs e)
@@ -366,16 +372,23 @@ namespace StreamDroid.Domain.Services.Stream
                 {
                     var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
 
-                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                        await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-
-                    var tasks = helixSubscriptionResponse.Data.Select(x =>
+                    try
                     {
-                        _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} that was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
-                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
-                    });
+                        var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                            await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-                    await Task.WhenAll(tasks);
+                        var tasks = helixSubscriptionResponse.Data.Select(x =>
+                        {
+                            _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} that was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
+                            return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
+                        });
+
+                        await Task.WhenAll(tasks);
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
+                    }
                 }
             }
         }
