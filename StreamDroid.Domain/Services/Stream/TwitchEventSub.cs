@@ -106,12 +106,12 @@ namespace StreamDroid.Domain.Services.Stream
                 return;
             }
 
-            if (_eventSub.webSocketClient.Connected)
-                await SubscribeAsync(userId);
-            else
-                await _eventSub.ConnectAsync();
+            var completed = _eventSub.webSocketClient.Connected
+                ? await SubscribeAsync(userId)
+                : await _eventSub.ConnectAsync();
 
-            _usersSubscribed.Add(userId, notificationHandler);
+            if (completed)
+                _usersSubscribed.Add(userId, notificationHandler);
         }
 
         /// <inheritdoc/>
@@ -134,8 +134,10 @@ namespace StreamDroid.Domain.Services.Stream
             }
         }
 
-        private async Task SubscribeAsync(params string[] userIds)
+        private async Task<bool> SubscribeAsync(params string[] userIds)
         {
+            var subscribed = false;
+
             if (_eventSub.SessionId != string.Empty)
             {
                 using (var scope = _serviceScopeFactory.CreateScope())
@@ -159,6 +161,8 @@ namespace StreamDroid.Domain.Services.Stream
                             });
 
                             await Task.WhenAll(tasks);
+
+                            subscribed = true;
                         }
                         catch (HttpRequestException ex)
                         {
@@ -168,6 +172,8 @@ namespace StreamDroid.Domain.Services.Stream
                     }
                 }
             }
+
+            return subscribed;
         }
 
         private async void OnClientDisconnected(object? sender, ClientDisconnectedArgs e)
