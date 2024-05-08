@@ -42,6 +42,7 @@ namespace StreamDroid.Domain
             services.AddScoped<IRewardService, RewardService>();
             services.AddScoped<IRedemptionService, RedemptionService>();
             services.AddScoped<IDataService, DataService>();
+            services.AddHostedService<TwitchEventSub>();
             return services;
         }
     }
