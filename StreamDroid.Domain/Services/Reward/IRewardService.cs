@@ -7,7 +7,7 @@ namespace StreamDroid.Domain.Services.Reward
     /// <summary>
     /// Defines <see cref="Core.Entities.Reward"/> business logic.
     /// </summary>
-    public interface IRewardService : IDisposable, IAsyncDisposable
+    public interface IRewardService
     {
         #region Rewards
         /// <summary>

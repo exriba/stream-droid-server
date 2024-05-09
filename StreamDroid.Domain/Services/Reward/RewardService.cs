@@ -167,17 +167,5 @@ namespace StreamDroid.Domain.Services.Reward
             return await _repository.FindByIdAsync(rewardId.ToString());
         }
         #endregion
-
-        public void Dispose()
-        {
-            _userService.Dispose();
-            _repository.Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _userService.DisposeAsync();
-            await _repository.DisposeAsync();
-        }
     }
 }
