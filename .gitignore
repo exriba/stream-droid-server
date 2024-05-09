@@ -481,3 +481,5 @@ NuGet.Config
 **/appsettings.*.json
 [Dd]atabase/
 Migrations/
+log4net.config
+launchsettings.json

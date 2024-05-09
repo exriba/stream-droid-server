@@ -9,9 +9,9 @@ namespace StreamDroid.Application.Settings
     {
         public const string Key = "AppSettings";
 
+        public string ServerUri { get; set; } = string.Empty;
         public string ClientUri { get; set; } = string.Empty;
         public string StaticAssetPath { get; set; } = string.Empty;
-        public string StaticAssetUri { get; set; } = string.Empty;
         public string ApplicationName { get; set; } = string.Empty;
     }
 }

@@ -5,8 +5,9 @@
     /// </summary>
     public interface IAppSettings
     {
-        string StaticAssetUri { get; set; }
-
+        // TODO: review this field
+        string ServerUri { get; set; }
+        string StaticAssetPath { get; set; }
         string ApplicationName { get; set; }
     }
 }

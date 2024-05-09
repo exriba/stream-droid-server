@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using StreamDroid.Application.Settings;
-using System.Text;
 
 namespace StreamDroid.Application
 {
@@ -37,8 +36,8 @@ namespace StreamDroid.Application
             var options = app.Services.GetRequiredService<IOptions<AppSettings>>();
             var appSettings = options.Value;
 
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var path = Path.Combine(appDataPath, appSettings.ApplicationName);
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            var path = Path.Combine(appDataPath, appSettings.ApplicationName, appSettings.StaticAssetPath);
             Directory.CreateDirectory(path);
 
             var fileProvider = new PhysicalFileProvider(path);
@@ -46,13 +45,13 @@ namespace StreamDroid.Application
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = fileProvider,
-                RequestPath = appSettings.StaticAssetPath,
+                RequestPath = $"/{appSettings.StaticAssetPath}",
             });
 
             app.UseDirectoryBrowser(new DirectoryBrowserOptions
             {
                 FileProvider = fileProvider,
-                RequestPath = appSettings.StaticAssetPath
+                RequestPath = $"/{appSettings.StaticAssetPath}",
             });
         }
     }

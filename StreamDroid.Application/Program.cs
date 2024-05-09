@@ -6,28 +6,33 @@ using StreamDroid.Shared;
 using StreamDroid.Application.Settings;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.API.Converters;
-using SharpTwitch.EventSub;
 using StreamDroid.Application;
-using StreamDroid.Domain.Services.Stream;
 using Microsoft.Extensions.Options;
 using StreamDroid.Domain.Settings;
-
-// StreamDroid.Application Configuration
-var builder = WebApplication.CreateBuilder(args);
+using SharpTwitch.EventSub;
 
 #region Constants
 const string LOGOUT_PATH = "/logout";
 const string COOKIE_NAME = "StreamDroid";
-const string HUB_PATTERN = "/hubs/events/{id}";
+const string LOG4NET_CONFIG = "log4net.config";
+const string APP_SETTINGS_JSON = "appsettings.json";
 #endregion
 
-#region Logging
+// StreamDroid.Application Configuration
+var builder = WebApplication.CreateBuilder(args);
+
 builder.Logging.ClearProviders();
 if (builder.Environment.IsDevelopment())
     builder.Logging.AddConsole();
 else
-    builder.Logging.AddLog4Net();
-#endregion
+{
+    var pathToExe = Environment.ProcessPath;
+    var pathToContentRoot = Path.GetDirectoryName(pathToExe);
+    Directory.SetCurrentDirectory(pathToContentRoot);
+    builder.Configuration.SetBasePath(Directory.GetCurrentDirectory());
+    builder.Configuration.AddJsonFile(APP_SETTINGS_JSON, optional: false, reloadOnChange: true);
+    builder.Logging.AddLog4Net(LOG4NET_CONFIG, watch: true);
+}
 
 #region Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
@@ -38,13 +43,13 @@ builder.Configuration.Configure();
 #endregion
 
 #region Register Services
+builder.Services.AddWindowsService();
 builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddInfrastructureConfiguration(builder.Configuration);
 builder.Services.AddServiceConfiguration(builder.Configuration);
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddTwitchEventSub();
 builder.Services.AddHttpClient();
-builder.Services.AddSignalR();
 builder.Services.AddControllers()
                 .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new AssetConverter()));
 builder.Services.AddCors(options =>
@@ -89,7 +94,6 @@ app.UseAuthentication();
 app.UseLocalFileServer();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<AssetHub>(HUB_PATTERN);
 if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 else

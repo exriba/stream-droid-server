@@ -10,6 +10,7 @@ using StreamDroid.Domain.DTOs;
 using SharpTwitch.Helix;
 using SharpTwitch.Core.Enums;
 using StreamDroid.Core.Enums;
+using Mapster;
 
 namespace StreamDroid.Domain.Services.User
 {
@@ -29,6 +30,14 @@ namespace StreamDroid.Domain.Services.User
             _authApi = authApi;
             _helixApi = helixApi;
             _repository = repository;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyCollection<UserDto>> FindUsersAsync()
+        {
+            var entities = await _repository.FindAsync();
+            var users = entities.AsQueryable();
+            return users.ProjectToType<UserDto>().ToList();
         }
 
         /// <inheritdoc/>
