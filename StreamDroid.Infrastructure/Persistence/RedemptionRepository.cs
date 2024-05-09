@@ -8,7 +8,7 @@ namespace StreamDroid.Infrastructure.Persistence
     /// <summary>
     /// Default implementation of <see cref="IRedemptionRepository"/>.
     /// </summary>
-    internal class RedemptionRepository : IRedemptionRepository
+    internal class RedemptionRepository : IRedemptionRepository, IDisposable, IAsyncDisposable
     {
         private readonly DbSet<Redemption> _entitySet;
         private readonly DatabaseContext _databaseContext;

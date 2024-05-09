@@ -1,7 +1,6 @@
 ﻿using Ardalis.GuardClauses;
 using Microsoft.EntityFrameworkCore;
 using StreamDroid.Core.Common;
-using System.Diagnostics;
 using System.Linq.Expressions;
 
 namespace StreamDroid.Infrastructure.Persistence
@@ -10,7 +9,7 @@ namespace StreamDroid.Infrastructure.Persistence
     /// Default implementation of <see cref="IRepository{TEntity}"/>.
     /// </summary>
     /// <typeparam name="TEntity">Entity base class</typeparam>
-    internal class Repository<TEntity> : IRepository<TEntity> where TEntity : EntityBase 
+    internal class Repository<TEntity> : IDisposable, IAsyncDisposable, IRepository<TEntity> where TEntity : EntityBase
     {
         private readonly DbSet<TEntity> _entitySet;
         private readonly DatabaseContext _databaseContext;

@@ -40,9 +40,6 @@ namespace StreamDroid.Domain.Tests.Common
 
         public void Dispose()
         {
-            redemptionRepository.Dispose();
-            userRepository.Dispose();
-            rewardRepository.Dispose();
             _serviceProvider.Dispose();
         }
     }

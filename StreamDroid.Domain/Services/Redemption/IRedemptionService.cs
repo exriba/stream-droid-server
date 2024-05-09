@@ -5,7 +5,7 @@ namespace StreamDroid.Domain.Services.Redemption
     /// <summary>
     /// Defines <see cref="Core.Entities.Redemption"/> business logic.
     /// </summary>
-    public interface IRedemptionService : IDisposable, IAsyncDisposable
+    public interface IRedemptionService
     {
         /// <summary>
         /// Finds redemptions by the given user id.

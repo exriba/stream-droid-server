@@ -149,15 +149,5 @@ namespace StreamDroid.Domain.Services.User
             return await _repository.FindByIdAsync(userId);
         }
         #endregion
-
-        public void Dispose()
-        {
-            _repository.Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _repository.DisposeAsync();
-        }
     }
 }
