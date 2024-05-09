@@ -37,12 +37,14 @@ namespace StreamDroid.Domain
             services.AddTwitchAuth();
             services.AddTwitchHelix();
             services.AddTwitchCore(configurationManager);
-            services.AddSingleton<ITwitchEventSub, TwitchEventSub>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IRewardService, RewardService>();
             services.AddScoped<IRedemptionService, RedemptionService>();
             services.AddScoped<IDataService, DataService>();
-            services.AddHostedService<TwitchEventSub>();
+            services.AddHostedService<TwitchHostedService>();
+            services.AddSingleton<ITwitchManager, TwitchEventSub>();
+            services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider =>
+                (TwitchEventSub) provider.GetRequiredService<ITwitchManager>());
             return services;
         }
     }
