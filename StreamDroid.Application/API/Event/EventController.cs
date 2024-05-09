@@ -19,11 +19,11 @@ namespace StreamDroid.Application.API.Event
         private const string CACHE_CONTROL = "no-cache";
         private const string EVENT_STREAM_CONTENT_TYPE = "text/event-stream";
 
-        private readonly ITwitchEventSub _twitchEventSub;
+        private readonly ITwitchSubscriber _twitchSubscriber;
 
-        public EventController(ITwitchEventSub twitchEventSub)
+        public EventController(ITwitchSubscriber twitchSubscriber)
         {
-            _twitchEventSub = twitchEventSub;
+            _twitchSubscriber = twitchSubscriber;
         }
 
         [HttpGet]
@@ -44,14 +44,14 @@ namespace StreamDroid.Application.API.Event
             Response.Headers.Add(HeaderNames.CacheControl, CACHE_CONTROL);
             Response.Headers.Add(HeaderNames.ContentType, EVENT_STREAM_CONTENT_TYPE);
 
-            await _twitchEventSub.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
+            await _twitchSubscriber.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(5000);
             }
 
-            _twitchEventSub.UnsubscribeAsync(claim.Value);
+            _twitchSubscriber.UnsubscribeAsync(claim.Value);
         }
     }
 }
