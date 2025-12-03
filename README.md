@@ -1,3 +1,3 @@
 # streamdroid-server
 
-StreamDroid server Application built with C# and net6.
+StreamDroid Server built with C# and net6.
