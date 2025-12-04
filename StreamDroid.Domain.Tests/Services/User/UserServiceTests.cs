@@ -43,14 +43,14 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var users = await _userService.FindUsersAsync();
 
-            Assert.Equal(1, users.Count);
+            Assert.Single(users);
         }
 
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task UserService_FindUserByIdAsync_Throws_InvalidArgs(string userId)
+        public async Task UserService_FindUserByIdAsync_Throws_InvalidArgs(string? userId)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _userService.FindUserByIdAsync(userId));
         }
@@ -70,7 +70,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task UserService_AuthenticateUserAsync_Throws_InvalidArgs(string code)
+        public async Task UserService_AuthenticateUserAsync_Throws_InvalidArgs(string? code)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _userService.AuthenticateUserAsync(code));
         }
@@ -105,7 +105,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var helixUserCollectionResponse = new HelixCollectionResponse<HelixModels.User.User>
             {
-                Data = new HelixModels.User.User[] { helixUser }
+                Data = [helixUser]
             };
 
             _authApi.Setup(x => x.GetAccessTokenFromCodeAsync(
@@ -142,7 +142,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
         [Theory]
         [InlineData(null)]
-        public async Task UserService_UpdateUserPreferencesAsync_Throws_InvalidArgs(Preferences preferences)
+        public async Task UserService_UpdateUserPreferencesAsync_Throws_InvalidArgs(Preferences? preferences)
         {
             var id = Guid.NewGuid();
             await SetupDataAsync(id);

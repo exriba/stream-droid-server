@@ -18,7 +18,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task FindByIdAsync_Throws_InvalidArgs(string id)
+        public async Task FindByIdAsync_Throws_InvalidArgs(string? id)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _repository.FindByIdAsync(id));
         }
@@ -58,14 +58,14 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
 
         [Theory]
         [InlineData(null)]
-        public async Task AddAsync_Throws_InvalidArgs(Reward reward)
+        public async Task AddAsync_Throws_InvalidArgs(Reward? reward)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _repository.AddAsync(reward));
         }
 
         [Theory]
         [InlineData(null)]
-        public async Task UpdateAsync_Throws_InvalidArgs(Reward reward)
+        public async Task UpdateAsync_Throws_InvalidArgs(Reward? reward)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _repository.UpdateAsync(reward));
         }

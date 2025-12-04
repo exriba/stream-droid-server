@@ -33,13 +33,13 @@ namespace StreamDroid.Application.Middleware
             else
             {
                 correlationId = Guid.NewGuid().ToString();
-                context.Request.Headers.Add(CorrelationIdHeaderKey, correlationId);
+                context.Request.Headers.Append(CorrelationIdHeaderKey, correlationId);
             }
 
             if (context.User.Claims.Any())
             {
                 var claim = context.User.Claims.First(c => c.Type.Equals(NAME));
-                _logger.LogInformation("{correlationId}: {user} requested {method} {url}", 
+                _logger.LogInformation("{correlationId}: {user} requested {method} {url}",
                      correlationId, claim.Value, context.Request?.Method, context.Request?.Path.Value);
             }
             else
@@ -49,12 +49,12 @@ namespace StreamDroid.Application.Middleware
             context.Response.OnStarting(() =>
             {
                 if (!context.Response.Headers.TryGetValue(CorrelationIdHeaderKey, out var correlationIds))
-                    context.Response.Headers.Add(CorrelationIdHeaderKey, correlationId);
+                    context.Response.Headers.Append(CorrelationIdHeaderKey, correlationId);
                 return Task.CompletedTask;
             });
 
             try
-            { 
+            {
                 await _next(context);
             }
             catch (Exception ex) when (ex is ArgumentException ||
@@ -73,7 +73,7 @@ namespace StreamDroid.Application.Middleware
 
         private static async Task HandleException(HttpContext context, string message, HttpStatusCode statusCode)
         {
-            context.Response.StatusCode = (int) statusCode;
+            context.Response.StatusCode = (int)statusCode;
             await context.Response.WriteAsync(message);
         }
     }

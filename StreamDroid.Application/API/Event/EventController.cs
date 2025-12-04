@@ -40,9 +40,9 @@ namespace StreamDroid.Application.API.Event
                 await Response.Body.FlushAsync();
             }
 
-            Response.Headers.Add(HeaderNames.Connection, CONNECTION);
-            Response.Headers.Add(HeaderNames.CacheControl, CACHE_CONTROL);
-            Response.Headers.Add(HeaderNames.ContentType, EVENT_STREAM_CONTENT_TYPE);
+            Response.Headers.Append(HeaderNames.Connection, CONNECTION);
+            Response.Headers.Append(HeaderNames.CacheControl, CACHE_CONTROL);
+            Response.Headers.Append(HeaderNames.ContentType, EVENT_STREAM_CONTENT_TYPE);
 
             await _twitchSubscriber.SubscribeAsync(claim.Value, notificationHandler: SerializeData);
 

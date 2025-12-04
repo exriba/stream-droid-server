@@ -14,7 +14,7 @@ namespace StreamDroid.Core.Tests.ValueObject
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void FileName_Throws_InvalidArgs(string name)
+        public void FileName_Throws_InvalidArgs(string? name)
         {
             Assert.ThrowsAny<ArgumentException>(() => new FileName(name, MediaExtension.MP3));
         }
@@ -48,7 +48,7 @@ namespace StreamDroid.Core.Tests.ValueObject
         [InlineData(null)]
         [InlineData(".mp4")]
 
-        public void FileName_FromString_Throws_InvalidArgs(string name)
+        public void FileName_FromString_Throws_InvalidArgs(string? name)
         {
             Assert.ThrowsAny<ArgumentException>(() => FileName.FromString(name));
         }

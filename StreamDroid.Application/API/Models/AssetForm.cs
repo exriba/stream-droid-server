@@ -16,7 +16,7 @@ namespace StreamDroid.Application.API.Models
         /// Files
         /// </summary>
         [Required]
-        [Constraints.FileExtensions(new string[] { ".mp3", ".mp4" })]
-        public IEnumerable<IFormFile> Files { get; set; }
+        [Constraints.FileExtensions([".mp3", ".mp4"])]
+        public required IEnumerable<IFormFile> Files { get; set; }
     }
 }

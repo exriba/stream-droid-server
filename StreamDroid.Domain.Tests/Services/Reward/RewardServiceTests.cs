@@ -1,19 +1,19 @@
 ﻿using Moq;
+using SharpTwitch.Core;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Settings;
+using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models;
+using SharpTwitch.Helix.Models.Channel.Reward;
+using SharpTwitch.Helix.Models.Shared;
 using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.RefreshPolicy;
 using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Tests.Common;
-using SharpTwitch.Core;
-using SharpTwitch.Helix.Models.Shared;
-using SharpTwitch.Helix;
-using StreamDroid.Domain.RefreshPolicy;
-using SharpTwitch.Helix.Models.Channel.Reward;
+using StreamDroid.Infrastructure.Persistence;
 using Entities = StreamDroid.Core.Entities;
 using Helix = SharpTwitch.Helix.Models;
-using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Tests.Services.Reward
 {
@@ -61,7 +61,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task RewardService_FindRewardsByUserIdAsync_Throws_InvalidArgs(string userId)
+        public async Task RewardService_FindRewardsByUserIdAsync_Throws_InvalidArgs(string? userId)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _rewardService.FindRewardsByUserIdAsync(userId));
         }
@@ -125,7 +125,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             await _rewardService.RemoveAssetsFromRewardAsync(id, dictionary.Keys);
             assets = await _rewardService.FindAssetsByRewardIdAsync(id);
 
-            Assert.Equal(1, assets.Count);
+            Assert.Single(assets);
         }
 
         [Fact]

@@ -13,8 +13,6 @@ using StreamDroid.Shared;
 using System.Text;
 
 #region Constants
-const string LOGOUT_PATH = "/logout";
-const string COOKIE_NAME = "StreamDroid";
 const string LOG4NET_CONFIG = "log4net.config";
 #endregion
 

@@ -25,7 +25,7 @@ namespace StreamDroid.Core.Tests.Entities
             Assert.Null(reward.ImageUrl);
             Assert.Equal(title, reward.Title);
             Assert.Equal(speech, reward.Speech);
-            Assert.Equal(prompt, reward.Prompt); 
+            Assert.Equal(prompt, reward.Prompt);
             Assert.Equal(streamerId, reward.StreamerId);
             Assert.Equal(backgroundColor, reward.BackgroundColor);
             Assert.Empty(reward.Redemptions);
@@ -78,7 +78,7 @@ namespace StreamDroid.Core.Tests.Entities
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void Reward_GetAsset_Throws_InvalidArgs(string name)
+        public void Reward_GetAsset_Throws_InvalidArgs(string? name)
         {
             var reward = CreateReward();
 
@@ -126,7 +126,7 @@ namespace StreamDroid.Core.Tests.Entities
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void Reward_RemoveAsset_Throws_InvalidArgs(string name)
+        public void Reward_RemoveAsset_Throws_InvalidArgs(string? name)
         {
             var reward = CreateReward();
 
@@ -170,8 +170,8 @@ namespace StreamDroid.Core.Tests.Entities
         }
 
         private static Reward CreateReward(
-            string? id = null, 
-            string? title = null, 
+            string? id = null,
+            string? title = null,
             string? prompt = null,
             Speech? speech = null,
             string? streamerId = null,
