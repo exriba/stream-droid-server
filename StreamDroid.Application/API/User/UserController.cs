@@ -1,16 +1,19 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using StreamDroid.Application.API.Constraints;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth.Helpers;
 using SharpTwitch.Core.Settings;
-using System.ComponentModel.DataAnnotations;
+using StreamDroid.Application.API.Constraints;
+using StreamDroid.Application.Settings;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Shared.Extensions;
+using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System.Web;
 
 namespace StreamDroid.Application.API.User
 {
@@ -23,21 +26,28 @@ namespace StreamDroid.Application.API.User
     public class UserController : Controller
     {
         private const string ID = "Id";
-        private const string USER = "User";
         private const string NAME = "Name";
         private const string REFERER = "Referer";
 
+        private const string ISSUER = "iss";
+        private const string AUDIENCE = "aud";
+        private const string JWT_ID = "jti";
+        private const string ACCESS_TOKEN = "accessToken";
+
+        private readonly JwtSettings _jwtSettings;
         private readonly IUserService _userService;
         private readonly ICoreSettings _coreSettings;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, 
-                              ICoreSettings coreSettings, 
+        public UserController(IUserService userService,
+                              ICoreSettings coreSettings,
+                              IOptions<JwtSettings> jwtSettings,
                               ILogger<UserController> logger)
         {
             _logger = logger;
             _userService = userService;
             _coreSettings = coreSettings;
+            _jwtSettings = jwtSettings.Value;
         }
 
         /// <summary>
@@ -45,7 +55,7 @@ namespace StreamDroid.Application.API.User
         /// </summary>
         /// <returns>Redirects to authentication url.</returns>
         [AllowAnonymous]
-        [HttpGet("login")]  
+        [HttpGet("login")]
         public IActionResult Login()
         {
             var referer = HttpContext.Request.Headers[REFERER];
@@ -56,15 +66,16 @@ namespace StreamDroid.Application.API.User
             return Ok(loginUrl);
         }
 
+        // TODO: Mark token for invalidation
         /// <summary>
         /// Handles logout.
         /// </summary>
-        [HttpPost("logout")]
-        public async Task<IActionResult> LogoutAsync()
-        {
-            await HttpContext.SignOutAsync();
-            return Ok();
-        }
+        //[HttpPost("logout")]
+        //public async Task<IActionResult> LogoutAsync()
+        //{
+        //    await HttpContext.SignOutAsync();
+        //    return Ok();
+        //}
 
         /// <summary>
         /// Handles successful authentication.
@@ -75,7 +86,7 @@ namespace StreamDroid.Application.API.User
         [AllowAnonymous]
         [HttpGet("redirect")]
         [QueryParameter("code", "state")]
-        public async Task<IActionResult> AuthenticationSuccessAsync([FromQuery] string code, 
+        public async Task<IActionResult> AuthenticationSuccessAsync([FromQuery] string code,
                                                                     [FromQuery] string state)
         {
             var encryptedState = Base64UrlEncoder.Decode(state);
@@ -87,20 +98,31 @@ namespace StreamDroid.Application.API.User
             {
                 new Claim(ID, user.Id.ToString()),
                 new Claim(NAME, user.Name),
+                new Claim(AUDIENCE, _jwtSettings.Audience),
+                new Claim(ISSUER, _jwtSettings.Issuer),
+                new Claim(JWT_ID, Guid.NewGuid().ToString()),
             };
 
-            var identity = new ClaimsIdentity(claims, USER);
-            var claimsPrincipal = new ClaimsPrincipal(identity);
-            var properties = new AuthenticationProperties
-            {
-                IsPersistent = true,
-                AllowRefresh = true,
-                ExpiresUtc = DateTime.UtcNow.AddDays(30)
-            };
+            var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);
+            var securityKey = new SymmetricSecurityKey(encodedKey);
 
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, properties);
+            var jwtToken = new JwtSecurityToken(
+                claims: claims,
+                notBefore: DateTime.UtcNow,
+                expires: DateTime.UtcNow.AddDays(30),
+                signingCredentials: new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)
+            );
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.WriteToken(jwtToken);
+
+            var uriBuilder = new UriBuilder(referer);
+            var queryParameters = HttpUtility.ParseQueryString(uriBuilder.Query);
+            queryParameters[ACCESS_TOKEN] = token;
+            uriBuilder.Query = queryParameters.ToString();
+
             _logger.LogInformation("{user} logged in.", user.Name);
-            return Redirect(referer);
+            return Redirect(uriBuilder.Uri.AbsoluteUri);
         }
 
         /// <summary>
@@ -112,8 +134,8 @@ namespace StreamDroid.Application.API.User
         /// <returns>Redirects to referer url.</returns>
         [AllowAnonymous]
         [HttpGet("redirect")]
-        public IActionResult AuthenticationError([FromQuery] string error, 
-                                                 [FromQuery(Name = "error_description")] string errorDescription, 
+        public IActionResult AuthenticationError([FromQuery] string error,
+                                                 [FromQuery(Name = "error_description")] string errorDescription,
                                                  [FromQuery] string state)
         {
             _logger.LogError("Error ocurred during login {error}. Details: {errorDescription}.", error, errorDescription);
