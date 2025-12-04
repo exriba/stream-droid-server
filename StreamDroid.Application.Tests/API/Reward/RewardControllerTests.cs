@@ -1,13 +1,13 @@
-﻿using Moq;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
+using StreamDroid.Application.API.Models;
 using StreamDroid.Application.API.Reward;
 using StreamDroid.Core.ValueObjects;
-using System.Security.Claims;
-using StreamDroid.Application.API.Models;
-using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.Services.Data;
+using StreamDroid.Domain.Services.Reward;
+using System.Security.Claims;
 
 namespace StreamDroid.Application.Tests.API.Reward
 {
@@ -21,7 +21,7 @@ namespace StreamDroid.Application.Tests.API.Reward
 
         public RewardControllerTests()
         {
-            var claims = new List<Claim> 
+            var claims = new List<Claim>
             {
                 new Claim(ID, Guid.NewGuid().ToString())
             };
@@ -163,6 +163,7 @@ namespace StreamDroid.Application.Tests.API.Reward
         public void Dispose()
         {
             _rewardController.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

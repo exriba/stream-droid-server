@@ -83,10 +83,10 @@ namespace StreamDroid.Application.Tests.API.Redemption
             Assert.Equal(typeof(OkObjectResult), result.GetType());
         }
 
-
         public void Dispose()
         {
             _redemptionController.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }
