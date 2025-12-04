@@ -12,7 +12,7 @@ namespace StreamDroid.Shared.Tests.Extensions
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void IsBase64String_Throws_InvalidArgs(string text)
+        public void IsBase64String_Throws_InvalidArgs(string? text)
         {
             Assert.ThrowsAny<ArgumentException>(() => text.IsBase64String());
         }
@@ -41,7 +41,7 @@ namespace StreamDroid.Shared.Tests.Extensions
         [InlineData(TEXT, "")]
         [InlineData(TEXT, " ")]
         [InlineData(TEXT, null)]
-        public void Base64Encrypt_Throws_InvalidArgs(string text, string secretKey)
+        public void Base64Encrypt_Throws_InvalidArgs(string? text, string? secretKey)
         {
             Assert.ThrowsAny<ArgumentException>(() => text.Base64Encrypt(keyPhrase: secretKey));
         }
@@ -62,7 +62,7 @@ namespace StreamDroid.Shared.Tests.Extensions
         [InlineData(TEXT, "")]
         [InlineData(TEXT, " ")]
         [InlineData(TEXT, null)]
-        public void Base64Decrypt_Throws_InvalidArgs(string text, string secretKey)
+        public void Base64Decrypt_Throws_InvalidArgs(string? text, string? secretKey)
         {
             Assert.ThrowsAny<ArgumentException>(() => text.Base64Decrypt(keyPhrase: secretKey));
         }

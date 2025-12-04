@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <None Update="Common\appsettings.Test.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

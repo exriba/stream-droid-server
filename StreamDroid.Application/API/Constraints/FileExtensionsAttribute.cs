@@ -23,7 +23,10 @@ namespace StreamDroid.Application.API.Constraints
         /// <exception cref="ArgumentException">If any file has an invalid extension.</exception>
         public override bool IsValid(object? value)
         {
-            var files = value as IEnumerable<IFormFile>;
+            if (value is not IEnumerable<IFormFile> files)
+            {
+                return false;
+            }
 
             foreach (var file in files)
             {

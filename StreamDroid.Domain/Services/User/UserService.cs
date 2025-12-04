@@ -1,16 +1,16 @@
 ﻿using Ardalis.GuardClauses;
-using StreamDroid.Infrastructure.Persistence;
-using Entities = StreamDroid.Core.Entities;
-using StreamDroid.Domain.RefreshPolicy;
-using StreamDroid.Core.ValueObjects;
-using StreamDroid.Shared.Extensions;
-using StreamDroid.Core.Exceptions;
-using SharpTwitch.Auth;
-using StreamDroid.Domain.DTOs;
-using SharpTwitch.Helix;
-using SharpTwitch.Core.Enums;
-using StreamDroid.Core.Enums;
 using Mapster;
+using SharpTwitch.Auth;
+using SharpTwitch.Core.Enums;
+using SharpTwitch.Helix;
+using StreamDroid.Core.Enums;
+using StreamDroid.Core.Exceptions;
+using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.DTOs;
+using StreamDroid.Domain.RefreshPolicy;
+using StreamDroid.Infrastructure.Persistence;
+using StreamDroid.Shared.Extensions;
+using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Services.User
 {
@@ -37,7 +37,7 @@ namespace StreamDroid.Domain.Services.User
         {
             var entities = await _repository.FindAsync();
             var users = entities.AsQueryable();
-            return users.ProjectToType<UserDto>().ToList();
+            return [.. users.ProjectToType<UserDto>()];
         }
 
         /// <inheritdoc/>
@@ -54,7 +54,7 @@ namespace StreamDroid.Domain.Services.User
 
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
-            var userDetailsTask = _helixApi.Users.GetUsersAsync(Array.Empty<string>(), token.AccessToken, CancellationToken.None);
+            var userDetailsTask = _helixApi.Users.GetUsersAsync([], token.AccessToken, CancellationToken.None);
             var userTask = FetchUserByIdAsync(userData.UserId);
             var userDetails = await userDetailsTask;
             var user = await userTask;
@@ -106,7 +106,8 @@ namespace StreamDroid.Domain.Services.User
                 user.RefreshToken = token.RefreshToken;
                 user = await _repository.UpdateAsync(user);
                 return token.AccessToken;
-            };
+            }
+            ;
 
             var accessToken = user.AccessToken.Base64Decrypt();
             return new TokenRefreshPolicy(userId, accessToken, refreshToken);

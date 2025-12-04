@@ -96,11 +96,11 @@ namespace StreamDroid.Application.API.User
 
             var claims = new List<Claim>
             {
-                new Claim(ID, user.Id.ToString()),
-                new Claim(NAME, user.Name),
-                new Claim(AUDIENCE, _jwtSettings.Audience),
-                new Claim(ISSUER, _jwtSettings.Issuer),
-                new Claim(JWT_ID, Guid.NewGuid().ToString()),
+                new(ID, user.Id.ToString()),
+                new(NAME, user.Name),
+                new(AUDIENCE, _jwtSettings.Audience),
+                new(ISSUER, _jwtSettings.Issuer),
+                new(JWT_ID, Guid.NewGuid().ToString()),
             };
 
             var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);

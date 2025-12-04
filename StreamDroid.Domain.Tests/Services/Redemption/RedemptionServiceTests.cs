@@ -23,7 +23,7 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public async Task RedemptionService_FindRedemptionStatisticsByUserIdAsync_Throws_InvalidArgs(string id)
+        public async Task RedemptionService_FindRedemptionStatisticsByUserIdAsync_Throws_InvalidArgs(string? id)
         {
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _redemptionService.FindRedemptionStatisticsByUserIdAsync(id));
         }
@@ -46,7 +46,7 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
         [Fact]
         public async Task RedemptionService_FindRedemptionStatisticsByRewardIdAsync_Throws_InvalidArgs()
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _redemptionService.FindRedemptionStatisticsByRewardIdAsync(Guid.Empty));   
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _redemptionService.FindRedemptionStatisticsByRewardIdAsync(Guid.Empty));
         }
 
         [Fact]

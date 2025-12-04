@@ -33,7 +33,7 @@ namespace StreamDroid.Application.Tests.API.User
             var user = CreateUser(id);
             var claims = new List<Claim>
             {
-                new Claim(ID, id.ToString())
+                new(ID, id.ToString())
             };
             var claimsIdentity = new ClaimsIdentity(claims);
 
@@ -41,7 +41,7 @@ namespace StreamDroid.Application.Tests.API.User
             var mockCoreSettings = new Mock<ICoreSettings>();
             mockCoreSettings.Setup(x => x.ClientId).Returns(CLIENT_ID);
             mockCoreSettings.Setup(x => x.RedirectUri).Returns(REDIRECT_URI);
-            mockCoreSettings.Setup(x => x.Scopes).Returns(new List<Scope> { Scope.BITS_READ });
+            mockCoreSettings.Setup(x => x.Scopes).Returns([Scope.BITS_READ]);
 
             var mockJwtSettings = new Mock<IOptions<JwtSettings>>();
             mockJwtSettings.Setup(x => x.Value).Returns(new JwtSettings
@@ -63,7 +63,7 @@ namespace StreamDroid.Application.Tests.API.User
             {
                 User = new ClaimsPrincipal(claimsIdentity)
             };
-            _userController.ControllerContext.HttpContext.Request.Headers.Add(REFERER, REFERER);
+            _userController.ControllerContext.HttpContext.Request.Headers.Append(REFERER, REFERER);
         }
 
         [Fact]
@@ -126,6 +126,7 @@ namespace StreamDroid.Application.Tests.API.User
         public void Dispose()
         {
             _userController.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }
