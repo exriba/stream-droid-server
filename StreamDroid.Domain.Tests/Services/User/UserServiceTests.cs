@@ -1,19 +1,19 @@
 ﻿using Moq;
-using SharpTwitch.Auth.Models;
-using StreamDroid.Core.ValueObjects;
-using StreamDroid.Domain.Tests.Common;
-using StreamDroid.Domain.Services.User;
-using System.Text.Json;
 using SharpTwitch.Auth;
+using SharpTwitch.Auth.Models;
+using SharpTwitch.Core;
+using SharpTwitch.Core.Enums;
+using SharpTwitch.Core.Settings;
+using SharpTwitch.Helix;
+using SharpTwitch.Helix.Models;
+using StreamDroid.Core.ValueObjects;
+using StreamDroid.Domain.Services.User;
+using StreamDroid.Domain.Tests.Common;
+using StreamDroid.Infrastructure.Persistence;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Entities = StreamDroid.Core.Entities;
-using SharpTwitch.Helix;
-using SharpTwitch.Core.Settings;
-using SharpTwitch.Core;
-using SharpTwitch.Helix.Models;
-using SharpTwitch.Core.Enums;
 using HelixModels = SharpTwitch.Helix.Models;
-using StreamDroid.Infrastructure.Persistence;
 
 namespace StreamDroid.Domain.Tests.Services.User
 {
@@ -52,7 +52,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         [InlineData(null)]
         public async Task UserService_FindUserByIdAsync_Throws_InvalidArgs(string userId)
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async() => await _userService.FindUserByIdAsync(userId));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _userService.FindUserByIdAsync(userId));
         }
 
         [Fact]
@@ -70,9 +70,9 @@ namespace StreamDroid.Domain.Tests.Services.User
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void UserService_AuthenticateUserAsync_Throws_InvalidArgs(string code)
-        {            
-            Assert.ThrowsAnyAsync<ArgumentException>(async() => await _userService.AuthenticateUserAsync(code));
+        public async Task UserService_AuthenticateUserAsync_Throws_InvalidArgs(string code)
+        {
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _userService.AuthenticateUserAsync(code));
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace StreamDroid.Domain.Tests.Services.User
                 { "Login", user.Name }
             };
 
-            var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString());;
+            var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString()); ;
 
             var helixUser = new SharpTwitch.Helix.Models.User.User
             {
@@ -147,7 +147,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             var id = Guid.NewGuid();
             await SetupDataAsync(id);
 
-            await Assert.ThrowsAnyAsync<ArgumentException>(async() => await _userService.UpdateUserPreferencesAsync(id.ToString(), preferences));
+            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _userService.UpdateUserPreferencesAsync(id.ToString(), preferences));
         }
 
         [Fact]
@@ -171,7 +171,7 @@ namespace StreamDroid.Domain.Tests.Services.User
                 AccessToken = "accessToken",
                 RefreshToken = "accessToken"
             };
-             
+
             await _userRepository.AddAsync(user);
         }
     }
