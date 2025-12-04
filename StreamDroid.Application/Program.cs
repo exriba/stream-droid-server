@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.EventSub;
 using StreamDroid.Application;
 using StreamDroid.Application.API.Converters;
@@ -9,7 +10,7 @@ using StreamDroid.Domain;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
 using StreamDroid.Shared;
-using System.Net;
+using System.Text;
 
 #region Constants
 const string LOGOUT_PATH = "/logout";
@@ -31,6 +32,7 @@ else
 
 #region Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.Key));
 #endregion
 
 #region Shared
@@ -38,6 +40,7 @@ builder.Configuration.Configure();
 #endregion
 
 #region Register Services
+
 builder.Services.AddWindowsService();
 builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddInfrastructureConfiguration(builder.Configuration);
@@ -47,19 +50,23 @@ builder.Services.AddTwitchEventSub();
 builder.Services.AddHttpClient();
 builder.Services.AddControllers()
                 .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new AssetConverter()));
-builder.Services.AddAuthentication(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
 {
-    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-}).AddCookie(options =>
-{
-    options.LogoutPath = LOGOUT_PATH;
-    options.SlidingExpiration = true;
-    options.Cookie.Name = COOKIE_NAME;
-    options.Events.OnRedirectToLogin = (context) =>
+    var jwtSettings = new JwtSettings();
+    builder.Configuration.GetSection(JwtSettings.Key).Bind(jwtSettings);
+    var encodedKey = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
+
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-        return Task.CompletedTask;
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(encodedKey),
+        ClockSkew = TimeSpan.FromSeconds(0)
     };
 });
 builder.Services.AddMvc(options =>
