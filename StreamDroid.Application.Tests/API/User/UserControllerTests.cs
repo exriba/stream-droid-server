@@ -1,13 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Settings;
 using StreamDroid.Application.API.User;
-using StreamDroid.Application.Settings;
 using StreamDroid.Application.Tests.Common;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.DTOs;
@@ -43,25 +42,25 @@ namespace StreamDroid.Application.Tests.API.User
             mockCoreSettings.Setup(x => x.RedirectUri).Returns(REDIRECT_URI);
             mockCoreSettings.Setup(x => x.Scopes).Returns([Scope.BITS_READ]);
 
-            var mockJwtSettings = new Mock<IOptions<JwtSettings>>();
-            mockJwtSettings.Setup(x => x.Value).Returns(new JwtSettings
-            {
-                SigningKey = "averylongkeyusedforsigningandvalidatingjsonwebtokens",
-                Audience = "test",
-                Issuer = "test",
-            });
-
             _mockUserService = new Mock<IUserService>();
             _mockUserService.Setup(x => x.FindUserByIdAsync(It.IsAny<string>())).ReturnsAsync(user);
             _mockUserService.Setup(x => x.AuthenticateUserAsync(It.IsAny<string>())).ReturnsAsync(user);
 
-            _userController = new UserController(_mockUserService.Object, mockCoreSettings.Object, mockJwtSettings.Object, mockLogger.Object)
+            var mockAuthService = new Mock<IAuthenticationService>();
+            mockAuthService.Setup(x => x.SignInAsync(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<ClaimsPrincipal>(), It.IsAny<AuthenticationProperties>()))
+                .Returns(Task.CompletedTask);
+            var mockServiceProvider = new Mock<IServiceProvider>();
+            mockServiceProvider.Setup(x => x.GetService(typeof(IAuthenticationService)))
+                .Returns(mockAuthService.Object);
+
+            _userController = new UserController(_mockUserService.Object, mockCoreSettings.Object, mockLogger.Object)
             {
                 ControllerContext = new ControllerContext()
             };
             _userController.ControllerContext.HttpContext = new DefaultHttpContext
             {
-                User = new ClaimsPrincipal(claimsIdentity)
+                User = new ClaimsPrincipal(claimsIdentity),
+                RequestServices = mockServiceProvider.Object,
             };
             _userController.ControllerContext.HttpContext.Request.Headers.Append(REFERER, REFERER);
         }
@@ -97,6 +96,7 @@ namespace StreamDroid.Application.Tests.API.User
         {
             var encryptedState = "state".Base64Encrypt();
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
+
             var result = await _userController.AuthenticationSuccessAsync("code", encodedState);
 
             Assert.Equal(typeof(RedirectResult), result.GetType());

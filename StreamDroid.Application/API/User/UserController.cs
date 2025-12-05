@@ -1,19 +1,16 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth.Helpers;
 using SharpTwitch.Core.Settings;
 using StreamDroid.Application.API.Constraints;
-using StreamDroid.Application.Settings;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Shared.Extensions;
 using System.ComponentModel.DataAnnotations;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
-using System.Web;
 
 namespace StreamDroid.Application.API.User
 {
@@ -26,28 +23,21 @@ namespace StreamDroid.Application.API.User
     public class UserController : Controller
     {
         private const string ID = "Id";
+        private const string USER = "User";
         private const string NAME = "Name";
         private const string REFERER = "Referer";
 
-        private const string ISSUER = "iss";
-        private const string AUDIENCE = "aud";
-        private const string JWT_ID = "jti";
-        private const string ACCESS_TOKEN = "accessToken";
-
-        private readonly JwtSettings _jwtSettings;
         private readonly IUserService _userService;
         private readonly ICoreSettings _coreSettings;
         private readonly ILogger<UserController> _logger;
 
         public UserController(IUserService userService,
                               ICoreSettings coreSettings,
-                              IOptions<JwtSettings> jwtSettings,
                               ILogger<UserController> logger)
         {
             _logger = logger;
             _userService = userService;
             _coreSettings = coreSettings;
-            _jwtSettings = jwtSettings.Value;
         }
 
         /// <summary>
@@ -66,16 +56,15 @@ namespace StreamDroid.Application.API.User
             return Ok(loginUrl);
         }
 
-        // TODO: Mark token for invalidation
         /// <summary>
         /// Handles logout.
         /// </summary>
-        //[HttpPost("logout")]
-        //public async Task<IActionResult> LogoutAsync()
-        //{
-        //    await HttpContext.SignOutAsync();
-        //    return Ok();
-        //}
+        [HttpPost("logout")]
+        public async Task<IActionResult> LogoutAsync()
+        {
+            await HttpContext.SignOutAsync();
+            return Ok();
+        }
 
         /// <summary>
         /// Handles successful authentication.
@@ -98,31 +87,20 @@ namespace StreamDroid.Application.API.User
             {
                 new(ID, user.Id.ToString()),
                 new(NAME, user.Name),
-                new(AUDIENCE, _jwtSettings.Audience),
-                new(ISSUER, _jwtSettings.Issuer),
-                new(JWT_ID, Guid.NewGuid().ToString()),
             };
 
-            var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);
-            var securityKey = new SymmetricSecurityKey(encodedKey);
+            var identity = new ClaimsIdentity(claims, USER);
+            var claimsPrincipal = new ClaimsPrincipal(identity);
+            var properties = new AuthenticationProperties
+            {
+                IsPersistent = true,
+                AllowRefresh = true,
+                ExpiresUtc = DateTime.UtcNow.AddDays(30)
+            };
 
-            var jwtToken = new JwtSecurityToken(
-                claims: claims,
-                notBefore: DateTime.UtcNow,
-                expires: DateTime.UtcNow.AddDays(30),
-                signingCredentials: new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)
-            );
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.WriteToken(jwtToken);
-
-            var uriBuilder = new UriBuilder(referer);
-            var queryParameters = HttpUtility.ParseQueryString(uriBuilder.Query);
-            queryParameters[ACCESS_TOKEN] = token;
-            uriBuilder.Query = queryParameters.ToString();
-
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal, properties);
             _logger.LogInformation("{user} logged in.", user.Name);
-            return Redirect(uriBuilder.Uri.AbsoluteUri);
+            return Redirect(referer);
         }
 
         /// <summary>
