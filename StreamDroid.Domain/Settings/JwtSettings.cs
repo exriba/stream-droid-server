@@ -1,4 +1,4 @@
-﻿namespace StreamDroid.Application.Settings
+﻿namespace StreamDroid.Domain.Settings
 {
     public class JwtSettings
     {
