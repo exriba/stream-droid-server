@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package grpc.model;
+
+message Preferences {
+  int32 default_volume = 1;
+}
+
+message User {
+
+	enum UserType {
+		UNSPECIFIED = 0;
+		NORMAL = 1;
+		AFFILIATE = 2;
+		PARTNER = 3;
+	}
+	
+  string id = 1;
+  string name = 2;
+  string user_key = 3;
+  UserType user_type = 4;
+  Preferences preferences = 5;
+}

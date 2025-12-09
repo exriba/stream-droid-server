@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+import "common/user.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "google/api/httpbody.proto";
+
+service GrpcUserService {
+  rpc Login(SessionRequest) returns (LoginResponse);
+  rpc AuthenticationSuccess(AuthenticationRequest) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      get: "/redirect"
+    };
+  }
+  rpc AuthenticationSession(SessionRequest) returns (stream SessionStatus);
+  rpc Me (google.protobuf.Empty) returns (MeResponse);
+}
+
+message SessionRequest {
+  string session_id = 1;
+}
+
+message LoginResponse {
+  string session_id = 1;
+  string authorization_url = 2;
+}
+
+message SessionStatus {
+    enum Status {
+        PENDING = 0;
+        AUTHORIZED = 1;
+        ERROR = 2;
+    }
+
+    Status status = 1;
+    string access_token = 2;
+    string message = 3;
+}
+
+message AuthenticationRequest {
+  string code = 1; 
+  string state = 2;   
+  string error = 3; 
+  string error_description = 4;
+}
+
+message AuthenticationResponse {
+  string message = 1;
+}
+
+message MeResponse {
+  grpc.model.User user = 1;
+}
