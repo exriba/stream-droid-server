@@ -13,7 +13,7 @@ service GrpcUserService {
     };
   }
   rpc AuthenticationSession(SessionRequest) returns (stream SessionStatus);
-  rpc Me (google.protobuf.Empty) returns (MeResponse);
+  rpc Me(google.protobuf.Empty) returns (MeResponse);
 }
 
 message SessionRequest {
