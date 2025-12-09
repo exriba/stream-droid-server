@@ -7,6 +7,7 @@ using StreamDroid.Application.API.Converters;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.Settings;
 using StreamDroid.Domain;
+using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
 using StreamDroid.Shared;
@@ -30,7 +31,6 @@ else
 
 #region Options
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.Key));
 #endregion
 
 #region Shared
@@ -71,16 +71,23 @@ builder.Services.AddMvc(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
 });
+builder.Services.AddGrpc(options =>
+{
+    options.MaxReceiveMessageSize = 4 * 1024 * 1024;
+    options.MaxSendMessageSize = 4 * 1024 * 1024;
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+}).AddJsonTranscoding();
 #endregion
 
 #region Configure HTTP pipeline.
 var app = builder.Build();
-// app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseLocalFileServer();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGrpcService<UserService>();
 
 if (app.Environment.IsDevelopment())
 {
