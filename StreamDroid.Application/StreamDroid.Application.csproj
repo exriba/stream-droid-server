@@ -26,10 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="Templates\error.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

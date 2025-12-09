@@ -61,17 +61,6 @@ namespace StreamDroid.Domain.Tests.Services.User
         }
 
         [Fact]
-        public async Task UserService_FindUsersAsync()
-        {
-            var id = Guid.NewGuid();
-            await SetupDataAsync(id);
-
-            var users = await _userService.FindUsersAsync();
-
-            Assert.Single(users);
-        }
-
-        [Fact]
         public async Task UserService_Login()
         {
             var id = Guid.NewGuid();

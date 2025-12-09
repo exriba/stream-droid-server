@@ -2,7 +2,6 @@
 using Google.Api;
 using Google.Protobuf;
 using Grpc.Core;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,7 +14,6 @@ using SharpTwitch.Core.Settings;
 using SharpTwitch.Helix;
 using StreamDroid.Core.Enums;
 using StreamDroid.Core.Exceptions;
-using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.RefreshPolicy;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
@@ -219,14 +217,6 @@ namespace StreamDroid.Domain.Services.User
                     }
                 }
             };
-        }
-
-        /// <inheritdoc/>
-        public async Task<IReadOnlyCollection<UserDto>> FindUsersAsync()
-        {
-            var entities = await _repository.FindAsync();
-            var users = entities.AsQueryable();
-            return [.. users.ProjectToType<UserDto>()];
         }
 
         /// <inheritdoc/>

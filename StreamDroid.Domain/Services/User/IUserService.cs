@@ -1,5 +1,4 @@
 ﻿using StreamDroid.Core.Exceptions;
-using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.RefreshPolicy;
 
 namespace StreamDroid.Domain.Services.User
@@ -9,13 +8,6 @@ namespace StreamDroid.Domain.Services.User
     /// </summary>
     public interface IUserService
     {
-        // TODO: Remove this method once grpc is fully implemented.
-        /// <summary>
-        /// Finds a collection of users.
-        /// </summary>
-        /// <returns>A collection of user DTOs.</returns>
-        Task<IReadOnlyCollection<UserDto>> FindUsersAsync();
-
         /// <summary>
         /// Creates a token refresh policy for the given user.
         /// </summary>
