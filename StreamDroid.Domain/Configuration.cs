@@ -1,16 +1,16 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using StreamDroid.Domain.Services.User;
-using StreamDroid.Domain.Services.Reward;
-using SharpTwitch.Auth;
-using SharpTwitch.Helix;
-using Mapster;
-using StreamDroid.Domain.DTOs;
-using System.Reflection;
-using StreamDroid.Domain.Services.Stream;
-using StreamDroid.Domain.Services.Redemption;
-using SharpTwitch.Core;
+﻿using Mapster;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using SharpTwitch.Auth;
+using SharpTwitch.Core;
+using SharpTwitch.Helix;
+using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.Services.Data;
+using StreamDroid.Domain.Services.Redemption;
+using StreamDroid.Domain.Services.Reward;
+using StreamDroid.Domain.Services.User;
+using StreamDroid.Domain.Settings;
+using System.Reflection;
 
 namespace StreamDroid.Domain
 {
@@ -27,6 +27,8 @@ namespace StreamDroid.Domain
         /// <returns>The service collection.</returns>
         public static IServiceCollection AddServiceConfiguration(this IServiceCollection services, ConfigurationManager configurationManager)
         {
+            services.Configure<JwtSettings>(configurationManager.GetSection(JwtSettings.Key));
+
             var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
             Assembly applicationAssembly = typeof(BaseDto<,>).Assembly;
             typeAdapterConfig.Scan(applicationAssembly);
@@ -41,10 +43,10 @@ namespace StreamDroid.Domain
             services.AddScoped<IRewardService, RewardService>();
             services.AddScoped<IRedemptionService, RedemptionService>();
             services.AddScoped<IDataService, DataService>();
-            services.AddHostedService<TwitchHostedService>();
-            services.AddSingleton<ITwitchManager, TwitchEventSub>();
-            services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider =>
-                (TwitchEventSub) provider.GetRequiredService<ITwitchManager>());
+            //services.AddHostedService<TwitchHostedService>();
+            //services.AddSingleton<ITwitchManager, TwitchEventSub>();
+            //services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider =>
+            //    (TwitchEventSub)provider.GetRequiredService<ITwitchManager>());
             return services;
         }
     }
