@@ -61,7 +61,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         }
 
         [Fact]
-        public async Task UserService_Login()
+        public async Task UserService_GenerateLoginUrl()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
@@ -69,24 +69,24 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = id.ToString(),
             };
 
-            var response = await _userService.Login(sessionRequest, _context);
+            var response = await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             Assert.Equal(sessionRequest.SessionId, response.SessionId);
         }
 
         [Fact]
-        public async Task UserService_Authentication_SessionNotFound()
+        public async Task UserService_AuthenticateUser_SessionNotFound()
         {
             var id = Guid.NewGuid();
             var authenticationRequest = CreateAuthenticationRequest(id);
 
-            var httpBody = await _userService.Authentication(authenticationRequest, _context);
+            var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
             Assert.Equal("text/html", httpBody.ContentType);
         }
 
         [Fact]
-        public async Task UserService_Authentication_ErrorOcurred()
+        public async Task UserService_AuthenticateUser_ErrorOcurred()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
@@ -94,17 +94,17 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = id.ToString(),
             };
 
-            await _userService.Login(sessionRequest, _context);
+            await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             var authenticationRequest = CreateAuthenticationRequest(id, hasError: true);
 
-            var httpBody = await _userService.Authentication(authenticationRequest, _context);
+            var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
             Assert.Equal("text/html", httpBody.ContentType);
         }
 
         [Fact]
-        public async Task UserService_Authentication()
+        public async Task UserService_AuthenticateUser()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
@@ -112,20 +112,20 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = id.ToString(),
             };
 
-            await _userService.Login(sessionRequest, _context);
+            await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             await ConfigureAuthApi(id);
             ConfigureHelixApi();
 
             var authenticationRequest = CreateAuthenticationRequest(id);
 
-            var httpBody = await _userService.Authentication(authenticationRequest, _context);
+            var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
             Assert.Equal("text/html", httpBody.ContentType);
         }
 
         [Fact]
-        public async Task UserService_AuthenticationSession_SessionNotFound()
+        public async Task UserService_MonitorAuthenticationSessionStatus_SessionNotFound()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
@@ -136,14 +136,14 @@ namespace StreamDroid.Domain.Tests.Services.User
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
 
-            await _userService.AuthenticationSession(sessionRequest, mockStreamWriter.Object, _context);
+            await _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, _context);
 
             Assert.Single(messages);
             Assert.Equal(SessionStatus.Types.Status.Error, messages.First().Status);
         }
 
         [Fact]
-        public async Task UserService_AuthenticationSession_Cancelled()
+        public async Task UserService_MonitorAuthenticationSessionStatus_Cancelled()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
@@ -151,7 +151,7 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = id.ToString(),
             };
 
-            await _userService.Login(sessionRequest, _context);
+            await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             var source = new CancellationTokenSource();
             var context = CreateTestServerCallContext(source);
@@ -161,7 +161,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             source.CancelAfter(1000);
 
-            await _userService.AuthenticationSession(sessionRequest, mockStreamWriter.Object, context);
+            await _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, context);
 
             source.Dispose();
 
@@ -169,7 +169,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         }
 
         [Fact]
-        public async Task UserService_AuthenticationSession()
+        public async Task UserService_MonitorAuthenticationSessionStatus()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
@@ -177,36 +177,36 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = id.ToString(),
             };
 
-            await _userService.Login(sessionRequest, _context);
+            await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             await ConfigureAuthApi(id);
             ConfigureHelixApi();
 
             var authenticationRequest = CreateAuthenticationRequest(id);
-            await _userService.Authentication(authenticationRequest, _context);
+            await _userService.AuthenticateUser(authenticationRequest, _context);
 
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
 
-            await _userService.AuthenticationSession(sessionRequest, mockStreamWriter.Object, _context);
+            await _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, _context);
 
             Assert.Single(messages);
             Assert.Equal(SessionStatus.Types.Status.Authorized, messages.First().Status);
         }
 
         [Fact]
-        public async Task UserService_Me_Throws_EntityNotFound()
+        public async Task UserService_FindUser_Throws_EntityNotFound()
         {
             var id = Guid.NewGuid();
             ConfigureServerCallContext(id);
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
-            await Assert.ThrowsAnyAsync<EntityNotFoundException>(async () => await _userService.Me(request, _context));
+            await Assert.ThrowsAnyAsync<EntityNotFoundException>(async () => await _userService.FindUser(request, _context));
         }
 
         [Fact]
-        public async Task UserService_Me()
+        public async Task UserService_FindUser()
         {
             var id = Guid.NewGuid();
             await SetupDataAsync(id);
@@ -214,7 +214,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
-            var response = await _userService.Me(request, _context);
+            var response = await _userService.FindUser(request, _context);
 
             Assert.Equal(id.ToString(), response.User.Id);
         }

@@ -69,20 +69,20 @@ namespace StreamDroid.Domain.Services.User
         }
 
         /// <summary>
-        /// Generates an authorization url.
+        /// Generates a login authorization url.
         /// </summary>
         /// <param name="request">Session request containing session id.</param>
         /// <param name="context">Context for server-side request.</param>
         /// <returns>The authorization url.</returns>
         [AllowAnonymous]
-        public override Task<LoginResponse> Login(SessionRequest request, ServerCallContext context)
+        public override Task<LoginUrlResponse> GenerateLoginUrl(SessionRequest request, ServerCallContext context)
         {
             _sessions.TryAdd(request.SessionId, null);
             var encryptedState = request.SessionId.Base64Encrypt();
 
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
             var loginUrl = AuthUtils.GenerateAuthorizationUrl(_coreSettings.ClientId, _coreSettings.RedirectUri, _coreSettings.Scopes, encodedState);
-            var loginResponse = new LoginResponse
+            var loginResponse = new LoginUrlResponse
             {
                 SessionId = request.SessionId,
                 AuthorizationUrl = loginUrl,
@@ -98,7 +98,7 @@ namespace StreamDroid.Domain.Services.User
         /// <param name="context">Context for server-side request.</param>
         /// <returns>An authentication message indicating success or error.</returns>
         [AllowAnonymous]
-        public override async Task<HttpBody> Authentication(AuthenticationRequest request, ServerCallContext context)
+        public override async Task<HttpBody> AuthenticateUser(AuthenticationRequest request, ServerCallContext context)
         {
             var encryptedState = Base64UrlEncoder.Decode(request.State);
             var state = encryptedState.Base64Decrypt();
@@ -149,13 +149,13 @@ namespace StreamDroid.Domain.Services.User
         }
 
         /// <summary>
-        /// Monitors the authentication request status.
+        /// Monitors the authentication session status.
         /// </summary>
         /// <param name="request">Session request containing session id.</param>
         /// <param name="responseStream">Authentication request updates indicating the status of the session.</param>
         /// <param name="context">Context for server-side request.</param>
         [AllowAnonymous]
-        public override async Task AuthenticationSession(SessionRequest request, IServerStreamWriter<SessionStatus> responseStream, ServerCallContext context)
+        public override async Task MonitorAuthenticationSessionStatus(SessionRequest request, IServerStreamWriter<SessionStatus> responseStream, ServerCallContext context)
         {
             var sessionExists = _sessions.TryGetValue(request.SessionId, out var _);
 
@@ -194,7 +194,7 @@ namespace StreamDroid.Domain.Services.User
         /// <param name="request">Generic empty message.</param>
         /// <param name="context">Context for server-side request.</param>
         /// <returns>A user response.</returns>
-        public override async Task<MeResponse> Me(Google.Protobuf.WellKnownTypes.Empty request, ServerCallContext context)
+        public override async Task<UserResponse> FindUser(Google.Protobuf.WellKnownTypes.Empty request, ServerCallContext context)
         {
             var usePrincipal = context.GetHttpContext().User;
             var claim = usePrincipal.Claims.First(c => c.Type.Equals(ID));
@@ -203,7 +203,7 @@ namespace StreamDroid.Domain.Services.User
 
             bool parsed = Enum.TryParse(user.UserType.Name, true, out GrpcUser.Types.UserType userType);
 
-            return new MeResponse
+            return new UserResponse
             {
                 User = new GrpcUser
                 {
