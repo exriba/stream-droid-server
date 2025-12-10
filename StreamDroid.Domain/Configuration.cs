@@ -6,7 +6,6 @@ using SharpTwitch.Core;
 using SharpTwitch.Helix;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.Services.Data;
-using StreamDroid.Domain.Services.Redemption;
 using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
@@ -41,8 +40,7 @@ namespace StreamDroid.Domain
             services.AddTwitchCore(configurationManager);
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IRewardService, RewardService>();
-            services.AddScoped<IRedemptionService, RedemptionService>();
-            services.AddScoped<IDataService, DataService>();
+            services.AddScoped<IAssetFileService, AssetFileService>();
             //services.AddHostedService<TwitchHostedService>();
             //services.AddSingleton<ITwitchManager, TwitchEventSub>();
             //services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider =>

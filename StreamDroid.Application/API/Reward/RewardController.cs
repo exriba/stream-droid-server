@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using StreamDroid.Core.ValueObjects;
 using StreamDroid.Application.API.Models;
-using StreamDroid.Domain.Services.Reward;
-using System.Web;
+using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Services.Data;
+using StreamDroid.Domain.Services.Reward;
+using System.ComponentModel.DataAnnotations;
+using System.Web;
 
 namespace StreamDroid.Application.API.Reward
 {
@@ -20,11 +20,11 @@ namespace StreamDroid.Application.API.Reward
         private const string ID = "Id";
         private const string ASSET_NAME = "ASSET_NAME";
 
-        private readonly IDataService _dataService;
+        private readonly IAssetFileService _dataService;
         private readonly IRewardService _rewardService;
 
         public RewardController(IRewardService rewardService,
-                                IDataService dataService)
+                                IAssetFileService dataService)
         {
             _dataService = dataService;
             _rewardService = rewardService;
@@ -109,7 +109,7 @@ namespace StreamDroid.Application.API.Reward
 
             var fileMap = assetForm.Files.ToDictionary(x => FileName.FromString(x.FileName), _ => assetForm.Volume);
             var tuple = await _rewardService.AddAssetsToRewardAsync(rewardId, fileMap);
-            await _dataService.AddRewardAssetsAsync(claim.Value, tuple.Item1, assetForm.Files);
+            await _dataService.AddAssetFilesAsync(claim.Value, tuple.Item1, assetForm.Files);
             return CreatedAtAction(nameof(AddAssetsToRewardAsync), tuple.Item2);
         }
 
@@ -143,7 +143,7 @@ namespace StreamDroid.Application.API.Reward
             var fileName = new FileName[] { FileName.FromString(decodedName) };
             var reward = await _rewardService.FindRewardByIdAsync(rewardId);
             await _rewardService.RemoveAssetsFromRewardAsync(rewardId, fileName);
-            _dataService.DeleteRewardAsset(claim.Value, reward.Title, fileName.First());
+            _dataService.DeleteAssetFile(claim.Value, reward.Title, fileName.First());
             return Ok();
         }
     }

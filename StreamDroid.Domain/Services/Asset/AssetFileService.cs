@@ -5,19 +5,19 @@ using StreamDroid.Domain.Settings;
 namespace StreamDroid.Domain.Services.Data
 {
     /// <summary>
-    /// Default implementation of <see cref="IDataService"/>.
+    /// Default implementation of <see cref="IAssetFileService"/>.
     /// </summary>
-    public sealed class DataService : IDataService
+    internal sealed class AssetFileService : IAssetFileService
     {
         private readonly IAppSettings _appSettings;
 
-        public DataService(IAppSettings appSettings) 
+        public AssetFileService(IAppSettings appSettings)
         {
             _appSettings = appSettings;
         }
 
         /// <inheritdoc/>
-        public async Task AddRewardAssetsAsync(string userId, string rewardName, IEnumerable<IFormFile> files)
+        public async Task AddAssetFilesAsync(string userId, string rewardName, IEnumerable<IFormFile> files)
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
             var basePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName);
@@ -29,9 +29,9 @@ namespace StreamDroid.Domain.Services.Data
             {
                 var filePath = Path.Combine(basePath, file.FileName);
                 var stream = new FileStream(filePath, FileMode.Create);
-                var task = file.CopyToAsync(stream).ContinueWith(task =>
+                var task = file.CopyToAsync(stream).ContinueWith(async task =>
                 {
-                    stream.DisposeAsync();
+                    await stream.DisposeAsync();
                 });
                 tasks.Add(task);
             }
@@ -40,7 +40,7 @@ namespace StreamDroid.Domain.Services.Data
         }
 
         /// <inheritdoc/>
-        public void DeleteRewardAsset(string userId, string rewardName, FileName fileName)
+        public void DeleteAssetFile(string userId, string rewardName, FileName fileName)
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
             var filePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName, fileName.ToString());

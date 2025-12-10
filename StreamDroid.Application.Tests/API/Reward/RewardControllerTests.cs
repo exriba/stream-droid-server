@@ -17,7 +17,7 @@ namespace StreamDroid.Application.Tests.API.Reward
 
         private readonly RewardController _rewardController;
         private readonly Mock<IRewardService> _mockRewardService;
-        private readonly Mock<IDataService> _mockDataService;
+        private readonly Mock<IAssetFileService> _mockDataService;
 
         public RewardControllerTests()
         {
@@ -34,7 +34,7 @@ namespace StreamDroid.Application.Tests.API.Reward
             _mockRewardService.Setup(x => x.FindRewardByIdAsync(It.IsAny<Guid>())).ReturnsAsync(reward);
             _mockRewardService.Setup(x => x.FindRewardsByUserIdAsync(It.IsAny<string>())).ReturnsAsync(rewards);
 
-            _mockDataService = new Mock<IDataService>();
+            _mockDataService = new Mock<IAssetFileService>();
             _rewardController = new RewardController(_mockRewardService.Object, _mockDataService.Object)
             {
                 ControllerContext = new ControllerContext()
