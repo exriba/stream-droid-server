@@ -14,6 +14,7 @@ using SharpTwitch.Core.Settings;
 using SharpTwitch.Helix;
 using StreamDroid.Core.Enums;
 using StreamDroid.Core.Exceptions;
+using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.RefreshPolicy;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
@@ -24,7 +25,6 @@ using System.Text;
 using static GrpcUserService;
 using Entities = StreamDroid.Core.Entities;
 using GrpcUser = Grpc.Model.User;
-using GrpcUserPreferences = Grpc.Model.Preferences;
 
 // TODO: Handle logout? Maybe mark token for invalidation. Look into interceptors and validators
 // TODO: Review error handling implementation. Exception Handler middleware is not going to work for gRPC, look into interceptors
@@ -205,17 +205,7 @@ namespace StreamDroid.Domain.Services.User
 
             return new UserResponse
             {
-                User = new GrpcUser
-                {
-                    Id = user.Id,
-                    Name = user.Name,
-                    UserKey = user.UserKey.ToString(),
-                    UserType = parsed ? userType : GrpcUser.Types.UserType.Unspecified,
-                    Preferences = new GrpcUserPreferences
-                    {
-                        DefaultVolume = user.Preferences.DefaultVolume
-                    }
-                }
+                User = UserProto.FromEntity(user)
             };
         }
 

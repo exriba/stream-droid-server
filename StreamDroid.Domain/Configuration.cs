@@ -29,7 +29,7 @@ namespace StreamDroid.Domain
             services.Configure<JwtSettings>(configurationManager.GetSection(JwtSettings.Key));
 
             var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
-            Assembly applicationAssembly = typeof(BaseDto<,>).Assembly;
+            Assembly applicationAssembly = typeof(BaseProto<,>).Assembly;
             typeAdapterConfig.Scan(applicationAssembly);
 
             // Add services to the container. 

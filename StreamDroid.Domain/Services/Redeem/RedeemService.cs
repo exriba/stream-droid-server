@@ -2,6 +2,7 @@
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using StreamDroid.Domain.DTOs;
 using StreamDroid.Infrastructure.Persistence;
 using static GrpcRedeemService;
 
@@ -44,13 +45,9 @@ namespace StreamDroid.Domain.Services.Redeem
                 var value = decimal.Divide(y.Count(), redeems.Count);
                 var percentage = decimal.Multiply(value, 100);
                 var roundedPercentage = decimal.Round(percentage, 2, MidpointRounding.AwayFromZero);
-                return new Grpc.Model.RewardRedeem
-                {
-                    RewardId = x.Id,
-                    RewardTitle = x.Title,
-                    Fill = x.BackgroundColor,
-                    Percentage = roundedPercentage.ToString()
-                };
+                var rewardRedeem = RewardRedeemProto.FromEntity(x);
+                rewardRedeem.Percentage = roundedPercentage.ToString();
+                return rewardRedeem;
             }).ToList();
 
             var rewardRedeemResponse = new RewardRedeemResponse();
@@ -93,6 +90,7 @@ namespace StreamDroid.Domain.Services.Redeem
                         Percentage = roundedPercentage.ToString()
                     };
                 }).ToList();
+
                 userRedeemResponse.UserRedeems.AddRange(userRedeems);
             }
 
