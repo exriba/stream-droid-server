@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+import "common/reward.proto";
+import "google/protobuf/empty.proto";
+
+service GrpcRewardService {
+  rpc FindReward(RewardRequest) returns (RewardResponse);
+  rpc FindMyRewards(google.protobuf.Empty) returns (stream RewardResponse);
+  rpc UpdateRewardSpeech(RewardSpeechRequest) returns (RewardResponse);
+  //rpc FindRewardAssets(RewardRequest) returns (stream RewardAssetResponse);
+  rpc AddRewardAssets(stream AddRewardAssetRequest) returns (RewardResponse);
+  rpc RemoveRewardAssets(stream RemoveRewardAssetRequest) returns (RewardResponse);
+}
+
+message RewardRequest {
+  string reward_id = 1;
+}
+
+message RewardResponse {
+  grpc.model.Reward reward = 1;
+}
+
+message RewardSpeechRequest {
+  string reward_id = 1;
+  grpc.model.Speech speech = 2;
+}
+
+//message RewardAssetResponse {
+//  grpc.model.Asset asset = 1;
+//}
+
+message AddRewardAssetRequest {
+  string reward_id = 1;
+  bytes file = 2;
+}
+
+message RemoveRewardAssetRequest {
+  string reward_id = 1;
+  string file_name = 2;
+}

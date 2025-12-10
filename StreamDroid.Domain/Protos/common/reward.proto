@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package grpc.model;
+
+message Speech {
+  bool enabled = 1;
+  int32 voice_index = 2;
+}
+
+message Asset {
+  int32 volume = 1;
+  string file_name = 2;
+}
+
+message Reward {
+  string id = 1;
+  string title = 2;
+  string prompt = 3;
+  string image_url = 4;
+  string background_color = 5;
+  string streamer_id = 6;
+  Speech speech = 7;
+  repeated Asset assets = 8;
+}

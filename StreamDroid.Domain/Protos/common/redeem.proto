@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package grpc.model;
+
+import "common/reward.proto";
+
+message UserRedeem {
+  string user_id = 1;
+  string user_name = 2;
+  int32 redeem_count = 3;
+  // Consider sfixed32 to represent decimal fields. The problem is consumers will require conversion logic.
+  // Example: 12345.6789 becomes units = 12345, nanos = 678900000
+  string percentage = 4;
+}
+
+message RewardRedeem {
+  string reward_id = 1;
+  string reward_title = 2;
+  string fill = 3;
+  // Consider sfixed32 to represent decimal fields. The problem is consumers will require conversion logic.
+  // Example: 12345.6789 becomes units = 12345, nanos = 678900000
+  string percentage = 4;
+}
+
+message Redeem {
+  string id = 1;
+  string title = 2;
+  string prompt = 3;
+  string image_url = 4;
+  string background_color = 5;
+  string streamer_id = 6;
+  grpc.model.Speech speech = 7;
+}

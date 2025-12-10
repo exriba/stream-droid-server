@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "common/redeem.proto";
+import "google/protobuf/empty.proto";
+
+service GrpcRedeemService {
+  rpc FindRewardRedeemStatisticsFromUser(google.protobuf.Empty) returns (RewardRedeemResponse);
+  rpc FindUserRedeemStatisticsByReward(RewardRequest) returns (UserRedeemResponse);
+}
+
+message RewardRequest {
+  string reward_id = 1;
+}
+
+message UserRedeemResponse {
+  repeated grpc.model.UserRedeem user_redeems = 1;
+}
+
+message RewardRedeemResponse {
+  repeated grpc.model.RewardRedeem reward_redeems = 1;
+}
