@@ -7,6 +7,7 @@ using StreamDroid.Application.API.Converters;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.Settings;
 using StreamDroid.Domain;
+using StreamDroid.Domain.Services.Redeem;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
@@ -88,6 +89,7 @@ app.UseLocalFileServer();
 app.UseAuthorization();
 app.MapControllers();
 app.MapGrpcService<UserService>();
+app.MapGrpcService<RedeemService>();
 
 if (app.Environment.IsDevelopment())
 {
