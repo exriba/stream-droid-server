@@ -5,11 +5,10 @@ import "google/protobuf/empty.proto";
 
 service GrpcRewardService {
   rpc FindReward(RewardRequest) returns (RewardResponse);
-  rpc FindMyRewards(google.protobuf.Empty) returns (stream RewardResponse);
+  rpc FindUserRewards(google.protobuf.Empty) returns (stream RewardResponse);
   rpc UpdateRewardSpeech(RewardSpeechRequest) returns (RewardResponse);
-  //rpc FindRewardAssets(RewardRequest) returns (stream RewardAssetResponse);
   rpc AddRewardAssets(stream AddRewardAssetRequest) returns (RewardResponse);
-  rpc RemoveRewardAssets(stream RemoveRewardAssetRequest) returns (RewardResponse);
+  rpc RemoveRewardAssets(RemoveRewardAssetRequest) returns (RewardResponse);
 }
 
 message RewardRequest {
@@ -25,10 +24,6 @@ message RewardSpeechRequest {
   grpc.model.Speech speech = 2;
 }
 
-//message RewardAssetResponse {
-//  grpc.model.Asset asset = 1;
-//}
-
 message AddRewardAssetRequest {
   string reward_id = 1;
   bytes file = 2;
@@ -36,5 +31,5 @@ message AddRewardAssetRequest {
 
 message RemoveRewardAssetRequest {
   string reward_id = 1;
-  string file_name = 2;
+  repeated string file_name = 2;
 }
