@@ -15,7 +15,6 @@ namespace StreamDroid.Domain.Services.Redeem
     public sealed class RedeemService : GrpcRedeemServiceBase
     {
         private const string ID = "Id";
-        private const string NAME = "Name";
 
         private readonly IRedemptionRepository _repository;
         private readonly ILogger<RedeemService> _logger;
@@ -34,12 +33,9 @@ namespace StreamDroid.Domain.Services.Redeem
         public override async Task<RewardRedeemResponse> FindRewardRedeemStatisticsFromUser(Empty request, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
-            var idClaim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
-            var nameClaim = userPrincipal.Claims.First(c => c.Type.Equals(NAME));
+            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            _logger.LogInformation("Finding redeems for user: {name}.", nameClaim.Value);
-
-            var redeems = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(idClaim.Value));
+            var redeems = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(claim.Value));
             var rewardRedeems = redeems.GroupBy(x => x.Reward, (x, y) =>
             {
                 var value = decimal.Divide(y.Count(), redeems.Count);
@@ -75,7 +71,7 @@ namespace StreamDroid.Domain.Services.Redeem
 
             if (redeems.Count > 0)
             {
-                _logger.LogInformation("Finding redeems for redeem: {redeem}.", redeems.First().Reward.Title);
+                _logger.LogInformation("Finding redeems for reward: {title}.", redeems.First().Reward.Title);
 
                 var userRedeems = redeems.GroupBy(x => x.UserId, (x, y) =>
                 {
