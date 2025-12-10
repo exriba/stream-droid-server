@@ -66,7 +66,7 @@ namespace StreamDroid.Domain.Services.Redeem
 
             if (!rewardIdExists || rewardId == Guid.Empty)
             {
-                throw new ArgumentException($"Invalid Reward Id: {rewardId}.", nameof(rewardId));
+                throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
             }
 
             var redeems = await _repository.FindAsync(x => x.Reward.Id.Equals(rewardId.ToString()));
