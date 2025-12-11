@@ -3,11 +3,11 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.EventSub;
 using StreamDroid.Application;
-using StreamDroid.Application.API.Converters;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.Settings;
 using StreamDroid.Domain;
 using StreamDroid.Domain.Services.Redeem;
+using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
@@ -47,8 +47,7 @@ builder.Services.AddServiceConfiguration(builder.Configuration);
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddTwitchEventSub();
 builder.Services.AddHttpClient();
-builder.Services.AddControllers()
-                .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new AssetConverter()));
+builder.Services.AddControllers();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
 {
@@ -88,7 +87,9 @@ app.UseAuthentication();
 app.UseLocalFileServer();
 app.UseAuthorization();
 app.MapControllers();
+
 app.MapGrpcService<UserService>();
+app.MapGrpcService<RewardService>();
 app.MapGrpcService<RedeemService>();
 
 if (app.Environment.IsDevelopment())
