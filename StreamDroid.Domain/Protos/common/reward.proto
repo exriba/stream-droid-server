@@ -8,8 +8,17 @@ message Speech {
 }
 
 message Asset {
-  int32 volume = 1;
-  string file_name = 2;
+	enum MediaExtension {
+		UNSPECIFIED = 0;
+		MP3 = 1;
+		MP4 = 2;
+	}
+
+  string id = 1;
+  string name = 2;
+  string file_name = 3;
+  int32 volume = 4;
+  MediaExtension media_extension = 5;
 }
 
 message Reward {

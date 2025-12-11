@@ -8,6 +8,7 @@ service GrpcRewardService {
   rpc FindUserRewards(google.protobuf.Empty) returns (stream RewardResponse);
   rpc UpdateRewardSpeech(RewardSpeechRequest) returns (RewardResponse);
   rpc AddRewardAssets(stream AddRewardAssetRequest) returns (RewardResponse);
+  rpc UpdateRewardAssets(UpdateRewardAssetRequest) returns (RewardResponse);
   rpc RemoveRewardAssets(RemoveRewardAssetRequest) returns (RewardResponse);
 }
 
@@ -26,7 +27,15 @@ message RewardSpeechRequest {
 
 message AddRewardAssetRequest {
   string reward_id = 1;
-  bytes file = 2;
+  string file_name = 2;
+  int32 volume = 3;
+  bytes file = 4;
+}
+
+message UpdateRewardAssetRequest {
+  string reward_id = 1;
+  string file_name = 2;
+  int32 volume = 3;
 }
 
 message RemoveRewardAssetRequest {

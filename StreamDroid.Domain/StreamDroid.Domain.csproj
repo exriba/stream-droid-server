@@ -29,6 +29,7 @@
 	<Protobuf Include="Protos\common\redeem.proto" ProtoRoot="Protos\" GrpcServices="None" />
 	<Protobuf Include="Protos\common\reward.proto" ProtoRoot="Protos\" GrpcServices="None" />
 	<Protobuf Include="Protos\service\userservice.proto" ProtoRoot="Protos\" GrpcServices="Server" />
+	<Protobuf Include="Protos\service\rewardservice.proto" ProtoRoot="Protos\" GrpcServices="Server" />
 	<Protobuf Include="Protos\service\redeemservice.proto" ProtoRoot="Protos\" GrpcServices="Server" />
   </ItemGroup>
 
