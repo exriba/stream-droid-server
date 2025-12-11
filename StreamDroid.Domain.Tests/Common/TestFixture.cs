@@ -24,7 +24,7 @@ namespace StreamDroid.Domain.Tests.Common
         public TestFixture()
         {
             var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
-            var applicationAssembly = typeof(BaseDto<,>).Assembly;
+            var applicationAssembly = typeof(BaseProto<,>).Assembly;
             typeAdapterConfig.Scan(applicationAssembly);
 
             using var configurationManager = new ConfigurationManager();
