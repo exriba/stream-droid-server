@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Google.Protobuf;
 using StreamDroid.Core.ValueObjects;
 
-namespace StreamDroid.Domain.Services.Data
+namespace StreamDroid.Domain.Services.AssetFile
 {
     /// <summary>
     /// Defines business logic regarding asset file management.
@@ -13,8 +13,9 @@ namespace StreamDroid.Domain.Services.Data
         /// </summary>
         /// <param name="userId">user id</param>
         /// <param name="rewardName">reward name</param>
-        /// <param name="files">files</param>
-        Task AddAssetFilesAsync(string userId, string rewardName, IEnumerable<IFormFile> files);
+        /// <param name="fileName">file name</param>
+        /// <param name="byteString">byte string representation of the file</param>
+        Task AddAssetFilesAsync(string userId, string rewardName, FileName fileName, ByteString byteString);
 
         /// <summary>
         /// Deletes an asset file from a given user id and reward name.

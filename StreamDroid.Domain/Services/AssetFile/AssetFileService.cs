@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Google.Protobuf;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Settings;
 
-namespace StreamDroid.Domain.Services.Data
+namespace StreamDroid.Domain.Services.AssetFile
 {
     /// <summary>
     /// Default implementation of <see cref="IAssetFileService"/>.
@@ -17,26 +17,16 @@ namespace StreamDroid.Domain.Services.Data
         }
 
         /// <inheritdoc/>
-        public async Task AddAssetFilesAsync(string userId, string rewardName, IEnumerable<IFormFile> files)
+        public async Task AddAssetFilesAsync(string userId, string rewardName, FileName fileName, ByteString byteString)
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
             var basePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName);
             Directory.CreateDirectory(basePath);
 
-            var tasks = new List<Task>();
+            var filePath = Path.Combine(basePath, fileName.ToString());
 
-            foreach (var file in files)
-            {
-                var filePath = Path.Combine(basePath, file.FileName);
-                var stream = new FileStream(filePath, FileMode.Create);
-                var task = file.CopyToAsync(stream).ContinueWith(async task =>
-                {
-                    await stream.DisposeAsync();
-                });
-                tasks.Add(task);
-            }
-
-            await Task.WhenAll(tasks);
+            var bytes = byteString.ToByteArray();
+            await File.WriteAllBytesAsync(filePath, bytes);
         }
 
         /// <inheritdoc/>
@@ -46,9 +36,7 @@ namespace StreamDroid.Domain.Services.Data
             var filePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName, fileName.ToString());
 
             if (File.Exists(filePath))
-            {
                 File.Delete(filePath);
-            }
         }
     }
 }
