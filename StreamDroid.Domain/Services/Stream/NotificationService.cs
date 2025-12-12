@@ -6,7 +6,7 @@ namespace StreamDroid.Domain.Services.Stream
     /// <summary>
     /// Lightweight component to achieve decoupled communication between two or more services within the same application.
     /// </summary>
-    internal class NotificationService
+    public sealed class NotificationService
     {
         private readonly Channel<NotificationEvent> _channel = Channel.CreateUnbounded<NotificationEvent>();
 
