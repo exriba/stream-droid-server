@@ -119,6 +119,8 @@ namespace StreamDroid.Domain.Services.Stream
 
         private async Task CreateSubscriptionsAsync(string userId)
         {
+            _logger.LogInformation("Creating subscriptions for user id {id}.", userId);
+
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
@@ -253,7 +255,8 @@ namespace StreamDroid.Domain.Services.Stream
                 var textToSpeechEvent = new NotificationEvent
                 {
                     Id = Guid.NewGuid().ToString(),
-                    EventType = NotificationEvent.Types.EventType.Speech,
+                    EventType = EventType.Speech,
+                    StreamerId = redeem.BroadcasterUserId,
                     TextToSpeechEvent = new TextToSpeechEvent
                     {
                         Message = redeem.UserInput,
@@ -273,6 +276,7 @@ namespace StreamDroid.Domain.Services.Stream
             {
                 Id = Guid.NewGuid().ToString(),
                 EventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.Audio : EventType.Video,
+                StreamerId = redeem.BroadcasterUserId,
                 AssetFileEvent = new AssetFileEvent
                 {
                     Volume = asset.Volume,

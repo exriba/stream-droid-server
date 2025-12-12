@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "common/event.proto";
+import "google/protobuf/empty.proto";
+
+service GrpcEventService {
+  rpc Subscribe(google.protobuf.Empty) returns (stream EventResponse);
+}
+
+message EventResponse {
+  grpc.model.NotificationEvent event = 1;
+}

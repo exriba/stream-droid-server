@@ -13,9 +13,10 @@ message NotificationEvent {
   
   string id = 1;
   EventType event_type = 2;
+  string streamer_id = 3;
   oneof payload {
-	  TextToSpeechEvent text_to_speech_event = 3;
-	  AssetFileEvent asset_file_event = 4;
+	  TextToSpeechEvent text_to_speech_event = 4;
+	  AssetFileEvent asset_file_event = 5;
   }
 }
 
