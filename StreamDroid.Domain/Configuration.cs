@@ -3,9 +3,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharpTwitch.Auth;
 using SharpTwitch.Core;
+using SharpTwitch.EventSub;
 using SharpTwitch.Helix;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.Services.AssetFile;
+using StreamDroid.Domain.Services.Stream;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using System.Reflection;
@@ -34,15 +36,16 @@ namespace StreamDroid.Domain
             // Add services to the container. 
             // services.AddMemoryCache(options => options.SizeLimit = 1024);
             // services.AddSingleton<IMemoryCache, MemoryCache>(); // Review
+            services.AddTwitchEventSub();
+            services.AddHttpClient();
             services.AddTwitchAuth();
             services.AddTwitchHelix();
             services.AddTwitchCore(configurationManager);
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAssetFileService, AssetFileService>();
-            //services.AddHostedService<TwitchHostedService>();
-            //services.AddSingleton<ITwitchManager, TwitchEventSub>();
-            //services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider =>
-            //    (TwitchEventSub)provider.GetRequiredService<ITwitchManager>());
+            services.AddSingleton<NotificationService>();
+            services.AddHostedService<TwitchEventSub>();
+            services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider => provider.GetRequiredService<TwitchEventSub>());
             return services;
         }
     }

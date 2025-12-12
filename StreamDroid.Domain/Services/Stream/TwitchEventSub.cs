@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Grpc.Model;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.EventSub;
@@ -10,22 +12,23 @@ using SharpTwitch.EventSub.Core.EventMessageArgs;
 using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using StreamDroid.Core.Enums;
-using StreamDroid.Core.ValueObjects;
-using StreamDroid.Domain.Services.Stream.Events;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
+using EventType = Grpc.Model.NotificationEvent.Types.EventType;
+using Speech = StreamDroid.Core.ValueObjects.Speech;
 
 // TODO:
 // 1. Review these restrictions https://dev.twitch.tv/docs/eventsub/manage-subscriptions/#subscription-limits (Future updates)
 namespace StreamDroid.Domain.Services.Stream
 {
     /// <summary>
-    /// Default implementation of <see cref="ITwitchManager"/>.
+    /// A background service designed to receive and handle Twitch EventSub messages. This class should run as it's own independent service, 
+    /// decoupled from the web host for scalability and maintenance purposes.
     /// </summary>
-    internal class TwitchEventSub : ITwitchManager, ITwitchSubscriber, IAsyncDisposable
+    internal class TwitchEventSub : IHostedService, ITwitchSubscriber
     {
         private static readonly IReadOnlySet<SubscriptionType> SUBSCRIPTION_TYPES = new HashSet<SubscriptionType>
         {
@@ -40,19 +43,27 @@ namespace StreamDroid.Domain.Services.Stream
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
+        private readonly ISet<string> _activeSubscribers;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly IDictionary<string, Func<EventBase, Task>?> _usersSubscribed;
+        private readonly NotificationService _notificationService;
 
         public TwitchEventSub(EventSub eventSub,
                               IAppSettings appSettings,
                               IServiceScopeFactory serviceScopeFactory,
+                              NotificationService notificationService,
                               ILogger<TwitchEventSub> logger)
         {
             _logger = logger;
             _eventSub = eventSub;
             _appSettings = appSettings;
+            _notificationService = notificationService;
             _serviceScopeFactory = serviceScopeFactory;
-            _usersSubscribed = new Dictionary<string, Func<EventBase, Task>?>();
+            _activeSubscribers = new HashSet<string>();
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Initiating TwitchEventSub service.");
 
             _eventSub.OnRevocation += OnRevocation;
             _eventSub.OnErrorMessage += OnErrorMessage;
@@ -64,117 +75,83 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub.OnCustomRewardUpdate += OnCustomRewardUpdate;
             _eventSub.OnCustomRewardRemove += OnCustomRewardRemove;
             _eventSub.OnChannelPointsCustomRewardRedemption += OnChannelPointsCustomRewardRedemption;
-        }
 
-        #region ITwitchManager
-        
-        /// <inheritdoc/>
-        public async Task<bool> ConnectAsync()
-        {
-            await CleanSubscriptionsAsync();
+            _logger.LogInformation("Loaded event handlers.");
 
-            if (_usersSubscribed.Keys.Any())
-            {
-                _logger.LogInformation("Connecting event sub.");
-                return await _eventSub.ConnectAsync();
-            }
-
-            return false;
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public async Task<bool> DisconnectAsync()
+        public async Task SubscribeAsync(string userId)
         {
-            await CleanSubscriptionsAsync();
-
-            _logger.LogInformation("Disconnecting event sub with session {id}.", _eventSub.SessionId);
-            return await _eventSub.DisconnectAsync();
-        }
-        
-        #endregion
-
-        #region ITwitchSubscriber
-        
-        /// <inheritdoc/>
-        public async Task SubscribeAsync(string userId, Func<EventBase, Task> notificationHandler)
-        {
-            if (_usersSubscribed.ContainsKey(userId))
-            {
-                _usersSubscribed[userId] = notificationHandler;
-                return;
-            }
-
-            var completed = _eventSub.webSocketClient.Connected
-                ? await SubscribeAsync(userId)
-                : await _eventSub.ConnectAsync();
-
-            if (completed)
-                _usersSubscribed.Add(userId, notificationHandler);
-        }
-
-        /// <inheritdoc/>
-        public void UnsubscribeAsync(string userId)
-        {
-            if (!_usersSubscribed.ContainsKey(userId))
+            if (_activeSubscribers.Contains(userId))
                 return;
 
-            _usersSubscribed[userId] = null;
-        }
+            if (!_eventSub.webSocketClient.Connected)
+                await _eventSub.ConnectAsync();
 
-        private async Task<bool> SubscribeAsync(params string[] userIds)
-        {
-            var subscribed = false;
-
-            if (_eventSub.SessionId != string.Empty)
+            if (_eventSub.SessionId == string.Empty)
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var source = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+                while (!source.IsCancellationRequested)
                 {
-                    var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-
-                    foreach (var userId in userIds)
+                    if (_eventSub.SessionId != string.Empty)
                     {
-                        var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
-
-                        try
-                        {
-                            var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                                await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-
-                            var tasks = SUBSCRIPTION_TYPES.Select(x =>
-                            {
-                                _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
-                                return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None);
-                            });
-
-                            await Task.WhenAll(tasks);
-
-                            subscribed = true;
-                        }
-                        catch (HttpRequestException ex)
-                        {
-                            _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
-                        }
+                        await CreateSubscriptionsAsync(userId);
+                        break;
                     }
+
+                    await Task.Delay(100);
                 }
             }
-
-            return subscribed;
+            else
+            {
+                await CreateSubscriptionsAsync(userId);
+            }
         }
 
-        #endregion
+        /// <inheritdoc/>
+        public async Task UnsubscribeAsync(string userId)
+        {
+            await DeleteSubscriptionsAsync(userId);
+        }
+
+        private async Task CreateSubscriptionsAsync(string userId)
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+
+                try
+                {
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                        await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+
+                    var tasks = SUBSCRIPTION_TYPES.Select(x =>
+                    {
+                        _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
+                        return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, CancellationToken.None);
+                    });
+
+                    await Task.WhenAll(tasks);
+
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
+                }
+            }
+        }
 
         #region EventSub Handlers
 
-        private async void OnClientConnected(object? sender, ClientConnectedArgs e)
+        private void OnClientConnected(object? sender, ClientConnectedArgs e)
         {
             _logger.LogInformation("EventSub client connected");
-
-            if (!e.ReconnectionRequested)
-            {
-                var userIds = _usersSubscribed.Keys.ToArray();
-                await SubscribeAsync(userIds);
-            }
         }
 
         private async void OnClientDisconnected(object? sender, ClientDisconnectedArgs e)
@@ -249,61 +226,64 @@ namespace StreamDroid.Domain.Services.Stream
             _logger.LogInformation("Streamer {streamer}: {user} redeemed {title} at {redeemedAt}.",
                 redeem.BroadcasterUserName, redeem.UserName, redeem.Reward.Title, redeem.RedeemedAt);
 
-            Entities.Reward? reward;
+            var scope = _serviceScopeFactory.CreateScope();
+            var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
+            var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>();
+            var reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
 
-            using (var scope = _serviceScopeFactory.CreateScope())
+            if (reward is null)
             {
-                var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Entities.Reward>>();
-                var redemptionRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>();
-                reward = await rewardRepository.FindByIdAsync(redeem.Reward.Id);
-
-                if (reward is not null)
-                {
-                    var redemption = new Entities.Redemption
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        UserId = redeem.UserId,
-                        UserName = redeem.UserName,
-                        Reward = reward
-                    };
-
-                    await redemptionRepository.AddAsync(redemption);
-                }
+                scope.Dispose();
+                return;
             }
 
-            _usersSubscribed.TryGetValue(redeem.BroadcasterUserId, out var handler);
+            var redemption = new Entities.Redemption
+            {
+                Id = Guid.NewGuid().ToString(),
+                UserId = redeem.UserId,
+                UserName = redeem.UserName,
+                Reward = reward
+            };
 
-            if (reward is null || handler is null)
-                return;
+            await redemptionRepository.AddAsync(redemption);
+            scope.Dispose();
 
             if (reward.Speech.Enabled)
             {
-                var textToSpeechEvent = new SpeechEvent
+                var textToSpeechEvent = new NotificationEvent
                 {
-                    Message = redeem.UserInput,
-                    VoiceIndex = reward.Speech.VoiceIndex
+                    Id = Guid.NewGuid().ToString(),
+                    EventType = NotificationEvent.Types.EventType.Speech,
+                    TextToSpeechEvent = new TextToSpeechEvent
+                    {
+                        Message = redeem.UserInput,
+                        VoiceIndex = reward.Speech.VoiceIndex
+                    }
                 };
 
-                await handler(textToSpeechEvent);
+                await _notificationService.PublishNotificationAsync(textToSpeechEvent);
             }
 
             if (!reward.TryGetRandomAsset(out var asset))
                 return;
 
-            var eventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.AUDIO : EventType.VIDEO;
-            var uriString = string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.BroadcasterUserId, reward.Title, asset.ToString());
+            var uriString = string.Join("/", _appSettings.ServerUri, _appSettings.StaticAssetPath, redeem.BroadcasterUserId, reward.Title, asset!.ToString());
 
-            var assetEvent = new AssetEvent(eventType)
+            var assetFileEvent = new NotificationEvent
             {
-                Volume = asset.Volume,
-                Uri = new Uri(uriString)
+                Id = Guid.NewGuid().ToString(),
+                EventType = asset!.FileName.MediaExtension == MediaExtension.MP3 ? EventType.Audio : EventType.Video,
+                AssetFileEvent = new AssetFileEvent
+                {
+                    Volume = asset.Volume,
+                    Uri = uriString
+                }
             };
 
-            await handler(assetEvent);
+            await _notificationService.PublishNotificationAsync(assetFileEvent);
         }
 
-        // TODO:
-        // 1. Need to alert user/admin.
+        // TODO: Need to alert user/admin.
         private void OnErrorMessage(object? sender, ErrorMessageArgs e)
         {
             var message = string.IsNullOrWhiteSpace(e.Message) ? "N/A" : e.Message;
@@ -338,60 +318,67 @@ namespace StreamDroid.Domain.Services.Stream
             var streamOffline = e.Notification.Payload.Event;
             _logger.LogInformation("{user} has gone offline at {timeStamp}.", streamOffline.BroadcasterUserName, DateTime.Now);
         }
-        
+
         #endregion
 
-        private async Task CleanSubscriptionsAsync()
+        private async Task DeleteSubscriptionsAsync()
         {
             _logger.LogInformation("Cleaning up subscriptions.");
+
+            foreach (var userId in _activeSubscribers)
+                await DeleteSubscriptionsAsync(userId);
+        }
+
+        private async Task DeleteSubscriptionsAsync(string userId)
+        {
+            if (!_activeSubscribers.Contains(userId))
+                return;
+
+            _logger.LogInformation("Cleaning up subscriptions for user id {id}.", userId);
 
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
 
-                if (!_usersSubscribed.Keys.Any())
+                try
                 {
-                    var users = await userService.FindUsersAsync();
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                        await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
 
-                    foreach (var user in users)
-                        _usersSubscribed.Add(user.Id, null);
+                    var tasks = helixSubscriptionResponse.Data.Select(x =>
+                    {
+                        _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} which was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
+                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
+                    });
+
+                    await Task.WhenAll(tasks);
                 }
-
-                foreach (var key in _usersSubscribed.Keys)
+                catch (HttpRequestException ex)
                 {
-                    var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(key);
-
-                    try
-                    {
-                        var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                            await helixApi.Subscriptions.GetEventSubSubscriptionAsync(key, tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
-
-                        var tasks = helixSubscriptionResponse.Data.Select(x =>
-                        {
-                            _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} that was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
-                            return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, CancellationToken.None);
-                        });
-
-                        await Task.WhenAll(tasks);
-                    }
-                    catch (HttpRequestException ex)
-                    {
-                        _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
-                    }
+                    _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
                 }
             }
+
+            _activeSubscribers.Remove(userId);
         }
 
-        public async ValueTask DisposeAsync()
+        /// <summary>
+        /// Clears all active eventsub subscriptions, then disconnects and disposes client. 
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             if (_eventSub.webSocketClient.Connected)
-                await DisconnectAsync();
-
-            _usersSubscribed.Clear();
+                await _eventSub.DisconnectAsync();
 
             _logger.LogInformation("Disposing event sub with session {id}.", _eventSub.SessionId);
             await _eventSub.DisposeAsync();
+
+            await DeleteSubscriptionsAsync();
+
+            _logger.LogInformation("Shutting down TwitchEventSub.");
         }
     }
 }
