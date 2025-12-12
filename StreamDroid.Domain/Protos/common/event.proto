@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package grpc.model;
+
+message NotificationEvent {
+
+	enum EventType {
+		UNSPECIFIED = 0;
+		SPEECH = 1;
+		AUDIO = 2;
+		VIDEO = 3;
+	}
+  
+  string id = 1;
+  EventType event_type = 2;
+  oneof payload {
+	  TextToSpeechEvent text_to_speech_event = 3;
+	  AssetFileEvent asset_file_event = 4;
+  }
+}
+
+message TextToSpeechEvent {
+	int32 voice_index = 2;
+	string message = 3;
+}
+
+message AssetFileEvent {
+	int32 volume = 2;
+	string uri = 3;
+}
