@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+	<Protobuf Include="Protos\common\event.proto" ProtoRoot="Protos\" GrpcServices="None" />
 	<Protobuf Include="Protos\common\user.proto" ProtoRoot="Protos\" GrpcServices="None" />
 	<Protobuf Include="Protos\common\redeem.proto" ProtoRoot="Protos\" GrpcServices="None" />
 	<Protobuf Include="Protos\common\reward.proto" ProtoRoot="Protos\" GrpcServices="None" />
