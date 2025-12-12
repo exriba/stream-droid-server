@@ -121,42 +121,48 @@ namespace StreamDroid.Domain.Services.Reward
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            Entities.Reward reward;
-            var tasks = new List<Task>();
-            var hasFirstItem = await requestStream.MoveNext();
+            var id = Guid.Empty;
+            var tasks = new List<Task>(3);
 
-            if (hasFirstItem)
+            while (await requestStream.MoveNext())
             {
-                var request = requestStream.Current;
-                var rewardIdExists = Guid.TryParse(request.RewardId, out var rewardId);
-
-                if (!rewardIdExists || rewardId == Guid.Empty)
-                    throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
-
-                reward = await FetchRewardAsync(rewardId);
-
-                reward.AddAsset(FileName.FromString(request.FileName), request.Volume);
-                var task = _assetFileService.AddAssetFilesAsync(claim.Value, reward.Title, FileName.FromString(request.FileName), request.File);
-                tasks.Add(task);
-
-                while (await requestStream.MoveNext())
+                if (tasks.Count == 3)
                 {
-                    var current = requestStream.Current;
-                    reward.AddAsset(FileName.FromString(current.FileName), current.Volume);
-                    var innerTask = _assetFileService.AddAssetFilesAsync(claim.Value, reward.Title, FileName.FromString(current.FileName), current.File);
-                    tasks.Add(task);
+                    await Task.WhenAll(tasks);
+                    tasks.Clear();
                 }
 
-                await Task.WhenAll(tasks);
-                await _repository.UpdateAsync(reward);
+                var request = requestStream.Current;
 
-                return new RewardResponse
+                if (id == Guid.Empty)
                 {
-                    Reward = RewardProto.FromEntity(reward)
-                };
+                    var isGuid = Guid.TryParse(request.RewardId, out var rewardId);
+
+                    if (!isGuid || rewardId == Guid.Empty)
+                        throw new ArgumentException($"Invalid Reward Id: {rewardId}.", nameof(request.RewardId));
+
+                    id = rewardId;
+                }
+
+                if (request.RewardId != id.ToString())
+                    throw new ArgumentException("All requests must have the same reward id.");
+
+
+                var innerReward = await FetchRewardAsync(id);
+                innerReward.AddAsset(FileName.FromString(request.FileName), request.Volume);
+                var task = _assetFileService.AddAssetFilesAsync(claim.Value, innerReward.Title, FileName.FromString(request.FileName), request.File);
+                tasks.Add(task);
             }
 
-            return new RewardResponse();
+            var reward = await FetchRewardAsync(id);
+            await Task.WhenAll(tasks);
+            await _repository.UpdateAsync(reward);
+            tasks.Clear();
+
+            return new RewardResponse
+            {
+                Reward = RewardProto.FromEntity(reward)
+            };
         }
 
         /// <summary>
