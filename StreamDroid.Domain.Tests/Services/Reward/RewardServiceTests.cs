@@ -12,7 +12,7 @@ using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using StreamDroid.Core.ValueObjects;
-using StreamDroid.Domain.RefreshPolicy;
+using StreamDroid.Domain.Policies;
 using StreamDroid.Domain.Services.AssetFile;
 using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.Services.User;

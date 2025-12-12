@@ -1,5 +1,5 @@
 ﻿using StreamDroid.Core.Exceptions;
-using StreamDroid.Domain.RefreshPolicy;
+using StreamDroid.Domain.Policies;
 
 namespace StreamDroid.Domain.Services.User
 {

@@ -15,7 +15,7 @@ using SharpTwitch.Helix;
 using StreamDroid.Core.Enums;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Domain.DTOs;
-using StreamDroid.Domain.RefreshPolicy;
+using StreamDroid.Domain.Policies;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Shared.Extensions;
@@ -62,7 +62,6 @@ namespace StreamDroid.Domain.Services.User
             _authApi = authApi;
             _helixApi = helixApi;
             _repository = repository;
-
             _jwtSettings = options.Value;
             _coreSettings = coreSettings;
             _logger = logger;

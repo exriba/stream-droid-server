@@ -2,7 +2,7 @@
 using Polly.Retry;
 using SharpTwitch.Core.Exceptions;
 
-namespace StreamDroid.Domain.RefreshPolicy
+namespace StreamDroid.Domain.Policies
 {
     /// <summary>
     /// Token refresh policy.

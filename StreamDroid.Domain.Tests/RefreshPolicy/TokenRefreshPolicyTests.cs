@@ -1,5 +1,5 @@
 using SharpTwitch.Core.Exceptions;
-using StreamDroid.Domain.RefreshPolicy;
+using StreamDroid.Domain.Policies;
 
 namespace StreamDroid.Domain.Tests.RefreshPolicy
 {
@@ -14,7 +14,7 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
 
             async Task<string> refreshToken(string userId) => await Task.FromResult(newAccessToken);
             var refreshPolicy = new TokenRefreshPolicy(userId, accessToken, refreshToken);
-            
+
             var token = await refreshPolicy.Policy.ExecuteAsync(async context =>
             {
                 if (refreshPolicy.AccessToken.Equals(accessToken))
