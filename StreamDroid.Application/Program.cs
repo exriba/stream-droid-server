@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using SharpTwitch.EventSub;
 using StreamDroid.Application;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.Settings;
@@ -39,15 +38,11 @@ builder.Configuration.Configure();
 #endregion
 
 #region Register Services
-
 builder.Services.AddWindowsService();
 builder.Services.AddSingleton<IAppSettings>(options => options.GetRequiredService<IOptions<AppSettings>>().Value);
 builder.Services.AddInfrastructureConfiguration(builder.Configuration);
 builder.Services.AddServiceConfiguration(builder.Configuration);
 builder.Services.AddDirectoryBrowser();
-builder.Services.AddTwitchEventSub();
-builder.Services.AddHttpClient();
-builder.Services.AddControllers();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
 {
