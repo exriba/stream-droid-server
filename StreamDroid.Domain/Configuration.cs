@@ -45,7 +45,7 @@ namespace StreamDroid.Domain
             services.AddScoped<IAssetFileService, AssetFileService>();
             services.AddSingleton<NotificationService>();
             services.AddHostedService<TwitchEventSub>();
-            services.AddSingleton<ITwitchSubscriber, TwitchEventSub>(provider => provider.GetRequiredService<TwitchEventSub>());
+            services.AddSingleton<ITwitchSubscriber, TwitchEventSub>();
             return services;
         }
     }
