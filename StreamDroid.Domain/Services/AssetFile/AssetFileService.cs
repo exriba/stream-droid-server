@@ -17,7 +17,7 @@ namespace StreamDroid.Domain.Services.AssetFile
         }
 
         /// <inheritdoc/>
-        public async Task AddAssetFilesAsync(string userId, string rewardName, FileName fileName, ByteString byteString)
+        public async Task AddAssetFileAsync(string userId, string rewardName, FileName fileName, ByteString byteString, CancellationToken cancellationToken = default)
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
             var basePath = Path.Combine(appDataPath, _appSettings.ApplicationName, _appSettings.StaticAssetPath, userId, rewardName);
@@ -26,7 +26,7 @@ namespace StreamDroid.Domain.Services.AssetFile
             var filePath = Path.Combine(basePath, fileName.ToString());
 
             var bytes = byteString.ToByteArray();
-            await File.WriteAllBytesAsync(filePath, bytes);
+            await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
         }
 
         /// <inheritdoc/>

@@ -140,7 +140,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             static async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
             var tokenRefreshPolicy = new TokenRefreshPolicy(user.Id, "accessToken", refreshToken);
 
-            _userService.Setup(x => x.CreateTokenRefreshPolicyAsync(It.IsAny<string>()))
+            _userService.Setup(x => x.CreateTokenRefreshPolicyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                         .ReturnsAsync(tokenRefreshPolicy);
             _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<Helix.User.User>>(
                         It.IsAny<UrlFragment>(),
@@ -334,9 +334,9 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         private static Mock<IServerStreamWriter<RewardResponse>> CreateServerStreamWriterMock(List<RewardResponse> messages)
         {
             var mockStreamWriter = new Mock<IServerStreamWriter<RewardResponse>>();
-            mockStreamWriter.Setup(x => x.WriteAsync(It.IsAny<RewardResponse>()))
+            mockStreamWriter.Setup(x => x.WriteAsync(It.IsAny<RewardResponse>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask)
-                .Callback<RewardResponse>(x => messages.Add(x));
+                .Callback((RewardResponse rewardResponse, CancellationToken token) => messages.Add(rewardResponse));
             return mockStreamWriter;
         }
 

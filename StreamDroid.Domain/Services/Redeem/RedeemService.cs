@@ -35,7 +35,7 @@ namespace StreamDroid.Domain.Services.Redeem
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var redeems = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(claim.Value));
+            var redeems = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(claim.Value), context.CancellationToken);
             var rewardRedeems = redeems.GroupBy(x => x.Reward, (x, y) =>
             {
                 var value = decimal.Divide(y.Count(), redeems.Count);
@@ -65,7 +65,7 @@ namespace StreamDroid.Domain.Services.Redeem
                 throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
             }
 
-            var redeems = await _repository.FindAsync(x => x.Reward.Id.Equals(rewardId.ToString()));
+            var redeems = await _repository.FindAsync(x => x.Reward.Id.Equals(rewardId.ToString()), context.CancellationToken);
 
             var userRedeemResponse = new UserRedeemResponse();
 

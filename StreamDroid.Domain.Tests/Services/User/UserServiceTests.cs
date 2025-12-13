@@ -322,9 +322,9 @@ namespace StreamDroid.Domain.Tests.Services.User
         private static Mock<IServerStreamWriter<SessionStatus>> CreateServerStreamWriterMock(List<SessionStatus> messages)
         {
             var mockStreamWriter = new Mock<IServerStreamWriter<SessionStatus>>();
-            mockStreamWriter.Setup(x => x.WriteAsync(It.IsAny<SessionStatus>()))
+            mockStreamWriter.Setup(x => x.WriteAsync(It.IsAny<SessionStatus>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask)
-                .Callback<SessionStatus>(x => messages.Add(x));
+                .Callback((SessionStatus status, CancellationToken token) => messages.Add(status));
             return mockStreamWriter;
         }
 

@@ -15,7 +15,8 @@ namespace StreamDroid.Domain.Services.AssetFile
         /// <param name="rewardName">reward name</param>
         /// <param name="fileName">file name</param>
         /// <param name="byteString">byte string representation of the file</param>
-        Task AddAssetFilesAsync(string userId, string rewardName, FileName fileName, ByteString byteString);
+        /// <param name="cancellationToken">cancellation token</param>
+        Task AddAssetFileAsync(string userId, string rewardName, FileName fileName, ByteString byteString, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Deletes an asset file from a given user id and reward name.

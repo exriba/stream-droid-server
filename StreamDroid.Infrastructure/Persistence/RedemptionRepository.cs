@@ -20,21 +20,21 @@ namespace StreamDroid.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task<Redemption> AddAsync(Redemption redemption)
+        public async Task<Redemption> AddAsync(Redemption redemption, CancellationToken cancellationToken = default)
         {
             Guard.Against.Null(redemption);
 
-            var e = await _entitySet.AddAsync(redemption);
-            await _databaseContext.SaveChangesAsync();
+            var e = await _entitySet.AddAsync(redemption, cancellationToken);
+            await _databaseContext.SaveChangesAsync(cancellationToken);
             return e.Entity;
         }
 
         /// <inheritdoc/>
-        public async Task<IReadOnlyCollection<Redemption>> FindAsync(Expression<Func<Redemption, bool>>? expression = null)
+        public async Task<IReadOnlyCollection<Redemption>> FindAsync(Expression<Func<Redemption, bool>>? expression = null, CancellationToken cancellationToken = default)
         {
             return expression is null
-                ? await _entitySet.Include(x => x.Reward).AsNoTracking().ToListAsync()
-                : await _entitySet.Include(x => x.Reward).Where(expression).AsNoTracking().ToListAsync();
+                ? await _entitySet.Include(x => x.Reward).AsNoTracking().ToListAsync(cancellationToken)
+                : await _entitySet.Include(x => x.Reward).Where(expression).AsNoTracking().ToListAsync(cancellationToken);
         }
 
         public void Dispose()

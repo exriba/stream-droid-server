@@ -54,7 +54,7 @@ namespace StreamDroid.Domain.Services.Reward
             if (!rewardIdExists || rewardId == Guid.Empty)
                 throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
 
-            var reward = await FetchRewardAsync(rewardId);
+            var reward = await FetchRewardAsync(rewardId, context.CancellationToken);
 
             return new RewardResponse
             {
@@ -71,12 +71,12 @@ namespace StreamDroid.Domain.Services.Reward
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var rewards = await _repository.FindAsync(r => r.StreamerId.Equals(claim.Value));
+            var rewards = await _repository.FindAsync(r => r.StreamerId.Equals(claim.Value), context.CancellationToken);
 
             if (rewards.Count == 0)
             {
                 _logger.LogInformation("No rewards found. Searching external server.");
-                rewards = await SynchronizeRewardsAsync(claim.Value);
+                rewards = await SynchronizeRewardsAsync(claim.Value, context.CancellationToken);
             }
 
             foreach (var reward in rewards)
@@ -85,7 +85,7 @@ namespace StreamDroid.Domain.Services.Reward
                 {
                     Reward = RewardProto.FromEntity(reward)
                 };
-                await responseStream.WriteAsync(response);
+                await responseStream.WriteAsync(response, context.CancellationToken);
             }
         }
 
@@ -101,9 +101,9 @@ namespace StreamDroid.Domain.Services.Reward
             if (!rewardIdExists || rewardId == Guid.Empty)
                 throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
 
-            var reward = await FetchRewardAsync(rewardId);
+            var reward = await FetchRewardAsync(rewardId, context.CancellationToken);
             reward.Speech = new Speech(enabled: request.Speech.Enabled, voiceIndex: request.Speech.VoiceIndex);
-            reward = await _repository.UpdateAsync(reward);
+            reward = await _repository.UpdateAsync(reward, context.CancellationToken);
 
             return new RewardResponse
             {
@@ -124,7 +124,7 @@ namespace StreamDroid.Domain.Services.Reward
             var id = Guid.Empty;
             var tasks = new List<Task>(3);
 
-            while (await requestStream.MoveNext())
+            while (await requestStream.MoveNext(context.CancellationToken))
             {
                 if (tasks.Count == 3)
                 {
@@ -148,15 +148,15 @@ namespace StreamDroid.Domain.Services.Reward
                     throw new ArgumentException("All requests must have the same reward id.");
 
 
-                var innerReward = await FetchRewardAsync(id);
+                var innerReward = await FetchRewardAsync(id, context.CancellationToken);
                 innerReward.AddAsset(FileName.FromString(request.FileName), request.Volume);
-                var task = _assetFileService.AddAssetFilesAsync(claim.Value, innerReward.Title, FileName.FromString(request.FileName), request.File);
+                var task = _assetFileService.AddAssetFileAsync(claim.Value, innerReward.Title, FileName.FromString(request.FileName), request.File, context.CancellationToken);
                 tasks.Add(task);
             }
 
-            var reward = await FetchRewardAsync(id);
+            var reward = await FetchRewardAsync(id, context.CancellationToken);
             await Task.WhenAll(tasks);
-            await _repository.UpdateAsync(reward);
+            await _repository.UpdateAsync(reward, context.CancellationToken);
             tasks.Clear();
 
             return new RewardResponse
@@ -177,11 +177,11 @@ namespace StreamDroid.Domain.Services.Reward
             if (!rewardIdExists || rewardId == Guid.Empty)
                 throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
 
-            var reward = await FetchRewardAsync(rewardId);
+            var reward = await FetchRewardAsync(rewardId, context.CancellationToken);
             reward.RemoveAsset(request.FileName);
-            await _repository.UpdateAsync(reward);
+            await _repository.UpdateAsync(reward, context.CancellationToken);
             reward.AddAsset(FileName.FromString(request.FileName), request.Volume);
-            reward = await _repository.UpdateAsync(reward);
+            reward = await _repository.UpdateAsync(reward, context.CancellationToken);
 
             return new RewardResponse
             {
@@ -204,7 +204,7 @@ namespace StreamDroid.Domain.Services.Reward
             if (!rewardIdExists || rewardId == Guid.Empty)
                 throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
 
-            var reward = await FetchRewardAsync(rewardId);
+            var reward = await FetchRewardAsync(rewardId, context.CancellationToken);
 
             foreach (var fileName in request.FileName)
             {
@@ -212,7 +212,7 @@ namespace StreamDroid.Domain.Services.Reward
                 reward.RemoveAsset(fileName.ToString());
             }
 
-            reward = await _repository.UpdateAsync(reward);
+            reward = await _repository.UpdateAsync(reward, context.CancellationToken);
 
             return new RewardResponse
             {
@@ -224,14 +224,15 @@ namespace StreamDroid.Domain.Services.Reward
         /// Synchronizes external rewards for the given user.
         /// </summary>
         /// <param name="userId">user id</param>
+        /// <param name="cancellationToken">cancellation token</param>
         /// <returns>A collection of rewards.</returns>
-        private async Task<List<Entities.Reward>> SynchronizeRewardsAsync(string userId)
+        private async Task<List<Entities.Reward>> SynchronizeRewardsAsync(string userId, CancellationToken cancellationToken = default)
         {
             var rewards = new List<Entities.Reward>();
-            var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicyAsync(userId);
+            var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicyAsync(userId, cancellationToken);
 
             var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                await _helixApi.Users.GetUsersAsync([], tokenRefreshPolicy.AccessToken, CancellationToken.None), tokenRefreshPolicy.ContextData);
+                await _helixApi.Users.GetUsersAsync([], tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
 
             if (twitchUsers.Any())
             {
@@ -240,7 +241,7 @@ namespace StreamDroid.Domain.Services.Reward
 
                 if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
                 {
-                    var twitchRewards = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, CancellationToken.None);
+                    var twitchRewards = await _helixApi.CustomRewards.GetCustomRewardsAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken);
 
                     if (twitchRewards.Any())
                         _logger.LogInformation("Importing rewards.");
@@ -262,7 +263,7 @@ namespace StreamDroid.Domain.Services.Reward
 
                     foreach (var entity in entities)
                     {
-                        await _repository.AddAsync(entity);
+                        await _repository.AddAsync(entity, cancellationToken);
                     }
 
                     rewards.AddRange(entities);
@@ -282,24 +283,26 @@ namespace StreamDroid.Domain.Services.Reward
         /// Finds a reward by the given id.
         /// </summary>
         /// <param name="rewardId">reward id</param>
+        /// <param name="cancellationToken">cancellation token</param>
         /// <returns>A reward entity</returns>
         /// <exception cref="EntityNotFoundException">If the reward is not found</exception>
-        private async Task<Entities.Reward> FetchRewardAsync(Guid rewardId)
+        private async Task<Entities.Reward> FetchRewardAsync(Guid rewardId, CancellationToken cancellationToken = default)
         {
-            return await FetchRewardByIdAsync(rewardId) ?? throw new EntityNotFoundException(rewardId.ToString());
+            return await FetchRewardByIdAsync(rewardId, cancellationToken) ?? throw new EntityNotFoundException(rewardId.ToString());
         }
 
         /// <summary>
         /// Finds a reward by the given id.
         /// </summary>
         /// <param name="rewardId">reward id</param>
+        /// <param name="cancellationToken">cancellation token</param>
         /// <returns>A reward entity.</returns>
         /// <exception cref="ArgumentException">If the reward id is an empty GUID</exception>
-        private async Task<Entities.Reward?> FetchRewardByIdAsync(Guid rewardId)
+        private async Task<Entities.Reward?> FetchRewardByIdAsync(Guid rewardId, CancellationToken cancellationToken = default)
         {
             if (rewardId == Guid.Empty)
                 throw new ArgumentException("Invalid Reward Id.", nameof(rewardId));
-            return await _repository.FindByIdAsync(rewardId.ToString());
+            return await _repository.FindByIdAsync(rewardId.ToString(), cancellationToken);
         }
         #endregion
     }

@@ -21,50 +21,50 @@ namespace StreamDroid.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task<TEntity?> FindByIdAsync(string id)
+        public async Task<TEntity?> FindByIdAsync(string id, CancellationToken cancellationToken = default)
         {
             Guard.Against.NullOrWhiteSpace(id, nameof(id));
 
-            return await _entitySet.FindAsync(id);
+            return await _entitySet.FindAsync(id, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task<IReadOnlyCollection<TEntity>> FindAsync(Expression<Func<TEntity, bool>>? expression = null)
+        public async Task<IReadOnlyCollection<TEntity>> FindAsync(Expression<Func<TEntity, bool>>? expression = null, CancellationToken cancellationToken = default)
         {
-            return expression is null 
-                ? await _entitySet.AsNoTracking().ToListAsync() 
-                : await _entitySet.Where(expression).AsNoTracking().ToListAsync();
+            return expression is null
+                ? await _entitySet.AsNoTracking().ToListAsync(cancellationToken)
+                : await _entitySet.Where(expression).AsNoTracking().ToListAsync(cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task<TEntity> AddAsync(TEntity entity)
+        public async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
             Guard.Against.Null(entity);
 
-            var e = await _entitySet.AddAsync(entity);
-            await _databaseContext.SaveChangesAsync();
+            var e = await _entitySet.AddAsync(entity, cancellationToken);
+            await _databaseContext.SaveChangesAsync(cancellationToken);
             return e.Entity;
         }
 
         /// <inheritdoc/>
-        public async Task<TEntity> UpdateAsync(TEntity entity)
+        public async Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
             Guard.Against.Null(entity);
 
             var e = _entitySet.Update(entity);
-            await _databaseContext.SaveChangesAsync();
+            await _databaseContext.SaveChangesAsync(cancellationToken);
             return e.Entity;
         }
 
         /// <inheritdoc/>
-        public async Task DeleteAsync(string id)
+        public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
         {
-            var entity = await FindByIdAsync(id);
+            var entity = await FindByIdAsync(id, cancellationToken);
 
             if (entity is not null)
             {
                 _entitySet.Remove(entity);
-                await _databaseContext.SaveChangesAsync();
+                await _databaseContext.SaveChangesAsync(cancellationToken);
             }
         }
 

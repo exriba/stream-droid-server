@@ -109,7 +109,7 @@ namespace StreamDroid.Domain.Services.User
             if (!sessionExists)
             {
                 _logger.LogError("Unable to find session: {state}.", state);
-                return await CreateHttpBodyResponse(ERROR_FILE);
+                return await CreateHttpBodyResponse(ERROR_FILE, context.CancellationToken);
             }
 
             _logger.LogInformation("Received authentication callback for session: {sessionId}.", state);
@@ -118,10 +118,10 @@ namespace StreamDroid.Domain.Services.User
             {
                 _pendingSessions.TryRemove(state, out _);
                 _logger.LogError("Error ocurred during login {error}. Details: {errorDescription}.", request.Error, request.ErrorDescription);
-                return await CreateHttpBodyResponse(ERROR_FILE);
+                return await CreateHttpBodyResponse(ERROR_FILE, context.CancellationToken);
             }
 
-            var user = await AuthenticateUserAsync(request.Code);
+            var user = await AuthenticateUserAsync(request.Code, context.CancellationToken);
 
             var claims = new List<Claim>
             {
@@ -152,7 +152,7 @@ namespace StreamDroid.Domain.Services.User
             semaphore?.Dispose();
 
             _logger.LogInformation("{user} logged in.", user.Name);
-            return await CreateHttpBodyResponse(SUCCESS_FILE);
+            return await CreateHttpBodyResponse(SUCCESS_FILE, context.CancellationToken);
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace StreamDroid.Domain.Services.User
                 {
                     Status = SessionStatus.Types.Status.Error,
                     Message = $"Unable to find session: {request.SessionId}."
-                });
+                }, context.CancellationToken);
                 return;
             }
 
@@ -183,7 +183,7 @@ namespace StreamDroid.Domain.Services.User
                 Status = SessionStatus.Types.Status.Authorized,
                 AccessToken = token,
                 Message = "Login Successful."
-            });
+            }, context.CancellationToken);
         }
 
         /// <summary>
@@ -197,7 +197,7 @@ namespace StreamDroid.Domain.Services.User
             var usePrincipal = context.GetHttpContext().User;
             var claim = usePrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var user = await FetchUserByIdAsync(claim.Value);
+            var user = await FetchUserByIdAsync(claim.Value, context.CancellationToken);
 
             bool parsed = Enum.TryParse(user.UserType.Name, true, out GrpcUser.Types.UserType userType);
 
@@ -208,17 +208,17 @@ namespace StreamDroid.Domain.Services.User
         }
 
         /// <inheritdoc/>
-        public async Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId)
+        public async Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId, CancellationToken cancellationToken = default)
         {
-            var user = await FetchUserByIdAsync(userId);
+            var user = await FetchUserByIdAsync(userId, cancellationToken);
 
             async Task<string> refreshToken(string userId)
             {
                 var refreshToken = user.RefreshToken.Base64Decrypt();
-                var token = await _authApi.RefreshAccessTokenAsync(refreshToken, CancellationToken.None);
+                var token = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
                 user.AccessToken = token.AccessToken;
                 user.RefreshToken = token.RefreshToken;
-                user = await _repository.UpdateAsync(user);
+                user = await _repository.UpdateAsync(user, cancellationToken);
                 return token.AccessToken;
             }
             ;
@@ -234,14 +234,14 @@ namespace StreamDroid.Domain.Services.User
         /// <returns>A user.</returns>
         /// <exception cref="ArgumentNullException">If the code is null</exception>
         /// <exception cref="ArgumentException">If the code is an empty or whitespace string</exception>
-        private async Task<Entities.User> AuthenticateUserAsync(string code)
+        private async Task<Entities.User> AuthenticateUserAsync(string code, CancellationToken cancellationToken = default)
         {
             Guard.Against.NullOrWhiteSpace(code, nameof(code));
 
-            var token = await _authApi.GetAccessTokenFromCodeAsync(code, CancellationToken.None);
-            var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, CancellationToken.None);
-            var userDetailsTask = _helixApi.Users.GetUsersAsync([], token.AccessToken, CancellationToken.None);
-            var userTask = FetchUserByIdAsync(userData.UserId);
+            var token = await _authApi.GetAccessTokenFromCodeAsync(code, cancellationToken);
+            var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, cancellationToken);
+            var userDetailsTask = _helixApi.Users.GetUsersAsync([], token.AccessToken, cancellationToken);
+            var userTask = FetchUserByIdAsync(userData.UserId, cancellationToken);
 
             await Task.WhenAll(userDetailsTask, userTask);
 
@@ -259,7 +259,7 @@ namespace StreamDroid.Domain.Services.User
                     AccessToken = token.AccessToken,
                     RefreshToken = token.RefreshToken,
                 };
-                user = await _repository.AddAsync(user);
+                user = await _repository.AddAsync(user, cancellationToken);
                 return user;
             }
 
@@ -267,7 +267,7 @@ namespace StreamDroid.Domain.Services.User
             user.AccessToken = token.AccessToken;
             user.RefreshToken = token.RefreshToken;
             user.UserType = ConvertUserBroadcasterType(userBroadcasterType);
-            user = await _repository.UpdateAsync(user);
+            user = await _repository.UpdateAsync(user, cancellationToken);
             return user;
         }
 
@@ -276,15 +276,16 @@ namespace StreamDroid.Domain.Services.User
         /// Finds a user by the given id.
         /// </summary>
         /// <param name="userId">user id</param>
+        /// <param name="cancellationToken">cancellation token</param>
         /// <returns>A user entity.</returns>
         /// <exception cref="ArgumentNullException">If the user id is null</exception>
         /// <exception cref="ArgumentException">If the user id is an empty or whitespace string</exception>
         /// <exception cref="EntityNotFoundException">If the user is not found</exception>
-        private async Task<Entities.User> FetchUserByIdAsync(string userId)
+        private async Task<Entities.User> FetchUserByIdAsync(string userId, CancellationToken cancellationToken = default)
         {
             Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
 
-            return await _repository.FindByIdAsync(userId) ?? throw new EntityNotFoundException(userId);
+            return await _repository.FindByIdAsync(userId, cancellationToken) ?? throw new EntityNotFoundException(userId);
         }
 
         /// <summary>
@@ -308,12 +309,13 @@ namespace StreamDroid.Domain.Services.User
         /// Simple <see cref="HttpBody"/> generator to render server side html files.
         /// </summary>
         /// <param name="fileName">the name of the file to render</param>
+        /// <param name="cancellationToken">cancellation token</param>
         /// <returns>An HttpBody</returns>
-        private static async Task<HttpBody> CreateHttpBodyResponse(string fileName)
+        private static async Task<HttpBody> CreateHttpBodyResponse(string fileName, CancellationToken cancellationToken = default)
         {
             var rootPath = AppContext.BaseDirectory;
             var filePath = Path.Combine(rootPath, "Templates", fileName);
-            var htmlContent = await File.ReadAllTextAsync(filePath, Encoding.UTF8);
+            var htmlContent = await File.ReadAllTextAsync(filePath, Encoding.UTF8, cancellationToken);
             var htmlBytes = Encoding.UTF8.GetBytes(htmlContent);
             var byteString = ByteString.CopyFrom(htmlBytes);
 
