@@ -6,12 +6,12 @@
         /// Creates subscriptions for the given user id.
         /// </summary>
         /// <param name="userId">user id</param>
-        Task SubscribeAsync(string userId);
+        Task SubscribeAsync(string userId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Removes subscriptions for the given user id.
         /// </summary>
         /// <param name="userId">user id</param>
-        Task UnsubscribeAsync(string userId);
+        Task UnsubscribeAsync(string userId, CancellationToken cancellationToken = default);
     }
 }
