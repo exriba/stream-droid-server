@@ -7,6 +7,7 @@ using StreamDroid.Application.Settings;
 using StreamDroid.Domain;
 using StreamDroid.Domain.Services.Redeem;
 using StreamDroid.Domain.Services.Reward;
+using StreamDroid.Domain.Services.Stream;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
@@ -86,6 +87,7 @@ app.MapControllers();
 app.MapGrpcService<UserService>();
 app.MapGrpcService<RewardService>();
 app.MapGrpcService<RedeemService>();
+app.MapGrpcService<SubscriberService>();
 
 if (app.Environment.IsDevelopment())
 {
