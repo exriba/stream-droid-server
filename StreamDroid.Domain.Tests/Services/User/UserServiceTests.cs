@@ -161,7 +161,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             source.CancelAfter(1000);
 
-            await _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, context);
+            _ = _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, context);
 
             source.Dispose();
 
@@ -182,13 +182,12 @@ namespace StreamDroid.Domain.Tests.Services.User
             await ConfigureAuthApi(id);
             ConfigureHelixApi();
 
-            var authenticationRequest = CreateAuthenticationRequest(id);
-            await _userService.AuthenticateUser(authenticationRequest, _context);
-
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
+            _ = _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, _context);
 
-            await _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, _context);
+            var authenticationRequest = CreateAuthenticationRequest(id);
+            await _userService.AuthenticateUser(authenticationRequest, _context);
 
             Assert.Single(messages);
             Assert.Equal(SessionStatus.Types.Status.Authorized, messages.First().Status);

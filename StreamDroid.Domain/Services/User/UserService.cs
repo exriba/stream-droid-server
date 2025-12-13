@@ -50,7 +50,8 @@ namespace StreamDroid.Domain.Services.User
         private readonly ILogger<UserService> _logger;
 
         // TODO: Might need cache solution to handle large data like Redis. For now this should be enough... maybe add InMemoryCache.
-        private static ConcurrentDictionary<string, string?> _sessions = new();
+        private static readonly ConcurrentDictionary<string, string> _completedSessions = new();
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _pendingSessions = new();
 
         public UserService(HelixApi helixApi,
                            IAuthApi authApi,
@@ -76,7 +77,8 @@ namespace StreamDroid.Domain.Services.User
         [AllowAnonymous]
         public override Task<LoginUrlResponse> GenerateLoginUrl(SessionRequest request, ServerCallContext context)
         {
-            _sessions.TryAdd(request.SessionId, null);
+            var semaphore = new SemaphoreSlim(0, 1);
+            _pendingSessions.TryAdd(request.SessionId, semaphore);
             var encryptedState = request.SessionId.Base64Encrypt();
 
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
@@ -101,7 +103,8 @@ namespace StreamDroid.Domain.Services.User
         {
             var encryptedState = Base64UrlEncoder.Decode(request.State);
             var state = encryptedState.Base64Decrypt();
-            var sessionExists = _sessions.TryGetValue(state, out var _);
+
+            var sessionExists = _pendingSessions.TryGetValue(state, out _);
 
             if (!sessionExists)
             {
@@ -113,6 +116,7 @@ namespace StreamDroid.Domain.Services.User
 
             if (request.Error != string.Empty)
             {
+                _pendingSessions.TryRemove(state, out _);
                 _logger.LogError("Error ocurred during login {error}. Details: {errorDescription}.", request.Error, request.ErrorDescription);
                 return await CreateHttpBodyResponse(ERROR_FILE);
             }
@@ -141,7 +145,11 @@ namespace StreamDroid.Domain.Services.User
 
             var tokenHandler = new JsonWebTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            _sessions[state] = token;
+
+            _completedSessions.TryAdd(state, token);
+            _pendingSessions.TryRemove(state, out var semaphore);
+            semaphore?.Release();
+            semaphore?.Dispose();
 
             _logger.LogInformation("{user} logged in.", user.Name);
             return await CreateHttpBodyResponse(SUCCESS_FILE);
@@ -156,7 +164,7 @@ namespace StreamDroid.Domain.Services.User
         [AllowAnonymous]
         public override async Task MonitorAuthenticationSessionStatus(SessionRequest request, IServerStreamWriter<SessionStatus> responseStream, ServerCallContext context)
         {
-            var sessionExists = _sessions.TryGetValue(request.SessionId, out var _);
+            var sessionExists = _pendingSessions.TryGetValue(request.SessionId, out var semaphore);
 
             if (!sessionExists)
             {
@@ -168,23 +176,14 @@ namespace StreamDroid.Domain.Services.User
                 return;
             }
 
-            while (!context.CancellationToken.IsCancellationRequested)
+            await semaphore!.WaitAsync(context.CancellationToken);
+            _completedSessions.TryRemove(request.SessionId, out var token);
+            await responseStream.WriteAsync(new SessionStatus
             {
-                _sessions.TryGetValue(request.SessionId, out var token);
-
-                if (token is not null)
-                {
-                    await responseStream.WriteAsync(new SessionStatus
-                    {
-                        Status = SessionStatus.Types.Status.Authorized,
-                        AccessToken = token,
-                        Message = "Login Successful."
-                    });
-                    break;
-                }
-
-                await Task.Delay(1000);
-            }
+                Status = SessionStatus.Types.Status.Authorized,
+                AccessToken = token,
+                Message = "Login Successful."
+            });
         }
 
         /// <summary>
