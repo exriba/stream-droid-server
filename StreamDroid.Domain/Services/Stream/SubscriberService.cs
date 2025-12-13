@@ -28,22 +28,20 @@ namespace StreamDroid.Domain.Services.Stream
             var userId = claim.Value;
             var tuple = Tuple.Create(responseStream, context.CancellationToken);
 
-            if (_userStreamWriters.TryAdd(userId, tuple))
+            _userStreamWriters.TryAdd(userId, tuple);
+
+            try
             {
                 await _twitchSubscriber.SubscribeAsync(claim.Value, context.CancellationToken);
-
-                try
-                {
-                    await Task.Delay(Timeout.Infinite, context.CancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    await _twitchSubscriber.UnsubscribeAsync(userId, CancellationToken.None);
-                }
-                finally
-                {
-                    _userStreamWriters.TryRemove(userId, out _);
-                }
+                await Task.Delay(Timeout.Infinite, context.CancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                await _twitchSubscriber.UnsubscribeAsync(userId, CancellationToken.None);
+            }
+            finally
+            {
+                _userStreamWriters.TryRemove(userId, out _);
             }
         }
     }

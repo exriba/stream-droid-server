@@ -111,6 +111,8 @@ namespace StreamDroid.Domain.Services.Stream
             if (_activeSubscribers.Contains(userId))
                 return;
 
+            _activeSubscribers.Add(userId);
+
             if (!_eventSub.webSocketClient.Connected)
             {
                 await _eventSub.ConnectAsync();
@@ -124,14 +126,13 @@ namespace StreamDroid.Domain.Services.Stream
                         await Task.Delay(500, linkedSource.Token);
                     }
                 }
-                catch (TaskCanceledException) when (linkedSource.IsCancellationRequested)
+                catch (OperationCanceledException) when (linkedSource.IsCancellationRequested)
                 {
-                    _logger.LogError("Failed to receive the sessionId within the 10-second limit.");
+                    _activeSubscribers.Remove(userId);
                     throw new TimeoutException("Unable to establish connection Twitch EventSub.");
                 }
             }
 
-            _activeSubscribers.Add(userId);
             _logger.LogInformation("Creating subscriptions for user id {id}.", userId);
 
             using (var scope = _serviceScopeFactory.CreateScope())
