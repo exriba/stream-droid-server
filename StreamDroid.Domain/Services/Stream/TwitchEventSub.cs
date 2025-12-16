@@ -95,8 +95,8 @@ namespace StreamDroid.Domain.Services.Stream
 
                     await DeleteSubscriptionsAsync(CancellationToken.None);
 
-                    if (_eventSub.webSocketClient.Connected)
-                        await _eventSub.DisconnectAsync();
+                    if (_eventSub.WebSocketClient!.Connected)
+                        await _eventSub.DisconnectAsync(CancellationToken.None);
 
                     var sessionId = _eventSub.SessionId == string.Empty ? "N/A" : _eventSub.SessionId;
                     _logger.LogInformation("Disposing event sub with session {id}.", sessionId);
@@ -113,15 +113,15 @@ namespace StreamDroid.Domain.Services.Stream
 
             _activeSubscribers.Add(userId);
 
-            if (!_eventSub.webSocketClient.Connected)
+            if (!_eventSub.WebSocketClient.Connected)
             {
-                await _eventSub.ConnectAsync();
+                await _eventSub.ConnectAsync(null, cancellationToken);
                 using var source = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, source.Token);
 
                 try
                 {
-                    while (!_eventSub.webSocketClient.Connected)
+                    while (!_eventSub.WebSocketClient.Connected)
                     {
                         await Task.Delay(500, linkedSource.Token);
                     }
