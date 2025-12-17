@@ -221,7 +221,6 @@ namespace StreamDroid.Domain.Services.User
                 user = await _repository.UpdateAsync(user, cancellationToken);
                 return token.AccessToken;
             }
-            ;
 
             var accessToken = user.AccessToken.Base64Decrypt();
             return new TokenRefreshPolicy(userId, accessToken, refreshToken);
