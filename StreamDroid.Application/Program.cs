@@ -72,7 +72,7 @@ builder.Services.AddGrpc(options =>
     options.MaxReceiveMessageSize = 4 * 1024 * 1024;
     options.MaxSendMessageSize = 4 * 1024 * 1024;
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-    options.Interceptors.Add<GlobalRequestInterceptor>();
+    options.Interceptors.Add<RequestInterceptor>();
 }).AddJsonTranscoding();
 #endregion
 

@@ -5,13 +5,13 @@ using StreamDroid.Core.Exceptions;
 
 namespace StreamDroid.Domain.Middleware
 {
-    public class GlobalRequestInterceptor : Interceptor
+    public class RequestInterceptor : Interceptor
     {
         private const string NAME = "Name";
 
-        private readonly ILogger<GlobalRequestInterceptor> _logger;
+        private readonly ILogger<RequestInterceptor> _logger;
 
-        public GlobalRequestInterceptor(ILogger<GlobalRequestInterceptor> logger)
+        public RequestInterceptor(ILogger<RequestInterceptor> logger)
         {
             _logger = logger;
         }
@@ -80,6 +80,5 @@ namespace StreamDroid.Domain.Middleware
                 throw new RpcException(new Status(StatusCode.Internal, "An internal error occurred."));
             }
         }
-
     }
 }
