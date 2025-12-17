@@ -5,6 +5,7 @@ using StreamDroid.Application;
 using StreamDroid.Application.Middleware;
 using StreamDroid.Application.Settings;
 using StreamDroid.Domain;
+using StreamDroid.Domain.Middleware;
 using StreamDroid.Domain.Services.Redeem;
 using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.Services.Stream;
@@ -72,6 +73,7 @@ builder.Services.AddGrpc(options =>
     options.MaxReceiveMessageSize = 4 * 1024 * 1024;
     options.MaxSendMessageSize = 4 * 1024 * 1024;
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.Interceptors.Add<GlobalRequestInterceptor>();
 }).AddJsonTranscoding();
 #endregion
 
