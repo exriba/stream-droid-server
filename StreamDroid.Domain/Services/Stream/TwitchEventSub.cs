@@ -16,7 +16,6 @@ using StreamDroid.Core.Enums;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure.Persistence;
-using System.Net.WebSockets;
 using Entities = StreamDroid.Core.Entities;
 using EventType = Grpc.Model.NotificationEvent.Types.EventType;
 using Speech = StreamDroid.Core.ValueObjects.Speech;
@@ -157,11 +156,11 @@ namespace StreamDroid.Domain.Services.Stream
                 }
                 catch (UnauthorizedRequestException ex)
                 {
-                    _logger.LogError("Unauthorized access request from user {userId}. Exception {ex}", userId, ex);
+                    _logger.LogError(ex, "Unauthorized access request from user {userId}.", userId);
                 }
                 catch (HttpRequestException ex)
                 {
-                    _logger.LogError("Unable to connect to the remote server. Exception {ex}", ex);
+                    _logger.LogError(ex, "Unable to connect to the remote server.");
                 }
             }
         }
@@ -184,7 +183,15 @@ namespace StreamDroid.Domain.Services.Stream
             var reason = string.IsNullOrWhiteSpace(e.CloseStatusDescription) ? "N/A" : e.CloseStatusDescription;
             _logger.LogWarning("EventSub client disconnected. Status {status}. Reason {reason}.", e.WebSocketCloseStatus, reason);
 
-            if (e.WebSocketCloseStatus is WebSocketCloseStatus.Empty)
+
+            // Need to implement resilience policy (Polly) for some of these
+            //    1000 => "Stay closed (Normal)",
+            //    1001 => "Reconnect (Server going away)",
+            //    1012 => "Reconnect with Jitter (Service Restart)",
+            //    1013 => "Reconnect with Backoff (Server Busy)",
+            //    1006 => "Reconnect Immediate (Abnormal)",
+            int? statusCode = (int?)e.WebSocketCloseStatus;
+            if (statusCode.HasValue && statusCode.Value == 1006)
                 await _eventSub.ReconnectAsync();
         }
 
@@ -314,7 +321,7 @@ namespace StreamDroid.Domain.Services.Stream
         private void OnErrorMessage(object? sender, ErrorMessageArgs e)
         {
             var message = string.IsNullOrWhiteSpace(e.Message) ? "N/A" : e.Message;
-            _logger.LogError("EventSub ran into an error. Message: {mesage} Exception: {exception}.", message, e.Exception);
+            _logger.LogError(e.Exception, "EventSub ran into an error.\n{mesage}.", message);
         }
 
         private void OnRevocation(object? sender, RevocationArgs e)
@@ -369,16 +376,27 @@ namespace StreamDroid.Domain.Services.Stream
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
                 var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
 
-                var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                    await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
-
-                var tasks = helixSubscriptionResponse.Data.Select(x =>
+                try
                 {
-                    _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} which was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
-                    return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, cancellationToken);
-                });
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                         await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
 
-                await Task.WhenAll(tasks);
+                    var tasks = helixSubscriptionResponse.Data.Select(x =>
+                    {
+                        _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} which was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
+                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, cancellationToken);
+                    });
+
+                    await Task.WhenAll(tasks);
+                }
+                catch (UnauthorizedRequestException ex)
+                {
+                    _logger.LogError(ex, "Unauthorized access request from user {userId}.", userId);
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError(ex, "Unable to connect to the remote server.");
+                }
             }
 
             _activeSubscribers.Remove(userId);
