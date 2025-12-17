@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using StreamDroid.Application;
-using StreamDroid.Application.Middleware;
 using StreamDroid.Application.Settings;
 using StreamDroid.Domain;
 using StreamDroid.Domain.Middleware;
@@ -90,15 +89,6 @@ app.MapGrpcService<UserService>();
 app.MapGrpcService<RewardService>();
 app.MapGrpcService<RedeemService>();
 app.MapGrpcService<SubscriberService>();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseMiddleware<GlobalRequestHandler>();
-}
 #endregion
 
 await app.RunAsync();
