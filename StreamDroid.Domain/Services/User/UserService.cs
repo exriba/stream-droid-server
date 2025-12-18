@@ -122,29 +122,7 @@ namespace StreamDroid.Domain.Services.User
             }
 
             var user = await AuthenticateUserAsync(request.Code, context.CancellationToken);
-
-            var claims = new List<Claim>
-            {
-                new(ID, user.Id.ToString()),
-                new(NAME, user.Name),
-                new(JWT_ID, Guid.NewGuid().ToString()),
-            };
-
-            var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);
-            var securityKey = new SymmetricSecurityKey(encodedKey);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Issuer = _jwtSettings.Issuer,
-                Audience = _jwtSettings.Audience,
-                Subject = new ClaimsIdentity(claims),
-                NotBefore = DateTime.UtcNow,
-                Expires = DateTime.UtcNow.AddDays(30),
-                SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var tokenHandler = new JsonWebTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var token = await GenerateAccessTokenAsync(user.Id, context.CancellationToken);
 
             _completedSessions.TryAdd(state, token);
             _pendingSessions.TryRemove(state, out var semaphore);
@@ -205,6 +183,36 @@ namespace StreamDroid.Domain.Services.User
             {
                 User = UserProto.FromEntity(user)
             };
+        }
+
+        /// <inheritdoc/>
+        public async Task<string> GenerateAccessTokenAsync(string userId, CancellationToken cancellationToken)
+        {
+            var user = await FetchUserByIdAsync(userId, cancellationToken);
+
+            var claims = new List<Claim>
+            {
+                new(ID, userId),
+                new(NAME, user.Name),
+                new(JWT_ID, Guid.NewGuid().ToString()),
+            };
+
+            var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);
+            var securityKey = new SymmetricSecurityKey(encodedKey);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Issuer = _jwtSettings.Issuer,
+                Audience = _jwtSettings.Audience,
+                Subject = new ClaimsIdentity(claims),
+                NotBefore = DateTime.UtcNow,
+                Expires = DateTime.UtcNow.AddDays(30),
+                SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var tokenHandler = new JsonWebTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return token;
         }
 
         /// <inheritdoc/>

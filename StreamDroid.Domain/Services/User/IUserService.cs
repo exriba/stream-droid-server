@@ -1,5 +1,4 @@
-﻿using StreamDroid.Core.Exceptions;
-using StreamDroid.Domain.Policies;
+﻿using StreamDroid.Domain.Policies;
 
 namespace StreamDroid.Domain.Services.User
 {
@@ -9,14 +8,19 @@ namespace StreamDroid.Domain.Services.User
     public interface IUserService
     {
         /// <summary>
+        /// Generates an access token for the given user.
+        /// </summary>
+        /// <param name="userId">user id</param>
+        /// <param name="cancellationToken">cancellation token</param>
+        /// <returns>An access token</returns>
+        Task<string> GenerateAccessTokenAsync(string userId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Creates a token refresh policy for the given user.
         /// </summary>
         /// <param name="userId">user id</param>
         /// <param name="cancellationToken">cancellation token</param>
         /// <returns>A token refresh policy</returns>
-        /// <exception cref="ArgumentNullException">If the user id is null</exception>
-        /// <exception cref="ArgumentException">If the user id is an empty or whitespace string</exception>
-        /// <exception cref="EntityNotFoundException">If the user is not found</exception>
         Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId, CancellationToken cancellationToken = default);
     }
 }
