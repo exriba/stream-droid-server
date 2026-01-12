@@ -1,8 +1,8 @@
 # streamdroid-server
 
-StreamDroid Server built with C# and net9.
+New mirror of StreamDroid Server built with C# and net9.
 
-WIP: New Mirror of streamdroid-server.
+WIP: This application is under development. Integration Tests are available for each module.
 
 Experimental branches
 * network/gRPC-jwt (latest)
