@@ -110,27 +110,35 @@ namespace StreamDroid.Domain.Services.Stream
             if (_activeSubscribers.Contains(userId))
                 return;
 
-            _activeSubscribers.Add(userId);
+            await ConnectAsync();
 
+            await CreateSubscriptionsAsync(userId, cancellationToken);
+        }
+
+        private async Task ConnectAsync()
+        {
             if (!_eventSub.WebSocketClient.Connected)
             {
-                await _eventSub.ConnectAsync(null, cancellationToken);
+                await _eventSub.ConnectAsync(null, CancellationToken.None);
                 using var source = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, source.Token);
 
                 try
                 {
                     while (!_eventSub.WebSocketClient.Connected)
                     {
-                        await Task.Delay(500, linkedSource.Token);
+                        await Task.Delay(500, source.Token);
                     }
                 }
-                catch (OperationCanceledException) when (linkedSource.IsCancellationRequested)
+                catch (OperationCanceledException ex) when (source.IsCancellationRequested)
                 {
-                    _activeSubscribers.Remove(userId);
-                    throw new TimeoutException("Unable to establish connection Twitch EventSub.");
+                    throw new TimeoutException("Unable to establish connection Twitch EventSub.", ex);
                 }
             }
+        }
+
+        private async Task CreateSubscriptionsAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            _activeSubscribers.Add(userId);
 
             _logger.LogInformation("Creating subscriptions for user id {id}.", userId);
 
@@ -138,8 +146,7 @@ namespace StreamDroid.Domain.Services.Stream
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId, CancellationToken.None);
 
                 try
                 {
@@ -163,12 +170,6 @@ namespace StreamDroid.Domain.Services.Stream
                     _logger.LogError(ex, "Unable to connect to the remote server.");
                 }
             }
-        }
-
-        /// <inheritdoc/>
-        public async Task UnsubscribeAsync(string userId, CancellationToken cancellationToken = default)
-        {
-            await DeleteSubscriptionsAsync(userId, cancellationToken);
         }
 
         #region EventSub Handlers
@@ -354,6 +355,12 @@ namespace StreamDroid.Domain.Services.Stream
         }
 
         #endregion
+
+        /// <inheritdoc/>
+        public async Task UnsubscribeAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            await DeleteSubscriptionsAsync(userId, cancellationToken);
+        }
 
         private async Task DeleteSubscriptionsAsync(CancellationToken cancellationToken = default)
         {
