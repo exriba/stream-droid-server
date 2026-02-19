@@ -11,13 +11,14 @@ using SharpTwitch.Core.Settings;
 using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models;
 using SharpTwitch.Helix.Models.Channel.Reward;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.Policies;
 using StreamDroid.Domain.Services.AssetFile;
 using StreamDroid.Domain.Services.Reward;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Tests.Common;
-using StreamDroid.Infrastructure.Persistence;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using Entities = StreamDroid.Core.Entities;
 using GrpcSpeech = Grpc.Model.Speech;
@@ -28,10 +29,12 @@ namespace StreamDroid.Domain.Tests.Services.Reward
     [Collection(TestCollectionFixture.Definition)]
     public class RewardServiceTests
     {
-        private readonly Mock<IApiCore> _apiCore;
+        private readonly Mock<IApiCore> _mockApiCore;
+        private readonly Mock<IUserService> _mockUserService;
+        private readonly Mock<ICoreSettings> _mockCoreSettings;
+        private readonly Mock<IRepository<Entities.Reward>> _mockRepository;
+
         private readonly RewardService _rewardService;
-        private readonly Mock<IUserService> _userService;
-        private readonly IRepository<Entities.Reward> _rewardRepository;
         private readonly ServerCallContext _context = TestServerCallContext.Create(
             method: "TestMethod",
             host: "localhost",
@@ -46,16 +49,18 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             writeOptionsSetter: (o) => { }
         );
 
-        public RewardServiceTests(TestFixture testFixture)
+        public RewardServiceTests()
         {
-            _apiCore = new Mock<IApiCore>();
-            _userService = new Mock<IUserService>();
-            var coreSettings = new Mock<ICoreSettings>();
-            _rewardRepository = testFixture.rewardRepository;
-            var helixApi = new HelixApi(coreSettings.Object, _apiCore.Object);
+            _mockApiCore = new Mock<IApiCore>();
+            _mockUserService = new Mock<IUserService>();
+            _mockCoreSettings = new Mock<ICoreSettings>();
+            _mockRepository = new Mock<IRepository<Entities.Reward>>();
+
             var mockLogger = new Mock<ILogger<RewardService>>();
             var mockAssetFileService = new Mock<IAssetFileService>();
-            _rewardService = new RewardService(helixApi, _userService.Object, _rewardRepository, mockAssetFileService.Object, mockLogger.Object);
+
+            var helixApi = new HelixApi(_mockCoreSettings.Object, _mockApiCore.Object);
+            _rewardService = new RewardService(helixApi, _mockUserService.Object, _mockRepository.Object, mockAssetFileService.Object, mockLogger.Object);
         }
 
         [Fact]
@@ -72,29 +77,36 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         [Fact]
         public async Task RewardService_FindReward()
         {
-            var id = Guid.NewGuid();
-            await SetupDataAsync(id);
-            var rewardId = id.ToString();
+            var rewardId = Guid.NewGuid();
+            var rewards = SetupRewards(rewardId);
+            var reward = rewards.FirstOrDefault();
+
             var request = new RewardRequest
             {
-                RewardId = rewardId
+                RewardId = rewardId.ToString()
             };
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(reward));
 
             var response = await _rewardService.FindReward(request, _context);
 
-            Assert.Equal(rewardId, response.Reward.Id);
+            Assert.Equal(rewardId.ToString(), response.Reward.Id);
         }
 
         [Fact]
         public async Task RewardService_FindUserRewards()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
+            var rewards = SetupRewards(id);
             ConfigureServerCallContext(id);
 
             var request = new Empty();
             var messages = new List<RewardResponse>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
+
+            _mockRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards));
 
             await _rewardService.FindUserRewards(request, mockStreamWriter.Object, _context);
 
@@ -105,19 +117,22 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public async Task RewardService_FindUserRewards_SynchronizeAsync()
         {
             var id = Guid.NewGuid();
+            var rewards = SetupRewards(id);
             ConfigureServerCallContext(id);
+
+            var request = new Empty();
+            var messages = new List<RewardResponse>();
+            var mockStreamWriter = CreateServerStreamWriterMock(messages);
 
             var user = new Helix.User.User
             {
                 Id = id.ToString(),
                 BroadcasterType = "affiliate"
             };
-
             var userResponse = new HelixCollectionResponse<Helix.User.User>
             {
                 Data = [user]
             };
-
             var customReward = new CustomReward
             {
                 Id = Guid.NewGuid().ToString(),
@@ -131,7 +146,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                     Url1x = "http://localhost/image.png"
                 },
             };
-
             var customRewardResponse = new HelixCollectionResponse<CustomReward>
             {
                 Data = [customReward]
@@ -140,24 +154,24 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             static async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
             var tokenRefreshPolicy = new TokenRefreshPolicy(user.Id, "accessToken", refreshToken);
 
-            _userService.Setup(x => x.CreateTokenRefreshPolicyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                        .ReturnsAsync(tokenRefreshPolicy);
-            _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<Helix.User.User>>(
-                        It.IsAny<UrlFragment>(),
-                        It.IsAny<IDictionary<Header, string>>(),
-                        It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
-                        It.IsAny<CancellationToken>()))
-                    .Returns(Task.FromResult(userResponse));
-            _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<CustomReward>>(
-                        It.IsAny<UrlFragment>(),
-                        It.IsAny<IDictionary<Header, string>>(),
-                        It.IsAny<IDictionary<QueryParameter, string>>(),
-                        It.IsAny<CancellationToken>()))
-                    .Returns(Task.FromResult(customRewardResponse));
-
-            var request = new Empty();
-            var messages = new List<RewardResponse>();
-            var mockStreamWriter = CreateServerStreamWriterMock(messages);
+            _mockUserService.Setup(x => x.CreateTokenRefreshPolicyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(tokenRefreshPolicy);
+            _mockApiCore.Setup(x => x.GetAsync<HelixCollectionResponse<Helix.User.User>>(
+                It.IsAny<UrlFragment>(),
+                It.IsAny<IDictionary<Header, string>>(),
+                It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(userResponse));
+            _mockApiCore.Setup(x => x.GetAsync<HelixCollectionResponse<CustomReward>>(
+                It.IsAny<UrlFragment>(),
+                It.IsAny<IDictionary<Header, string>>(),
+                It.IsAny<IDictionary<QueryParameter, string>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(customRewardResponse));
+            _mockRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards));
+            _mockRepository.Setup(x => x.AddAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.First()));
 
             await _rewardService.FindUserRewards(request, mockStreamWriter.Object, _context);
 
@@ -177,7 +191,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                     RewardId = Guid.Empty.ToString()
                 }
             };
-
             var mockStreamReader = CreateStreamReaderMock(requests);
 
             await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _rewardService.AddRewardAssets(mockStreamReader.Object, _context));
@@ -187,26 +200,29 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public async Task RewardService_AddRewardAssets()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
-            var rewardId = id.ToString();
+            var rewards = SetupRewards(id);
             ConfigureServerCallContext(id);
 
             var requests = new List<AddRewardAssetRequest>
             {
                 new AddRewardAssetRequest
                 {
-                    RewardId = rewardId,
+                    RewardId = id.ToString(),
                     File = ByteString.Empty,
                     FileName = "file.mp4",
                     Volume = 50
                 }
             };
-
             var mockStreamReader = CreateStreamReaderMock(requests);
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.FirstOrDefault()));
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.First()));
 
             var response = await _rewardService.AddRewardAssets(mockStreamReader.Object, _context);
 
-            Assert.Equal(rewardId, response.Reward.Id);
+            Assert.Equal(id.ToString(), response.Reward.Id);
         }
 
         [Fact]
@@ -224,17 +240,21 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public async Task RewardService_UpdateRewardSpeech()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
-            var rewardId = id.ToString();
+            var rewards = SetupRewards(id);
             var request = new RewardSpeechRequest
             {
-                RewardId = rewardId,
+                RewardId = id.ToString(),
                 Speech = new GrpcSpeech
                 {
                     Enabled = true,
                     VoiceIndex = 0
                 }
             };
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.FirstOrDefault()));
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.First()));
 
             var response = await _rewardService.UpdateRewardSpeech(request, _context);
 
@@ -256,15 +276,21 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public async Task RewardService_UpdateRewardAssets()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
+            var rewards = SetupRewards(id);
             ConfigureServerCallContext(id);
-            var rewardId = id.ToString();
+
+            var fileName = FileName.FromString("file.mp3");
             var request = new UpdateRewardAssetRequest
             {
-                RewardId = rewardId,
-                FileName = "file.mp3",
+                RewardId = id.ToString(),
+                FileName = fileName.ToString(),
                 Volume = 50
             };
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.FirstOrDefault()));
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.First()));
 
             var response = await _rewardService.UpdateRewardAssets(request, _context);
 
@@ -289,26 +315,31 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public async Task RewardService_RemoveRewardAssets()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
+            var rewards = SetupRewards(id);
             ConfigureServerCallContext(id);
-            var rewardId = id.ToString();
+
             var request = new RemoveRewardAssetRequest
             {
-                RewardId = rewardId
+                RewardId = id.ToString()
             };
             request.FileName.Add("file.mp3");
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.FirstOrDefault()));
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.First()));
 
             var response = await _rewardService.RemoveRewardAssets(request, _context);
 
             Assert.Empty(response.Reward.Assets);
         }
 
-        private async Task SetupDataAsync(Guid id)
+        private static IReadOnlyCollection<Entities.Reward> SetupRewards(Guid id)
         {
             var reward = new Entities.Reward
             {
                 Id = id.ToString(),
-                ImageUrl = null,
+                ImageUrl = "http://localhost/image.png",
                 Title = "Title",
                 Prompt = "Prompt",
                 Speech = new Speech(),
@@ -316,7 +347,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 BackgroundColor = "#6441A4",
             };
             reward.AddAsset(FileName.FromString("file.mp3"), 100);
-            await _rewardRepository.AddAsync(reward);
+            return [reward];
         }
 
         private void ConfigureServerCallContext(Guid id)

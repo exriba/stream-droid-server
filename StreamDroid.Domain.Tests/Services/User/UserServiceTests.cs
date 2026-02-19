@@ -12,9 +12,9 @@ using SharpTwitch.Core.Settings;
 using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models;
 using StreamDroid.Core.Exceptions;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Tests.Common;
-using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Shared.Extensions;
 using System.Security.Claims;
 using System.Text.Json;
@@ -27,10 +27,11 @@ namespace StreamDroid.Domain.Tests.Services.User
     [Collection(TestCollectionFixture.Definition)]
     public class UserServiceTests
     {
-        private readonly Mock<IApiCore> _apiCore;
-        private readonly Mock<IAuthApi> _authApi;
+        private readonly Mock<IApiCore> _mockApiCore;
+        private readonly Mock<IAuthApi> _mockAuthApi;
+        private readonly Mock<IRepository<Entities.User>> _mockRepository;
+
         private readonly UserService _userService;
-        private readonly IRepository<Entities.User> _userRepository;
         private readonly ServerCallContext _context = TestServerCallContext.Create(
             method: "TestMethod",
             host: "localhost",
@@ -47,17 +48,18 @@ namespace StreamDroid.Domain.Tests.Services.User
 
         public UserServiceTests(TestFixture testFixture)
         {
-            _authApi = new Mock<IAuthApi>();
-            _apiCore = new Mock<IApiCore>();
-            _userRepository = testFixture.userRepository;
-            var logger = new Mock<ILogger<UserService>>();
-            var coreSettings = new Mock<ICoreSettings>();
-            coreSettings.SetupGet(x => x.ClientId).Returns("test");
-            coreSettings.SetupGet(x => x.RedirectUri).Returns("test");
-            coreSettings.SetupGet(x => x.Scopes).Returns([Scope.CHAT_READ]);
-            var helixApi = new HelixApi(coreSettings.Object, _apiCore.Object);
-            _userService = new UserService(helixApi, _authApi.Object, _userRepository, testFixture.options,
-                coreSettings.Object, logger.Object);
+            _mockAuthApi = new Mock<IAuthApi>();
+            _mockApiCore = new Mock<IApiCore>();
+            _mockRepository = new Mock<IRepository<Entities.User>>();
+
+            var mockLogger = new Mock<ILogger<UserService>>();
+            var mockCoreSettings = new Mock<ICoreSettings>();
+            mockCoreSettings.SetupGet(x => x.ClientId).Returns("test");
+            mockCoreSettings.SetupGet(x => x.RedirectUri).Returns("test");
+            mockCoreSettings.SetupGet(x => x.Scopes).Returns([Scope.CHAT_READ]);
+
+            var helixApi = new HelixApi(mockCoreSettings.Object, _mockApiCore.Object);
+            _userService = new UserService(helixApi, _mockAuthApi.Object, _mockRepository.Object, testFixture.options, mockCoreSettings.Object, mockLogger.Object);
         }
 
         [Fact]
@@ -107,17 +109,21 @@ namespace StreamDroid.Domain.Tests.Services.User
         public async Task UserService_AuthenticateUser()
         {
             var id = Guid.NewGuid();
+            var user = SetupUser();
             var sessionRequest = new SessionRequest
             {
-                SessionId = id.ToString(),
+                SessionId = user.Id,
             };
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
-            await ConfigureAuthApi(id);
+            ConfigureAuthApi();
             ConfigureHelixApi();
 
             var authenticationRequest = CreateAuthenticationRequest(id);
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(user));
 
             var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
@@ -171,22 +177,27 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_MonitorAuthenticationSessionStatus()
         {
-            var id = Guid.NewGuid();
+            var user = SetupUser();
             var sessionRequest = new SessionRequest
             {
-                SessionId = id.ToString(),
+                SessionId = user.Id,
             };
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
-            await ConfigureAuthApi(id);
+            ConfigureAuthApi();
             ConfigureHelixApi();
+
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(user));
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(user));
 
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
             _ = _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, _context);
 
-            var authenticationRequest = CreateAuthenticationRequest(id);
+            var authenticationRequest = CreateAuthenticationRequest(Guid.Parse(user.Id));
             await _userService.AuthenticateUser(authenticationRequest, _context);
 
             Assert.Single(messages);
@@ -196,8 +207,8 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_FindUser_Throws_EntityNotFound()
         {
-            var id = Guid.NewGuid();
-            ConfigureServerCallContext(id);
+            var user = SetupUser();
+            ConfigureServerCallContext(user.Id);
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
@@ -207,46 +218,50 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_FindUser()
         {
-            var id = Guid.NewGuid();
-            await SetupDataAsync(id);
-            ConfigureServerCallContext(id);
+            var user = SetupUser();
+            ConfigureServerCallContext(user.Id);
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(user));
+
             var response = await _userService.FindUser(request, _context);
 
-            Assert.Equal(id.ToString(), response.User.Id);
+            Assert.Equal(user.Id, response.User.Id);
         }
 
         [Fact]
         public async Task UserService_CreateTokenRefreshPolicyAsync()
         {
-            var id = Guid.NewGuid();
-            await SetupDataAsync(id);
+            var user = SetupUser();
 
-            var policy = await _userService.CreateTokenRefreshPolicyAsync(id.ToString());
+            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(user));
+
+            var policy = await _userService.CreateTokenRefreshPolicyAsync(user.Id);
 
             Assert.Equal(2, policy.ContextData.Keys.Count);
         }
 
-        private async Task SetupDataAsync(Guid id)
+        private static Entities.User SetupUser()
         {
-            var user = new Entities.User
+            var id = Guid.NewGuid();
+
+            return new Entities.User
             {
                 Id = id.ToString(),
                 Name = "user",
                 AccessToken = "accessToken",
-                RefreshToken = "accessToken"
+                RefreshToken = "refreshToken"
             };
-
-            await _userRepository.AddAsync(user);
         }
 
-        private void ConfigureServerCallContext(Guid id)
+        private void ConfigureServerCallContext(string id)
         {
             var httpContext = new DefaultHttpContext();
             var claimsIdentity = new ClaimsIdentity();
-            var claim = new Claim("Id", id.ToString());
+            var claim = new Claim("Id", id);
             claimsIdentity.AddClaim(claim);
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
             httpContext.User = claimsPrincipal;
@@ -268,10 +283,9 @@ namespace StreamDroid.Domain.Tests.Services.User
             };
         }
 
-        private async Task ConfigureAuthApi(Guid id)
+        private void ConfigureAuthApi()
         {
-            await SetupDataAsync(id);
-            var user = await _userRepository.FindByIdAsync(id.ToString());
+            var user = SetupUser();
 
             var accessTokenResponseJson = new JsonObject
             {
@@ -289,14 +303,14 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString()); ;
 
-            _authApi.Setup(x => x.GetAccessTokenFromCodeAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(accessTokenResponse!);
-            _authApi.Setup(x => x.ValidateAccessTokenAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(validateTokenResponse!);
+            _mockAuthApi.Setup(x => x.GetAccessTokenFromCodeAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(accessTokenResponse!);
+            _mockAuthApi.Setup(x => x.ValidateAccessTokenAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(validateTokenResponse!);
         }
 
         private void ConfigureHelixApi()
@@ -311,12 +325,12 @@ namespace StreamDroid.Domain.Tests.Services.User
                 Data = [helixUser]
             };
 
-            _apiCore.Setup(x => x.GetAsync<HelixCollectionResponse<HelixModels.User.User>>(
-                    It.IsAny<UrlFragment>(),
-                    It.IsAny<IDictionary<Header, string>>(),
-                    It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(helixUserCollectionResponse);
+            _mockApiCore.Setup(x => x.GetAsync<HelixCollectionResponse<HelixModels.User.User>>(
+                It.IsAny<UrlFragment>(),
+                It.IsAny<IDictionary<Header, string>>(),
+                It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(helixUserCollectionResponse);
         }
 
         private static Mock<IServerStreamWriter<SessionStatus>> CreateServerStreamWriterMock(List<SessionStatus> messages)

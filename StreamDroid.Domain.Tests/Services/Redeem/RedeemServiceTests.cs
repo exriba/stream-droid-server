@@ -3,20 +3,17 @@ using Grpc.Core.Testing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Services.Redeem;
-using StreamDroid.Domain.Tests.Common;
-using StreamDroid.Infrastructure.Persistence;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Tests.Services.Redemption
 {
-    [Collection(TestCollectionFixture.Definition)]
     public class RedeemServiceTests
     {
         private readonly RedeemService _redeemService;
-        private readonly IRedemptionRepository _redemptionRepository;
-        private readonly IRepository<Entities.Reward> _rewardRepository;
         private readonly ServerCallContext _context = TestServerCallContext.Create(
             method: "TestMethod",
             host: "localhost",
@@ -31,19 +28,22 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
             writeOptionsSetter: (o) => { }
         );
 
-        public RedeemServiceTests(TestFixture testFixture)
+        public RedeemServiceTests()
         {
-            _rewardRepository = testFixture.rewardRepository;
-            _redemptionRepository = testFixture.redemptionRepository;
+            var redemptions = SetupRedemptions();
+
             var mockLogger = new Mock<ILogger<RedeemService>>();
-            _redeemService = new RedeemService(_redemptionRepository, mockLogger.Object);
+            var mockRedeemRepository = new Mock<IRedemptionRepository>();
+            mockRedeemRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Entities.Redemption, bool>>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(redemptions));
+
+            _redeemService = new RedeemService(mockRedeemRepository.Object, mockLogger.Object);
         }
 
         [Fact]
         public async Task RedeemService_FindRewardRedeemStatisticsFromUser()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
             ConfigureServerCallContext(id);
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
@@ -69,7 +69,6 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
         public async Task RedemptionService_FindUserRedeemStatisticsByReward()
         {
             var id = Guid.NewGuid();
-            await SetupDataAsync(id);
             var request = new RewardRequest
             {
                 RewardId = id.ToString()
@@ -86,9 +85,11 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
             Assert.Equal("100", userRedeem.Percentage);
         }
 
-        private async Task SetupDataAsync(Guid id)
+        private static Entities.Reward SetupReward()
         {
-            var reward = new Entities.Reward
+            var id = Guid.NewGuid();
+
+            return new Entities.Reward
             {
                 Id = id.ToString(),
                 ImageUrl = null,
@@ -97,10 +98,13 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
                 StreamerId = id.ToString(),
                 BackgroundColor = "#6441A4",
             };
+        }
 
-            reward = await _rewardRepository.AddAsync(reward);
+        private static IReadOnlyCollection<Entities.Redemption> SetupRedemptions()
+        {
+            var reward = SetupReward();
 
-            var redemptions = new List<Entities.Redemption>
+            return new List<Entities.Redemption>
             {
                 {
                     new Entities.Redemption
@@ -121,9 +125,6 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
                     }
                 }
             };
-
-            foreach (var redemption in redemptions)
-                await _redemptionRepository.AddAsync(redemption);
         }
 
         private void ConfigureServerCallContext(Guid id)
