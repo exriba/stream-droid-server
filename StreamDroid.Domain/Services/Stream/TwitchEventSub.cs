@@ -110,7 +110,7 @@ namespace StreamDroid.Domain.Services.Stream
             if (_activeSubscribers.Contains(userId))
                 return;
 
-            await ConnectAsync();
+            await ConnectAsync(); // Might need to lock this to avoid race conditions
 
             await CreateSubscriptionsAsync(userId, cancellationToken);
         }
