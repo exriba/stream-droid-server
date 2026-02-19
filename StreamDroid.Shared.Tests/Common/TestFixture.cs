@@ -2,17 +2,23 @@
 
 namespace StreamDroid.Shared.Tests.Common
 {
-    public sealed class TestFixture
+    public sealed class TestFixture : IDisposable
     {
+        private readonly ConfigurationManager _configurationManager;
         private const string FilePath = "Common/appsettings.Test.json";
 
         public TestFixture()
         {
-            using var configurationManager = new ConfigurationManager();
-            configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                                .AddJsonFile(FilePath)
-                                .Build();
-            configurationManager.Configure();
+            _configurationManager = new ConfigurationManager();
+            _configurationManager.SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile(FilePath)
+                .Build();
+            _configurationManager.Configure();
+        }
+
+        public void Dispose()
+        {
+            _configurationManager.Dispose();
         }
     }
 }
