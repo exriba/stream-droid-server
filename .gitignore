@@ -484,3 +484,4 @@ Migrations/
 log4net.config
 launchsettings.json
 StreamDroid.Domain.Tests/Templates/
+StreamDroid.Application.Tests
