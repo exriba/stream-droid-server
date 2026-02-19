@@ -1,4 +1,4 @@
-# streamdroid-server
+# stream-droid-server
 
 StreamDroid Server is a layered backend service built with .NET 9, implementing gRPC communication secured by JWT authentication.
 
