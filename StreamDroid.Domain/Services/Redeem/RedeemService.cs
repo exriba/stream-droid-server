@@ -2,8 +2,8 @@
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.DTOs;
-using StreamDroid.Infrastructure.Persistence;
 using static GrpcRedeemService;
 
 namespace StreamDroid.Domain.Services.Redeem

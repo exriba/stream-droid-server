@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Helix;
 using StreamDroid.Core.Exceptions;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.Services.AssetFile;
 using StreamDroid.Domain.Services.User;
-using StreamDroid.Infrastructure.Persistence;
 using static GrpcRewardService;
 using Entities = StreamDroid.Core.Entities;
 

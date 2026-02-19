@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StreamDroid.Core.Entities;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Infrastructure.Settings;
 

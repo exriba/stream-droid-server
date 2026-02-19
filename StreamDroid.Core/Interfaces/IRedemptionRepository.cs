@@ -1,7 +1,7 @@
 ﻿using StreamDroid.Core.Entities;
 using System.Linq.Expressions;
 
-namespace StreamDroid.Infrastructure.Persistence
+namespace StreamDroid.Core.Interfaces
 {
     /// <summary>
     /// Defines Redemption persistence operations.

@@ -1,6 +1,7 @@
 ﻿using Ardalis.GuardClauses;
 using Microsoft.EntityFrameworkCore;
 using StreamDroid.Core.Entities;
+using StreamDroid.Core.Interfaces;
 using System.Linq.Expressions;
 
 namespace StreamDroid.Infrastructure.Persistence

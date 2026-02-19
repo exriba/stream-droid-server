@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StreamDroid.Domain\StreamDroid.Domain.csproj" />
+    <ProjectReference Include="..\StreamDroid.Infrastructure\StreamDroid.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
