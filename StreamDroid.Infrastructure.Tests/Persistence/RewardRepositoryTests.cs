@@ -1,5 +1,5 @@
 using StreamDroid.Core.Entities;
-using StreamDroid.Infrastructure.Persistence;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Infrastructure.Tests.Common;
 
 namespace StreamDroid.Infrastructure.Tests.Persistence

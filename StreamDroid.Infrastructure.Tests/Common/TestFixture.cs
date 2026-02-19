@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StreamDroid.Core.Entities;
-using StreamDroid.Infrastructure.Persistence;
+using StreamDroid.Core.Interfaces;
 
 namespace StreamDroid.Infrastructure.Tests.Common
 {

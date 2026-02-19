@@ -1,5 +1,5 @@
 ﻿using StreamDroid.Core.Entities;
-using StreamDroid.Infrastructure.Persistence;
+using StreamDroid.Core.Interfaces;
 using StreamDroid.Infrastructure.Tests.Common;
 
 namespace StreamDroid.Infrastructure.Tests.Persistence
@@ -10,7 +10,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
         private readonly IRepository<Reward> _rewardRepository;
         private readonly IRedemptionRepository _redemptionRepository;
 
-        public RedemptionRepositoryTests(TestFixture testFixture) 
+        public RedemptionRepositoryTests(TestFixture testFixture)
         {
             _rewardRepository = testFixture.rewardRepository;
             _redemptionRepository = testFixture.redemptionRepository;
@@ -25,7 +25,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var redemptions = await _redemptionRepository.FindAsync(x => x.Reward.Id.Equals(id.ToString()));
 
             Assert.NotEmpty(redemptions);
-            foreach(var redemption in redemptions)
+            foreach (var redemption in redemptions)
                 Assert.NotNull(redemption.Reward);
         }
 
@@ -52,20 +52,20 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
                         UserId = id.ToString(),
                         UserName = "user",
                         Reward = reward
-                    }  
+                    }
                 },
-                { 
-                    new Redemption 
+                {
+                    new Redemption
                     {
                         Id = Guid.NewGuid().ToString(),
                         UserId = id.ToString(),
                         UserName = "user",
                         Reward = reward
-                    }  
+                    }
                 }
             };
 
-            foreach(var redemption in redemptions)
+            foreach (var redemption in redemptions)
                 await _redemptionRepository.AddAsync(redemption);
         }
     }
