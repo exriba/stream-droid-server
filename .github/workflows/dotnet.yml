@@ -61,13 +61,21 @@ jobs:
           name: build-output
 
       - name: Run Tests
-        run: dotnet test --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
 
       - name: Publish Test Summary
+        if: always()
         run: |
-          TOTAL=$(grep -oP 'total="\K[0-9]+' test-results.trx)
-          PASSED=$(grep -oP 'passed="\K[0-9]+' test-results.trx)
-          FAILED=$(grep -oP 'failed="\K[0-9]+' test-results.trx)
+          FILE=./TestResults/test-results.trx
+
+          if [ ! -f "$FILE" ]; then
+            echo "No test result file found."
+            exit 0
+          fi
+
+          TOTAL=$(grep -oP 'total="\K[0-9]+' "$FILE")
+          PASSED=$(grep -oP 'passed="\K[0-9]+' "$FILE")
+          FAILED=$(grep -oP 'failed="\K[0-9]+' "$FILE")
 
           echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
