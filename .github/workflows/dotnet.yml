@@ -58,5 +58,4 @@ jobs:
           name: build-output
 
       - name: Run Tests
-        # Use --no-build because we downloaded the pre-compiled binaries
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test --configuration Release --verbosity normal
