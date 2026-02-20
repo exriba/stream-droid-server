@@ -63,11 +63,24 @@ jobs:
       - name: Run Tests
         run: dotnet test --configuration Release --logger "trx" --results-directory ./TestResults
 
-      - name: Publish Test Report
-        uses: dorny/test-reporter@v1
+      - name: Aggregate Test Results
         if: always()
-        with:
-          name: .NET Tests
-          path: "TestResults/*.trx"
-          reporter: dotnet-trx
-          github_token: ${{ secrets.PAT_TOKEN }}
+        run: |
+          TOTAL=0
+          PASSED=0
+          FAILED=0
+
+          for FILE in ./TestResults/*.trx; do
+            T=$(grep -oP 'total="\K[0-9]+' "$FILE")
+            P=$(grep -oP 'passed="\K[0-9]+' "$FILE")
+            F=$(grep -oP 'failed="\K[0-9]+' "$FILE")
+
+            TOTAL=$((TOTAL + T))
+            PASSED=$((PASSED + P))
+            FAILED=$((FAILED + F))
+          done
+
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Total: $TOTAL" >> $GITHUB_STEP_SUMMARY
+          echo "- Passed: ✅ $PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "- Failed: ❌ $FAILED" >> $GITHUB_STEP_SUMMARY
