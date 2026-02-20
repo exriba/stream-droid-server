@@ -2,23 +2,18 @@
 
 namespace StreamDroid.Shared.Tests.Common
 {
-    public sealed class TestFixture : IDisposable
+    public sealed class TestFixture
     {
-        private readonly ConfigurationManager _configurationManager;
-        private const string FilePath = "Common/appsettings.Test.json";
-
         public TestFixture()
         {
-            _configurationManager = new ConfigurationManager();
-            _configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile(FilePath)
-                .Build();
-            _configurationManager.Configure();
-        }
+            var dictionary = new Dictionary<string, string>
+            {
+                { "EncryptionSettings:KeyPhrase", "w9z$C&F)H@McQfTj" }
+            };
 
-        public void Dispose()
-        {
-            _configurationManager.Dispose();
+            using var configurationManager = new ConfigurationManager();
+            configurationManager.AddInMemoryCollection(dictionary).Build();
+            configurationManager.Configure();
         }
     }
 }

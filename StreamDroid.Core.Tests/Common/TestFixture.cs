@@ -5,14 +5,15 @@ namespace StreamDroid.Core.Tests.Common
 {
     public sealed class TestFixture
     {
-        private const string FilePath = "Common/appsettings.Test.json";
-
         public TestFixture()
         {
+            var dictionary = new Dictionary<string, string>
+            {
+                { "EncryptionSettings:KeyPhrase", "w9z$C&F)H@McQfTj" }
+            };
+
             using var configurationManager = new ConfigurationManager();
-            configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                                .AddJsonFile(FilePath)
-                                .Build();
+            configurationManager.AddInMemoryCollection(dictionary).Build();
             configurationManager.Configure();
         }
     }

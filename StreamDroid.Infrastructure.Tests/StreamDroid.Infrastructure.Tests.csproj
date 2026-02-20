@@ -28,10 +28,4 @@
     <ProjectReference Include="..\StreamDroid.Infrastructure\StreamDroid.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Common\appsettings.Test.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

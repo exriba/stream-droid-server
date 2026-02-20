@@ -2,27 +2,31 @@
 using Microsoft.Extensions.DependencyInjection;
 using StreamDroid.Core.Entities;
 using StreamDroid.Core.Interfaces;
+using StreamDroid.Shared;
 
 namespace StreamDroid.Infrastructure.Tests.Common
 {
     public sealed class TestFixture : IDisposable
     {
-        private const string FilePath = "Common/appsettings.Test.json";
-
         private readonly ServiceProvider _serviceProvider;
         internal readonly IRepository<Reward> rewardRepository;
         internal readonly IRedemptionRepository redemptionRepository;
 
         public TestFixture()
         {
+            var dictionary = new Dictionary<string, string>
+            {
+                { "SqliteSettings:ConnectionString", "Data Source=file::memory:?cache=shared" }
+            };
+
             using var configurationManager = new ConfigurationManager();
-            configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                                .AddJsonFile(FilePath)
-                                .Build();
+            configurationManager.AddInMemoryCollection(dictionary).Build();
+            configurationManager.Configure();
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddInfrastructureConfiguration(configurationManager);
             _serviceProvider = serviceCollection.BuildServiceProvider();
+
             rewardRepository = _serviceProvider.GetRequiredService<IRepository<Reward>>();
             redemptionRepository = _serviceProvider.GetRequiredService<IRedemptionRepository>();
         }

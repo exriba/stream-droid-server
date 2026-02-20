@@ -9,8 +9,6 @@ namespace StreamDroid.Domain.Tests.Common
 {
     public sealed class TestFixture
     {
-        private const string FilePath = "Common/appsettings.Test.json";
-
         internal readonly IOptions<JwtSettings> options;
 
         public TestFixture()
@@ -19,10 +17,16 @@ namespace StreamDroid.Domain.Tests.Common
             var applicationAssembly = typeof(BaseProto<,>).Assembly;
             typeAdapterConfig.Scan(applicationAssembly);
 
+            var dictionary = new Dictionary<string, string>
+            {
+                { "EncryptionSettings:KeyPhrase", "w9z$C&F)H@McQfTj" },
+                { "JwtSettings:SigningKey", "this-is-a-super-secret-signingkey-please-dont-steal-it" },
+                { "JwtSettings:Issuer", "stream-droid-server" },
+                { "JwtSettings:Audience", "stream-droid-client" }
+            };
+
             using var configurationManager = new ConfigurationManager();
-            configurationManager.SetBasePath(Directory.GetCurrentDirectory())
-                                .AddJsonFile(FilePath)
-                                .Build();
+            configurationManager.AddInMemoryCollection(dictionary).Build();
             configurationManager.Configure();
 
             var jwtSettings = new JwtSettings();
