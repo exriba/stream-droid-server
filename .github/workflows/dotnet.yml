@@ -51,6 +51,9 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Configure NUGET
+        run: dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.PAT_TOKEN }}" --store-password-in-clear-text --name "github" "https://nuget.pkg.github.com/exriba/index.json" 
+
       # Download the binaries from the Build job
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -58,4 +61,4 @@ jobs:
           name: build-output
 
       - name: Run Tests
-        run: dotnet test --configuration Release --verbosity normal
+        run: dotnet test --configuration Debug --verbosity normal
