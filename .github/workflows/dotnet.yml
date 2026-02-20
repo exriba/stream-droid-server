@@ -12,6 +12,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -37,13 +38,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: build # Ensures this job only runs after 'build' succeeds
-    env:
-      ASPNETCORE_ENVIRONMENT: Test
-      EncryptionSettings__KeyPhrase: w9z$C&F)H@McQfTj
-      SqliteSettings__ConnectionString: Data Source=file::memory:?cache=shared
-      JwtSettings__SigningKey: this-is-a-super-secret-signingkey-please-dont-steal-it
-      JwtSettings__Issuer: stream-droid-server
-      JwtSettings__Audience: stream-droid-client
 
     steps:
       - name: Checkout Code
