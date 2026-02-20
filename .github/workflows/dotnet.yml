@@ -70,3 +70,4 @@ jobs:
           name: .NET Tests
           path: "TestResults/*.trx"
           reporter: dotnet-trx
+          github_token: "${{ secrets.PAT_TOKEN }}"
