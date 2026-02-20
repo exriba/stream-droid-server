@@ -61,24 +61,12 @@ jobs:
           name: build-output
 
       - name: Run Tests
-        run: dotnet test --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
+        run: dotnet test --configuration Release --logger "trx" --results-directory ./TestResults
 
-      - name: Publish Test Summary
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v1
         if: always()
-        run: |
-          FILE=./TestResults/test-results.trx
-
-          if [ ! -f "$FILE" ]; then
-            echo "No test result file found."
-            exit 0
-          fi
-
-          TOTAL=$(grep -oP 'total="\K[0-9]+' "$FILE")
-          PASSED=$(grep -oP 'passed="\K[0-9]+' "$FILE")
-          FAILED=$(grep -oP 'failed="\K[0-9]+' "$FILE")
-
-          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Total: $TOTAL" >> $GITHUB_STEP_SUMMARY
-          echo "- Passed: ✅ $PASSED" >> $GITHUB_STEP_SUMMARY
-          echo "- Failed: ❌ $FAILED" >> $GITHUB_STEP_SUMMARY
+        with:
+          name: .NET Tests
+          path: "TestResults/*.trx"
+          reporter: dotnet-trx
