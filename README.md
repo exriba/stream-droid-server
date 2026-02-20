@@ -61,7 +61,7 @@ Testing focuses on:
 * Service behavior correctness
 * Domain rule enforcement
 
-CI pipelines automatically: (TODO)
+CI pipelines automatically:
 
 * Restore dependencies
 * Build the solution
