@@ -372,7 +372,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             return mockStreamWriter;
         }
 
-        private static Mock<IAsyncStreamReader<AddRewardAssetRequest>> CreateStreamReaderMock(List<AddRewardAssetRequest> requests)
+        private static Mock<IAsyncStreamReader<AddRewardAssetRequest>> CreateStreamReaderMock(IEnumerable<AddRewardAssetRequest> requests)
         {
             var enumerator = requests.GetEnumerator();
 
