@@ -85,6 +85,7 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
             Assert.Equal("100", userRedeem.Percentage);
         }
 
+        #region Helpers
         private static Entities.Reward SetupReward()
         {
             var id = Guid.NewGuid();
@@ -138,5 +139,6 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
             httpContext.User = claimsPrincipal;
             _context.UserState["__HttpContext"] = httpContext;
         }
+        #endregion
     }
 }
