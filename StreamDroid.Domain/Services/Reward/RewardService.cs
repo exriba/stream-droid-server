@@ -121,47 +121,29 @@ namespace StreamDroid.Domain.Services.Reward
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var id = Guid.Empty;
-            var tasks = new List<Task>(3);
+            Entities.Reward? reward = null;
 
+            // TODO: This method needs review. Keep it simple for now but:
+            // 1. Consider batching for large streams 
+            // 2. Process every single item and rollback the transaction if validation fail
             while (await requestStream.MoveNext(context.CancellationToken))
             {
-                if (tasks.Count == 3)
-                {
-                    await Task.WhenAll(tasks);
-                    tasks.Clear();
-                }
-
                 var request = requestStream.Current;
 
-                if (id == Guid.Empty)
-                {
-                    var isGuid = Guid.TryParse(request.RewardId, out var rewardId);
+                var isGuid = Guid.TryParse(request.RewardId, out var rewardId);
 
-                    if (!isGuid || rewardId == Guid.Empty)
-                        throw new ArgumentException($"Invalid Reward Id: {rewardId}.", nameof(request.RewardId));
+                if (!isGuid || rewardId == Guid.Empty)
+                    throw new ArgumentException($"Invalid Reward Id: {rewardId}.", nameof(request.RewardId));
 
-                    id = rewardId;
-                }
-
-                if (request.RewardId != id.ToString())
-                    throw new ArgumentException("All requests must have the same reward id.");
-
-
-                var innerReward = await FetchRewardAsync(id, context.CancellationToken);
-                innerReward.AddAsset(FileName.FromString(request.FileName), request.Volume);
-                var task = _assetFileService.AddAssetFileAsync(claim.Value, innerReward.Title, FileName.FromString(request.FileName), request.File, context.CancellationToken);
-                tasks.Add(task);
+                reward = await FetchRewardAsync(rewardId, context.CancellationToken);
+                reward.AddAsset(FileName.FromString(request.FileName), request.Volume);
+                await _assetFileService.AddAssetFileAsync(claim.Value, reward.Title, FileName.FromString(request.FileName), request.File, context.CancellationToken);
+                await _repository.UpdateAsync(reward, context.CancellationToken);
             }
-
-            var reward = await FetchRewardAsync(id, context.CancellationToken);
-            await Task.WhenAll(tasks);
-            await _repository.UpdateAsync(reward, context.CancellationToken);
-            tasks.Clear();
 
             return new RewardResponse
             {
-                Reward = RewardProto.FromEntity(reward)
+                Reward = RewardProto.FromEntity(reward!)
             };
         }
 
