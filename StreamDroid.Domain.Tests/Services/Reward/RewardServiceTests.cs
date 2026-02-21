@@ -30,7 +30,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
     public class RewardServiceTests
     {
         private readonly Mock<IApiCore> _mockApiCore;
-        private readonly Mock<IUserService> _mockUserService;
+        private readonly Mock<IUserManager> _mockUserManager;
         private readonly Mock<ICoreSettings> _mockCoreSettings;
         private readonly Mock<IRepository<Entities.Reward>> _mockRepository;
 
@@ -52,7 +52,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         public RewardServiceTests()
         {
             _mockApiCore = new Mock<IApiCore>();
-            _mockUserService = new Mock<IUserService>();
+            _mockUserManager = new Mock<IUserManager>();
             _mockCoreSettings = new Mock<ICoreSettings>();
             _mockRepository = new Mock<IRepository<Entities.Reward>>();
 
@@ -60,7 +60,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             var mockAssetFileService = new Mock<IAssetFileService>();
 
             var helixApi = new HelixApi(_mockCoreSettings.Object, _mockApiCore.Object);
-            _rewardService = new RewardService(helixApi, _mockUserService.Object, _mockRepository.Object, mockAssetFileService.Object, mockLogger.Object);
+            _rewardService = new RewardService(helixApi, _mockUserManager.Object, _mockRepository.Object, mockAssetFileService.Object, mockLogger.Object);
         }
 
         [Fact]
@@ -154,7 +154,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             static async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
             var tokenRefreshPolicy = new TokenRefreshPolicy(user.Id, "accessToken", refreshToken);
 
-            _mockUserService.Setup(x => x.CreateTokenRefreshPolicyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockUserManager.Setup(x => x.CreateTokenRefreshPolicyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tokenRefreshPolicy);
             _mockApiCore.Setup(x => x.GetAsync<HelixCollectionResponse<Helix.User.User>>(
                 It.IsAny<UrlFragment>(),
@@ -334,6 +334,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             Assert.Empty(response.Reward.Assets);
         }
 
+        #region Helpers
         private static IReadOnlyCollection<Entities.Reward> SetupRewards(Guid id)
         {
             var reward = new Entities.Reward
@@ -383,5 +384,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
 
             return mockStreamReader;
         }
+        #endregion
     }
 }
