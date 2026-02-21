@@ -9,7 +9,7 @@ using static GrpcRedeemService;
 namespace StreamDroid.Domain.Services.Redeem
 {
     /// <summary>
-    /// Service class responsible for handling all Redeem related logic.
+    /// Redeem Service API.
     /// </summary>
     [Authorize]
     public sealed class RedeemService : GrpcRedeemServiceBase
