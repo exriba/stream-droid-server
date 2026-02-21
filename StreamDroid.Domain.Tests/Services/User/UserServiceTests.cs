@@ -59,7 +59,8 @@ namespace StreamDroid.Domain.Tests.Services.User
             mockCoreSettings.SetupGet(x => x.Scopes).Returns([Scope.CHAT_READ]);
 
             var helixApi = new HelixApi(mockCoreSettings.Object, _mockApiCore.Object);
-            _userService = new UserService(helixApi, _mockAuthApi.Object, _mockRepository.Object, testFixture.options, mockCoreSettings.Object, mockLogger.Object);
+            var userManager = new UserManager(_mockAuthApi.Object, testFixture.options, _mockRepository.Object);
+            _userService = new UserService(helixApi, _mockAuthApi.Object, userManager, mockCoreSettings.Object, _mockRepository.Object, mockLogger.Object);
         }
 
         [Fact]
@@ -123,7 +124,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             var authenticationRequest = CreateAuthenticationRequest(id);
 
             _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user));
+                .Returns(Task.FromResult(user)!);
 
             var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
@@ -189,7 +190,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             ConfigureHelixApi();
 
             _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user));
+                .Returns(Task.FromResult(user)!);
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user));
 
@@ -224,26 +225,14 @@ namespace StreamDroid.Domain.Tests.Services.User
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
             _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user));
+                .Returns(Task.FromResult(user)!);
 
             var response = await _userService.FindUser(request, _context);
 
             Assert.Equal(user.Id, response.User.Id);
         }
 
-        [Fact]
-        public async Task UserService_CreateTokenRefreshPolicyAsync()
-        {
-            var user = SetupUser();
-
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user));
-
-            var policy = await _userService.CreateTokenRefreshPolicyAsync(user.Id);
-
-            Assert.Equal(2, policy.ContextData.Keys.Count);
-        }
-
+        #region Helpers
         private static Entities.User SetupUser()
         {
             var id = Guid.NewGuid();
@@ -358,5 +347,6 @@ namespace StreamDroid.Domain.Tests.Services.User
                 writeOptionsSetter: (o) => { }
             );
         }
+        #endregion
     }
 }
