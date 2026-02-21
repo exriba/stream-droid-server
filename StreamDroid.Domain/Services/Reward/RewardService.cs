@@ -16,7 +16,7 @@ using Entities = StreamDroid.Core.Entities;
 namespace StreamDroid.Domain.Services.Reward
 {
     /// <summary>
-    /// Service class responsible for handling all Reward related logic.
+    /// Reward Service API.
     /// </summary>
     [Authorize]
     public sealed class RewardService : GrpcRewardServiceBase
@@ -24,20 +24,20 @@ namespace StreamDroid.Domain.Services.Reward
         private const string ID = "Id";
 
         private readonly HelixApi _helixApi;
-        private readonly IUserService _userService;
+        private readonly IUserManager _userManager;
         private readonly IAssetFileService _assetFileService;
         private readonly IRepository<Entities.Reward> _repository;
         private readonly ILogger<RewardService> _logger;
 
         public RewardService(HelixApi helixApi,
-                             IUserService userService,
+                             IUserManager userManager,
                              IRepository<Entities.Reward> repository,
                              IAssetFileService assetFileService,
                              ILogger<RewardService> logger)
         {
             _helixApi = helixApi;
             _repository = repository;
-            _userService = userService;
+            _userManager = userManager;
             _assetFileService = assetFileService;
             _logger = logger;
         }
@@ -229,7 +229,7 @@ namespace StreamDroid.Domain.Services.Reward
         private async Task<List<Entities.Reward>> SynchronizeRewardsAsync(string userId, CancellationToken cancellationToken = default)
         {
             var rewards = new List<Entities.Reward>();
-            var tokenRefreshPolicy = await _userService.CreateTokenRefreshPolicyAsync(userId, cancellationToken);
+            var tokenRefreshPolicy = await _userManager.CreateTokenRefreshPolicyAsync(userId, cancellationToken);
 
             var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
                 await _helixApi.Users.GetUsersAsync([], tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
