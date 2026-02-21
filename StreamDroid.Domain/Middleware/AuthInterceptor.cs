@@ -9,11 +9,11 @@ namespace StreamDroid.Domain.Middleware
         private const string ID = "Id";
         private const string EXPIRY = "exp";
 
-        private readonly IUserService _userService;
+        private readonly IUserManager _userManager;
 
-        public AuthInterceptor(IUserService userService)
+        public AuthInterceptor(IUserManager userManager)
         {
-            _userService = userService;
+            _userManager = userManager;
         }
 
         public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
@@ -51,7 +51,7 @@ namespace StreamDroid.Domain.Middleware
 
                 if (timeSpan.TotalSeconds < 300)
                 {
-                    var token = await _userService.GenerateAccessTokenAsync(idClaim!);
+                    var token = await _userManager.GenerateAccessTokenAsync(idClaim!);
                     context.ResponseTrailers.Add("access-token", token);
                 }
             }

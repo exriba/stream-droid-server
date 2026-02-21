@@ -145,8 +145,8 @@ namespace StreamDroid.Domain.Services.Stream
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId, CancellationToken.None);
+                var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
+                var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(userId, CancellationToken.None);
 
                 try
                 {
@@ -380,8 +380,8 @@ namespace StreamDroid.Domain.Services.Stream
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-                var tokenRefreshPolicy = await userService.CreateTokenRefreshPolicyAsync(userId);
+                var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
+                var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(userId);
 
                 try
                 {

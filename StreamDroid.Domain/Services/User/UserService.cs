@@ -4,8 +4,6 @@ using Google.Protobuf;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth;
 using SharpTwitch.Auth.Helpers;
@@ -13,14 +11,10 @@ using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Settings;
 using SharpTwitch.Helix;
 using StreamDroid.Core.Enums;
-using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.DTOs;
-using StreamDroid.Domain.Policies;
-using StreamDroid.Domain.Settings;
 using StreamDroid.Shared.Extensions;
 using System.Collections.Concurrent;
-using System.Security.Claims;
 using System.Text;
 using static GrpcUserService;
 using Entities = StreamDroid.Core.Entities;
@@ -31,23 +25,21 @@ using GrpcUser = Grpc.Model.User;
 namespace StreamDroid.Domain.Services.User
 {
     /// <summary>
-    /// Service class responsible for handling all User related logic.
+    /// User Service API.
     /// </summary>
     [Authorize]
-    public sealed class UserService : GrpcUserServiceBase, IUserService
+    public sealed class UserService : GrpcUserServiceBase
     {
         private const string ID = "Id";
-        private const string NAME = "Name";
-        private const string JWT_ID = "jti";
         private const string SUCCESS_FILE = "success.html";
         private const string ERROR_FILE = "error.html";
 
         private readonly IAuthApi _authApi;
         private readonly HelixApi _helixApi;
-        private readonly JwtSettings _jwtSettings;
+        private readonly IUserManager _userManager;
         private readonly ICoreSettings _coreSettings;
-        private readonly IRepository<Entities.User> _repository;
         private readonly ILogger<UserService> _logger;
+        private readonly IRepository<Entities.User> _repository;
 
         // TODO: Might need cache solution to handle large data like Redis. For now this should be enough... maybe add InMemoryCache.
         private static readonly ConcurrentDictionary<string, string> _completedSessions = new();
@@ -55,16 +47,16 @@ namespace StreamDroid.Domain.Services.User
 
         public UserService(HelixApi helixApi,
                            IAuthApi authApi,
-                           IRepository<Entities.User> repository,
-                           IOptions<JwtSettings> options,
+                           IUserManager userManager,
                            ICoreSettings coreSettings,
+                           IRepository<Entities.User> repository,
                            ILogger<UserService> logger)
         {
             _authApi = authApi;
             _helixApi = helixApi;
-            _repository = repository;
-            _jwtSettings = options.Value;
+            _userManager = userManager;
             _coreSettings = coreSettings;
+            _repository = repository;
             _logger = logger;
         }
 
@@ -122,7 +114,7 @@ namespace StreamDroid.Domain.Services.User
             }
 
             var user = await AuthenticateUserAsync(request.Code, context.CancellationToken);
-            var token = await GenerateAccessTokenAsync(user.Id, context.CancellationToken);
+            var token = await _userManager.GenerateAccessTokenAsync(user.Id, context.CancellationToken);
 
             _completedSessions.TryAdd(state, token);
             _pendingSessions.TryRemove(state, out var semaphore);
@@ -175,7 +167,7 @@ namespace StreamDroid.Domain.Services.User
             var usePrincipal = context.GetHttpContext().User;
             var claim = usePrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var user = await FetchUserByIdAsync(claim.Value, context.CancellationToken);
+            var user = await _userManager.FetchUserByIdAsync(claim.Value, context.CancellationToken);
 
             bool parsed = Enum.TryParse(user.UserType.Name, true, out GrpcUser.Types.UserType userType);
 
@@ -183,55 +175,6 @@ namespace StreamDroid.Domain.Services.User
             {
                 User = UserProto.FromEntity(user)
             };
-        }
-
-        /// <inheritdoc/>
-        public async Task<string> GenerateAccessTokenAsync(string userId, CancellationToken cancellationToken)
-        {
-            var user = await FetchUserByIdAsync(userId, cancellationToken);
-
-            var claims = new List<Claim>
-            {
-                new(ID, userId),
-                new(NAME, user.Name),
-                new(JWT_ID, Guid.NewGuid().ToString()),
-            };
-
-            var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);
-            var securityKey = new SymmetricSecurityKey(encodedKey);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Issuer = _jwtSettings.Issuer,
-                Audience = _jwtSettings.Audience,
-                Subject = new ClaimsIdentity(claims),
-                NotBefore = DateTime.UtcNow,
-                Expires = DateTime.UtcNow.AddDays(30),
-                SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var tokenHandler = new JsonWebTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return token;
-        }
-
-        /// <inheritdoc/>
-        public async Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId, CancellationToken cancellationToken = default)
-        {
-            var user = await FetchUserByIdAsync(userId, cancellationToken);
-
-            async Task<string> refreshToken(string userId)
-            {
-                var refreshToken = user.RefreshToken.Base64Decrypt();
-                var token = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
-                user.AccessToken = token.AccessToken;
-                user.RefreshToken = token.RefreshToken;
-                user = await _repository.UpdateAsync(user, cancellationToken);
-                return token.AccessToken;
-            }
-
-            var accessToken = user.AccessToken.Base64Decrypt();
-            return new TokenRefreshPolicy(userId, accessToken, refreshToken);
         }
 
         /// <summary>
@@ -248,7 +191,7 @@ namespace StreamDroid.Domain.Services.User
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, cancellationToken);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, cancellationToken);
             var userDetailsTask = _helixApi.Users.GetUsersAsync([], token.AccessToken, cancellationToken);
-            var userTask = FetchUserByIdAsync(userData.UserId, cancellationToken);
+            var userTask = _userManager.FetchUserByIdAsync(userData.UserId, cancellationToken);
 
             await Task.WhenAll(userDetailsTask, userTask);
 
@@ -279,22 +222,6 @@ namespace StreamDroid.Domain.Services.User
         }
 
         #region Helpers
-        /// <summary>
-        /// Finds a user by the given id.
-        /// </summary>
-        /// <param name="userId">user id</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <returns>A user entity.</returns>
-        /// <exception cref="ArgumentNullException">If the user id is null</exception>
-        /// <exception cref="ArgumentException">If the user id is an empty or whitespace string</exception>
-        /// <exception cref="EntityNotFoundException">If the user is not found</exception>
-        private async Task<Entities.User> FetchUserByIdAsync(string userId, CancellationToken cancellationToken = default)
-        {
-            Guard.Against.NullOrWhiteSpace(userId, nameof(userId));
-
-            return await _repository.FindByIdAsync(userId, cancellationToken) ?? throw new EntityNotFoundException(userId);
-        }
-
         /// <summary>
         /// Simple converter from <see cref="BroadcasterType"/> to <see cref="UserType"/>.
         /// </summary>

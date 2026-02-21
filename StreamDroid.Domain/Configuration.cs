@@ -41,8 +41,8 @@ namespace StreamDroid.Domain
             services.AddTwitchAuth();
             services.AddTwitchHelix();
             services.AddTwitchCore(configurationManager);
-            services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IAssetFileService, AssetFileService>();
+            services.AddScoped<IUserManager, UserManager>();
+            services.AddSingleton<IAssetFileService, AssetFileService>();
             services.AddSingleton<NotificationService>();
             services.AddHostedService<TwitchEventSub>();
             services.AddHostedService<NotificationManagerService>();
