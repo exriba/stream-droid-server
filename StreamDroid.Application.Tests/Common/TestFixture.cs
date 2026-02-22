@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using SharpTwitch.Auth;
+using SharpTwitch.Auth.Models;
 using SharpTwitch.Core;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Helix.Models;
@@ -19,10 +21,14 @@ using StreamDroid.Domain.Middleware;
 using StreamDroid.Domain.Services.AssetFile;
 using StreamDroid.Domain.Services.Redeem;
 using StreamDroid.Domain.Services.Reward;
+using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
 using StreamDroid.Shared;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Helix = SharpTwitch.Helix.Models;
+using HelixModels = SharpTwitch.Helix.Models;
 
 namespace StreamDroid.Application.Tests.Common
 {
@@ -30,8 +36,9 @@ namespace StreamDroid.Application.Tests.Common
     {
         private readonly WebApplication _webApplication;
 
-        internal readonly GrpcChannel grpcChannel;
+        internal readonly string userId = "1";
         internal readonly string rewardId = "4396f91d-0453-488b-873b-e016f461a297";
+        internal readonly GrpcChannel grpcChannel;
 
         public TestFixture()
         {
@@ -85,19 +92,28 @@ namespace StreamDroid.Application.Tests.Common
 
             var user = new Helix.User.User
             {
-                Id = "1",
+                Id = userId,
                 BroadcasterType = "affiliate"
             };
             var userResponse = new HelixCollectionResponse<Helix.User.User>
             {
                 Data = [user]
             };
+            var helixUser = new HelixModels.User.User
+            {
+                BroadcasterType = string.Empty
+            };
+            var helixUserCollectionResponse = new HelixCollectionResponse<HelixModels.User.User>
+            {
+                Data = [helixUser]
+            };
+
             var customReward = new CustomReward
             {
                 Id = rewardId,
                 Title = "Title",
                 Prompt = "Prompt",
-                BroadcasterUserId = user.Id,
+                BroadcasterUserId = userId,
                 BackgroundColor = "#FFFFFF",
                 IsUserInputRequired = true,
                 Image = new Helix.Shared.Image
@@ -117,7 +133,37 @@ namespace StreamDroid.Application.Tests.Common
                 It.IsAny<IDictionary<QueryParameter, string>>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(customRewardResponse));
+            mockApiCore.Setup(x => x.GetAsync<HelixCollectionResponse<HelixModels.User.User>>(
+                It.IsAny<UrlFragment>(),
+                It.IsAny<IDictionary<Header, string>>(),
+                It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(helixUserCollectionResponse);
             builder.Services.AddSingleton<IApiCore>(mockApiCore.Object);
+
+            var accessTokenResponseJson = new JsonObject
+            {
+                { "AccessToken", "accessToken" },
+                { "RefreshToken", "refreshToken" }
+            };
+            var accessTokenResponse = JsonSerializer.Deserialize<AccessTokenResponse>(accessTokenResponseJson.ToString());
+            var validateTokenResponseJson = new JsonObject
+            {
+                { "UserId", userId },
+                { "Login", "user" }
+            };
+            var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString());
+
+            var mockAuthApi = new Mock<IAuthApi>();
+            mockAuthApi.Setup(x => x.GetAccessTokenFromCodeAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(accessTokenResponse!);
+            mockAuthApi.Setup(x => x.ValidateAccessTokenAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(validateTokenResponse!);
+            builder.Services.AddSingleton<IAuthApi>(mockAuthApi.Object);
 
             var mockAssetFileService = new Mock<IAssetFileService>();
             builder.Services.AddSingleton<IAssetFileService>(mockAssetFileService.Object);
@@ -141,7 +187,7 @@ namespace StreamDroid.Application.Tests.Common
             _webApplication.UseAuthorization();
             _webApplication.MapControllers();
 
-            //_webApplication.MapGrpcService<UserService>();
+            _webApplication.MapGrpcService<UserService>();
             _webApplication.MapGrpcService<RewardService>();
             _webApplication.MapGrpcService<RedeemService>();
 
@@ -164,7 +210,7 @@ namespace StreamDroid.Application.Tests.Common
             var userRepository = scope.ServiceProvider.GetRequiredService<IRepository<User>>();
             var user = new User
             {
-                Id = "1",
+                Id = userId,
                 Name = "user",
                 AccessToken = "accessToken",
                 RefreshToken = "refreshToken"
@@ -179,7 +225,7 @@ namespace StreamDroid.Application.Tests.Common
                 Title = "Title",
                 Prompt = "Prompt",
                 Speech = new Speech(),
-                StreamerId = "1",
+                StreamerId = userId,
                 BackgroundColor = "#6441A4",
             };
             var fileName = FileName.FromString("file.mp3");
