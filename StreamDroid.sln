@@ -25,6 +25,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Core.Tests", "S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamDroid.Domain.Tests", "StreamDroid.Domain.Tests\StreamDroid.Domain.Tests.csproj", "{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamDroid.Application.Tests", "StreamDroid.Application.Tests\StreamDroid.Application.Tests.csproj", "{4DBECB95-8F11-433C-BC47-A364AE646193}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +69,10 @@ Global
 		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DBECB95-8F11-433C-BC47-A364AE646193}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DBECB95-8F11-433C-BC47-A364AE646193}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DBECB95-8F11-433C-BC47-A364AE646193}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DBECB95-8F11-433C-BC47-A364AE646193}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,6 +87,7 @@ Global
 		{2AA1F610-DB6C-4E54-8518-428F1BECDEC7} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
 		{9F984DF6-65FD-4B5F-A317-904090C56750} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
 		{5393F108-C0A7-4FAF-BA1E-0FDAB84D6F96} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
+		{4DBECB95-8F11-433C-BC47-A364AE646193} = {089F98B4-F2ED-4970-8992-EE2B041AB26B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EDFEC61E-EA36-4157-86DE-FF0CED2D6020}

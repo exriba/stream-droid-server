@@ -483,4 +483,3 @@ NuGet.Config
 Migrations/
 log4net.config
 launchsettings.json
-StreamDroid.Application.Tests
