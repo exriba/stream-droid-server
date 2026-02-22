@@ -16,6 +16,10 @@ StreamDroid.sln
 ├── StreamDroid.Infrastructure    # Persistence concerns
 ├── StreamDroid.Shared            # Cross-shared utilities
 ├── *.Tests                       # Unit, Component and Integration tests
+
+Application → Domain → Core → Shared
+        ↓
+Infrastructure → Core
 ```
 
 ## Authentication Design (JWT + gRPC)
