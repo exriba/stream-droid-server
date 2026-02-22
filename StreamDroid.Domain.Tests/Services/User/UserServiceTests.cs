@@ -290,7 +290,7 @@ namespace StreamDroid.Domain.Tests.Services.User
                 { "Login", user.Name }
             };
 
-            var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString()); ;
+            var validateTokenResponse = JsonSerializer.Deserialize<ValidateTokenResponse>(validateTokenResponseJson.ToString());
 
             _mockAuthApi.Setup(x => x.GetAccessTokenFromCodeAsync(
                 It.IsAny<string>(),
