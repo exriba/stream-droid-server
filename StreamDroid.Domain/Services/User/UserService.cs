@@ -3,6 +3,7 @@ using Google.Api;
 using Google.Protobuf;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth;
@@ -14,14 +15,12 @@ using StreamDroid.Core.Enums;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Shared.Extensions;
-using System.Collections.Concurrent;
 using System.Text;
 using static GrpcUserService;
 using Entities = StreamDroid.Core.Entities;
 using GrpcUser = Grpc.Model.User;
 
 // TODO: Handle logout? Maybe mark token for invalidation. Look into interceptors and validators
-// TODO: Review error handling implementation. Exception Handler middleware is not going to work for gRPC, look into interceptors
 namespace StreamDroid.Domain.Services.User
 {
     /// <summary>
@@ -36,26 +35,26 @@ namespace StreamDroid.Domain.Services.User
 
         private readonly IAuthApi _authApi;
         private readonly HelixApi _helixApi;
-        private readonly IUserManager _userManager;
         private readonly ICoreSettings _coreSettings;
-        private readonly ILogger<UserService> _logger;
+        private readonly IUserManager _userManager;
+        private readonly IMemoryCache _cache;
         private readonly IRepository<Entities.User> _repository;
-
-        // TODO: Might need cache solution to handle large data like Redis. For now this should be enough... maybe add InMemoryCache.
-        private static readonly ConcurrentDictionary<string, string> _completedSessions = new();
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _pendingSessions = new();
+        private readonly ILogger<UserService> _logger;
 
         public UserService(HelixApi helixApi,
                            IAuthApi authApi,
-                           IUserManager userManager,
                            ICoreSettings coreSettings,
+                           IMemoryCache cache,
+                           IUserManager userManager,
                            IRepository<Entities.User> repository,
                            ILogger<UserService> logger)
         {
             _authApi = authApi;
             _helixApi = helixApi;
-            _userManager = userManager;
             _coreSettings = coreSettings;
+            _cache = cache;
+
+            _userManager = userManager;
             _repository = repository;
             _logger = logger;
         }
@@ -69,12 +68,18 @@ namespace StreamDroid.Domain.Services.User
         [AllowAnonymous]
         public override Task<LoginUrlResponse> GenerateLoginUrl(SessionRequest request, ServerCallContext context)
         {
-            var semaphore = new SemaphoreSlim(0, 1);
-            _pendingSessions.TryAdd(request.SessionId, semaphore);
-            var encryptedState = request.SessionId.Base64Encrypt();
+            GetOrCreateSessionTask(request.SessionId);
 
+            var encryptedState = request.SessionId.Base64Encrypt();
             var encodedState = Base64UrlEncoder.Encode(encryptedState);
-            var loginUrl = AuthUtils.GenerateAuthorizationUrl(_coreSettings.ClientId, _coreSettings.RedirectUri, _coreSettings.Scopes, encodedState);
+
+            var loginUrl = AuthUtils.GenerateAuthorizationUrl(
+                _coreSettings.ClientId,
+                _coreSettings.RedirectUri,
+                _coreSettings.Scopes,
+                encodedState
+            );
+
             var loginResponse = new LoginUrlResponse
             {
                 SessionId = request.SessionId,
@@ -94,21 +99,19 @@ namespace StreamDroid.Domain.Services.User
         public override async Task<HttpBody> AuthenticateUser(AuthenticationRequest request, ServerCallContext context)
         {
             var encryptedState = Base64UrlEncoder.Decode(request.State);
-            var state = encryptedState.Base64Decrypt();
+            var sessionId = encryptedState.Base64Decrypt();
 
-            var sessionExists = _pendingSessions.TryGetValue(state, out _);
-
-            if (!sessionExists)
+            if (!_cache.TryGetValue(sessionId, out TaskCompletionSource<string>? tcs))
             {
-                _logger.LogError("Unable to find session: {state}.", state);
+                _logger.LogError("Unable to find session: {state}.", sessionId);
                 return await CreateHttpBodyResponse(ERROR_FILE, context.CancellationToken);
             }
 
-            _logger.LogInformation("Received authentication callback for session: {sessionId}.", state);
+            _logger.LogInformation("Received authentication callback for session: {sessionId}.", sessionId);
 
-            if (request.Error != string.Empty)
+            if (!string.IsNullOrEmpty(request.Error))
             {
-                _pendingSessions.TryRemove(state, out _);
+                tcs!.TrySetException(new UnauthorizedAccessException(request.Error));
                 _logger.LogError("Error ocurred during login {error}. Details: {errorDescription}.", request.Error, request.ErrorDescription);
                 return await CreateHttpBodyResponse(ERROR_FILE, context.CancellationToken);
             }
@@ -116,11 +119,7 @@ namespace StreamDroid.Domain.Services.User
             var user = await AuthenticateUserAsync(request.Code, context.CancellationToken);
             var token = await _userManager.GenerateAccessTokenAsync(user.Id, context.CancellationToken);
 
-            _completedSessions.TryAdd(state, token);
-            _pendingSessions.TryRemove(state, out var semaphore);
-            semaphore?.Release();
-            semaphore?.Dispose();
-
+            tcs!.TrySetResult(token);
             _logger.LogInformation("{user} logged in.", user.Name);
             return await CreateHttpBodyResponse(SUCCESS_FILE, context.CancellationToken);
         }
@@ -134,9 +133,7 @@ namespace StreamDroid.Domain.Services.User
         [AllowAnonymous]
         public override async Task MonitorAuthenticationSessionStatus(SessionRequest request, IServerStreamWriter<SessionStatus> responseStream, ServerCallContext context)
         {
-            var sessionExists = _pendingSessions.TryGetValue(request.SessionId, out var semaphore);
-
-            if (!sessionExists)
+            if (!_cache.TryGetValue(request.SessionId, out TaskCompletionSource<string>? tcs))
             {
                 await responseStream.WriteAsync(new SessionStatus
                 {
@@ -146,14 +143,25 @@ namespace StreamDroid.Domain.Services.User
                 return;
             }
 
-            await semaphore!.WaitAsync(context.CancellationToken);
-            _completedSessions.TryRemove(request.SessionId, out var token);
-            await responseStream.WriteAsync(new SessionStatus
+            try
             {
-                Status = SessionStatus.Types.Status.Authorized,
-                AccessToken = token,
-                Message = "Login Successful."
-            }, context.CancellationToken);
+                var token = await tcs!.Task.WaitAsync(context.CancellationToken);
+
+                await responseStream.WriteAsync(new SessionStatus
+                {
+                    Status = SessionStatus.Types.Status.Authorized,
+                    Message = "Login Successful.",
+                    AccessToken = token,
+                }, context.CancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await responseStream.WriteAsync(new SessionStatus
+                {
+                    Status = SessionStatus.Types.Status.Error,
+                    Message = CreateExceptionMessage(ex)
+                }, context.CancellationToken);
+            }
         }
 
         /// <summary>
@@ -223,6 +231,42 @@ namespace StreamDroid.Domain.Services.User
 
         #region Helpers
         /// <summary>
+        /// Gets or Creates a session task for a given session id.
+        /// </summary>
+        /// <param name="sessionId">the session id</param>
+        /// <returns>A Task Completion Source</returns>
+        private TaskCompletionSource<string> GetOrCreateSessionTask(string sessionId)
+        {
+            return _cache.GetOrCreate(sessionId, entry =>
+            {
+                entry.SetSize(1);
+
+                var cts = new CancellationTokenSource(); // for canceling the timeout
+                var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                // Timeout: ensures TCS completes after 5 minutes if nothing happens
+                Task.Delay(TimeSpan.FromMinutes(5), cts.Token)
+                    .ContinueWith(_ =>
+                    {
+                        var exception = new TimeoutException("Authentication session timed out.");
+                        tcs.TrySetException(exception);
+                        _cache.Remove(sessionId);
+                        cts.Dispose(); // dispose CTS
+                    }, TaskScheduler.Default);
+
+                // Cleanup cache when TCS completes (success or failure)
+                tcs.Task.ContinueWith(_ =>
+                {
+                    _cache.Remove(sessionId);
+                    cts.Cancel(); // cancel the timeout if it hasn’t fired
+                    cts.Dispose(); // dispose CTS 
+                }, TaskScheduler.Default);
+
+                return tcs;
+            })!;
+        }
+
+        /// <summary>
         /// Simple converter from <see cref="BroadcasterType"/> to <see cref="UserType"/>.
         /// </summary>
         /// <param name="userBroadcasterType">the user broadcaster type</param>
@@ -257,6 +301,17 @@ namespace StreamDroid.Domain.Services.User
             {
                 ContentType = "text/html",
                 Data = byteString
+            };
+        }
+
+        private static String CreateExceptionMessage(Exception exception)
+        {
+            return exception switch
+            {
+                UnauthorizedAccessException => "Authentication error.",
+                OperationCanceledException => "Monitoring cancelled.",
+                TimeoutException => "Authentication timed out.",
+                _ => "An error ocurred."
             };
         }
         #endregion
