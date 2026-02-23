@@ -1,6 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Core.Testing;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -29,6 +30,7 @@ namespace StreamDroid.Domain.Tests.Services.User
     {
         private readonly Mock<IApiCore> _mockApiCore;
         private readonly Mock<IAuthApi> _mockAuthApi;
+        private readonly Mock<IMemoryCache> _mockMemoryCache;
         private readonly Mock<IRepository<Entities.User>> _mockRepository;
 
         private readonly UserService _userService;
@@ -50,6 +52,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             _mockAuthApi = new Mock<IAuthApi>();
             _mockApiCore = new Mock<IApiCore>();
+            _mockMemoryCache = new Mock<IMemoryCache>();
             _mockRepository = new Mock<IRepository<Entities.User>>();
 
             var mockLogger = new Mock<ILogger<UserService>>();
@@ -60,7 +63,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var helixApi = new HelixApi(mockCoreSettings.Object, _mockApiCore.Object);
             var userManager = new UserManager(_mockAuthApi.Object, testFixture.options, _mockRepository.Object);
-            _userService = new UserService(helixApi, _mockAuthApi.Object, userManager, mockCoreSettings.Object, _mockRepository.Object, mockLogger.Object);
+            _userService = new UserService(helixApi, _mockAuthApi.Object, mockCoreSettings.Object, _mockMemoryCache.Object, userManager, _mockRepository.Object, mockLogger.Object);
         }
 
         [Fact]
@@ -71,6 +74,10 @@ namespace StreamDroid.Domain.Tests.Services.User
             {
                 SessionId = id.ToString(),
             };
+
+            var tcs = new TaskCompletionSource<string>() as object;
+            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
+                .Returns(true);
 
             var response = await _userService.GenerateLoginUrl(sessionRequest, _context);
 
@@ -97,6 +104,10 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = id.ToString(),
             };
 
+            var tcs = new TaskCompletionSource<string>() as object;
+            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
+                .Returns(true);
+
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             var authenticationRequest = CreateAuthenticationRequest(id, hasError: true);
@@ -116,6 +127,10 @@ namespace StreamDroid.Domain.Tests.Services.User
                 SessionId = user.Id,
             };
 
+            var tcs = new TaskCompletionSource<string>() as object;
+            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
+                .Returns(true);
+
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             ConfigureAuthApi();
@@ -124,6 +139,8 @@ namespace StreamDroid.Domain.Tests.Services.User
             var authenticationRequest = CreateAuthenticationRequest(id);
 
             _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(user)!);
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user)!);
 
             var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
@@ -150,13 +167,17 @@ namespace StreamDroid.Domain.Tests.Services.User
         }
 
         [Fact]
-        public async Task UserService_MonitorAuthenticationSessionStatus_Cancelled()
+        public async Task UserService_MonitorAuthenticationSessionStatus_CancelledByUser()
         {
             var id = Guid.NewGuid();
             var sessionRequest = new SessionRequest
             {
                 SessionId = id.ToString(),
             };
+
+            var tcs = new TaskCompletionSource<string>() as object;
+            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
+                .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
@@ -166,13 +187,40 @@ namespace StreamDroid.Domain.Tests.Services.User
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
 
-            source.CancelAfter(1000);
+            source.CancelAfter(100);
 
             _ = _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, context);
 
             source.Dispose();
 
             Assert.Empty(messages);
+        }
+
+        [Fact]
+        public async Task UserService_MonitorAuthenticationSessionStatus_CancelledByTimeout()
+        {
+            var id = Guid.NewGuid();
+            var sessionRequest = new SessionRequest
+            {
+                SessionId = id.ToString(),
+            };
+
+            var tcs = new TaskCompletionSource<string>();
+            var outvalue = tcs as object;
+            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out outvalue))
+                .Returns(true);
+
+            await _userService.GenerateLoginUrl(sessionRequest, _context);
+
+            var messages = new List<SessionStatus>();
+            var mockStreamWriter = CreateServerStreamWriterMock(messages);
+
+            _ = _userService.MonitorAuthenticationSessionStatus(sessionRequest, mockStreamWriter.Object, _context);
+
+            tcs.SetCanceled();
+
+            Assert.Single(messages);
+            Assert.Equal(SessionStatus.Types.Status.Error, messages.First().Status);
         }
 
         [Fact]
@@ -183,6 +231,12 @@ namespace StreamDroid.Domain.Tests.Services.User
             {
                 SessionId = user.Id,
             };
+
+            var tcs = new TaskCompletionSource<string>();
+            tcs.SetResult(user.AccessToken);
+            var outvalue = tcs as object;
+            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out outvalue))
+                .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 

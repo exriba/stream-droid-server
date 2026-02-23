@@ -116,6 +116,60 @@ namespace StreamDroid.Application.Tests.Services.User
         }
 
         [Fact]
+        public async Task UserService_MonitorAuthenticationSessionStatus_CancelledByUser()
+        {
+            var sessionId = Guid.NewGuid().ToString();
+            var sessionRequest = new SessionRequest
+            {
+                SessionId = sessionId,
+            };
+
+            await _grpcUserServiceClient.GenerateLoginUrlAsync(sessionRequest);
+
+            var exception = await Assert.ThrowsAnyAsync<RpcException>(
+                async () =>
+                {
+                    var cts = new CancellationTokenSource();
+                    var streamingResponse = _grpcUserServiceClient.MonitorAuthenticationSessionStatus(sessionRequest, cancellationToken: cts.Token);
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), CancellationToken.None);
+                    cts.Cancel();
+                    await foreach (var response in streamingResponse.ResponseStream.ReadAllAsync()) { }
+                    cts.Dispose();
+                }
+            );
+        }
+
+        [Fact]
+        public async Task UserService_MonitorAuthenticationSessionStatus_UnauthorizedAccess()
+        {
+            var sessionId = Guid.NewGuid().ToString();
+            var sessionRequest = new SessionRequest
+            {
+                SessionId = sessionId,
+            };
+
+            await _grpcUserServiceClient.GenerateLoginUrlAsync(sessionRequest);
+
+            var streamingResponse = _grpcUserServiceClient.MonitorAuthenticationSessionStatus(sessionRequest);
+
+            var encryptedState = sessionId.Base64Encrypt();
+            var encodedState = Base64UrlEncoder.Encode(encryptedState);
+
+            var authenticationRequest = new AuthenticationRequest
+            {
+                State = encodedState,
+                Error = "UnauthorizedAccess"
+            };
+
+            await _grpcUserServiceClient.AuthenticateUserAsync(authenticationRequest);
+
+            await foreach (var response in streamingResponse.ResponseStream.ReadAllAsync())
+            {
+                Assert.Equal(SessionStatus.Types.Status.Error, response.Status);
+            }
+        }
+
+        [Fact]
         public async Task UserService_MonitorAuthenticationSessionStatus_Authorized()
         {
             var sessionId = Guid.NewGuid().ToString();
