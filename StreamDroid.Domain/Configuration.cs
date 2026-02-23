@@ -34,8 +34,7 @@ namespace StreamDroid.Domain
             typeAdapterConfig.Scan(applicationAssembly);
 
             // Add services to the container. 
-            // services.AddMemoryCache(options => options.SizeLimit = 1024);
-            // services.AddSingleton<IMemoryCache, MemoryCache>(); // Review
+            services.AddMemoryCache(options => options.SizeLimit = 1024);
             services.AddTwitchEventSub();
             services.AddHttpClient();
             services.AddTwitchAuth();
