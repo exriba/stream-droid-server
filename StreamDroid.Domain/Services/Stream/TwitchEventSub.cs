@@ -14,6 +14,7 @@ using SharpTwitch.Helix;
 using SharpTwitch.Helix.Models.Channel.Reward;
 using StreamDroid.Core.Enums;
 using StreamDroid.Core.Interfaces;
+using StreamDroid.Domain.Notification;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using Entities = StreamDroid.Core.Entities;
@@ -43,22 +44,21 @@ namespace StreamDroid.Domain.Services.Stream
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
-        private readonly ISet<string> _activeSubscribers;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly NotificationService _notificationService;
+        private readonly HashSet<string> _activeSubscribers = new HashSet<string>();
+        private readonly NotificationRegistry _notificationRegistry;
 
         public TwitchEventSub(EventSub eventSub,
                               IAppSettings appSettings,
                               IServiceScopeFactory serviceScopeFactory,
-                              NotificationService notificationService,
+                              NotificationRegistry notificationRegistry,
                               ILogger<TwitchEventSub> logger)
         {
             _logger = logger;
             _eventSub = eventSub;
             _appSettings = appSettings;
-            _notificationService = notificationService;
+            _notificationRegistry = notificationRegistry;
             _serviceScopeFactory = serviceScopeFactory;
-            _activeSubscribers = new HashSet<string>();
         }
 
         /// <summary>
@@ -294,7 +294,7 @@ namespace StreamDroid.Domain.Services.Stream
                     }
                 };
 
-                await _notificationService.PublishNotificationAsync(textToSpeechEvent);
+                await _notificationRegistry.Publish(redeem.BroadcasterUserId, textToSpeechEvent);
             }
 
             if (!reward.TryGetRandomAsset(out var asset))
@@ -314,7 +314,7 @@ namespace StreamDroid.Domain.Services.Stream
                 }
             };
 
-            await _notificationService.PublishNotificationAsync(assetFileEvent);
+            await _notificationRegistry.Publish(redeem.BroadcasterUserId, assetFileEvent);
         }
 
         // TODO: Need to alert user/admin.
