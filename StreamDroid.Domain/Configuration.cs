@@ -6,6 +6,7 @@ using SharpTwitch.Core;
 using SharpTwitch.EventSub;
 using SharpTwitch.Helix;
 using StreamDroid.Domain.DTOs;
+using StreamDroid.Domain.Notification;
 using StreamDroid.Domain.Services.AssetFile;
 using StreamDroid.Domain.Services.Stream;
 using StreamDroid.Domain.Services.User;
@@ -42,9 +43,8 @@ namespace StreamDroid.Domain
             services.AddTwitchCore(configurationManager);
             services.AddScoped<IUserManager, UserManager>();
             services.AddSingleton<IAssetFileService, AssetFileService>();
-            services.AddSingleton<NotificationService>();
+            services.AddSingleton<NotificationRegistry>();
             services.AddHostedService<TwitchEventSub>();
-            services.AddHostedService<NotificationManagerService>();
             services.AddSingleton<ITwitchSubscriber, TwitchEventSub>();
             return services;
         }
