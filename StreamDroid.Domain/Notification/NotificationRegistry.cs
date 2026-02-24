@@ -15,7 +15,7 @@ namespace StreamDroid.Domain.Notification
         /// Registers a user to receive notifications and creates a channel associated with the specified user id.
         /// </summary>
         /// <param name="userId">the user id</param>
-        /// <returns><see cref="ChannelReader{T}"/> that can be used to asynchronously read notifications for the specified user.</returns>
+        /// <returns>A channel reader that can be used to asynchronously read notifications for the specified user.</returns>
         public ChannelReader<NotificationEvent> Register(string userId)
         {
             var channel = Channel.CreateUnbounded<NotificationEvent>(
