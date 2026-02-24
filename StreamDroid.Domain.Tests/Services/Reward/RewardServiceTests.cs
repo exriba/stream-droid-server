@@ -32,7 +32,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
         private readonly Mock<IApiCore> _mockApiCore;
         private readonly Mock<IUserManager> _mockUserManager;
         private readonly Mock<ICoreSettings> _mockCoreSettings;
-        private readonly Mock<IRepository<Entities.Reward>> _mockRepository;
+        private readonly Mock<IUberRepository> _mockRepository;
 
         private readonly RewardService _rewardService;
         private readonly ServerCallContext _context = TestServerCallContext.Create(
@@ -54,7 +54,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             _mockApiCore = new Mock<IApiCore>();
             _mockUserManager = new Mock<IUserManager>();
             _mockCoreSettings = new Mock<ICoreSettings>();
-            _mockRepository = new Mock<IRepository<Entities.Reward>>();
+            _mockRepository = new Mock<IUberRepository>();
 
             var mockLogger = new Mock<ILogger<RewardService>>();
             var mockAssetFileService = new Mock<IAssetFileService>();
@@ -86,7 +86,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 RewardId = rewardId.ToString()
             };
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.Reward>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(reward));
 
             var response = await _rewardService.FindReward(request, _context);
@@ -105,8 +105,10 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             var messages = new List<RewardResponse>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
 
-            _mockRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(rewards));
+            _mockRepository.Setup(x => x.CountAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(rewards.LongCount()));
+            _mockRepository.Setup(x => x.FindStreamAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                .Returns(rewards.ToAsyncEnumerable());
 
             await _rewardService.FindUserRewards(request, mockStreamWriter.Object, _context);
 
@@ -168,8 +170,11 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 It.IsAny<IDictionary<QueryParameter, string>>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(customRewardResponse));
-            _mockRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(rewards));
+
+            _mockRepository.Setup(x => x.CountAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(0L));
+            _mockRepository.Setup(x => x.FindStreamAsync(It.IsAny<Expression<Func<Entities.Reward, bool>>>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                .Returns(rewards.ToAsyncEnumerable());
             _mockRepository.Setup(x => x.AddAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.First()));
 
@@ -215,7 +220,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             };
             var mockStreamReader = CreateStreamReaderMock(requests);
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.Reward>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.FirstOrDefault()));
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.First()));
@@ -251,7 +256,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 }
             };
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.Reward>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.FirstOrDefault()));
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.First()));
@@ -287,7 +292,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 Volume = 50
             };
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.Reward>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.FirstOrDefault()));
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.First()));
@@ -324,7 +329,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             };
             request.FileName.Add("file.mp3");
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.Reward>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.FirstOrDefault()));
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.Reward>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(rewards.First()));

@@ -31,7 +31,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         private readonly Mock<IApiCore> _mockApiCore;
         private readonly Mock<IAuthApi> _mockAuthApi;
         private readonly Mock<IMemoryCache> _mockMemoryCache;
-        private readonly Mock<IRepository<Entities.User>> _mockRepository;
+        private readonly Mock<IUberRepository> _mockRepository;
 
         private readonly UserService _userService;
         private readonly ServerCallContext _context = TestServerCallContext.Create(
@@ -53,7 +53,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             _mockAuthApi = new Mock<IAuthApi>();
             _mockApiCore = new Mock<IApiCore>();
             _mockMemoryCache = new Mock<IMemoryCache>();
-            _mockRepository = new Mock<IRepository<Entities.User>>();
+            _mockRepository = new Mock<IUberRepository>();
 
             var mockLogger = new Mock<ILogger<UserService>>();
             var mockCoreSettings = new Mock<ICoreSettings>();
@@ -138,7 +138,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var authenticationRequest = CreateAuthenticationRequest(id);
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user)!);
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user)!);
@@ -243,7 +243,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             ConfigureAuthApi();
             ConfigureHelixApi();
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user)!);
             _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user));
@@ -278,7 +278,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
-            _mockRepository.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(user)!);
 
             var response = await _userService.FindUser(request, _context);

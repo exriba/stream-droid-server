@@ -33,11 +33,11 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
             var redemptions = SetupRedemptions();
 
             var mockLogger = new Mock<ILogger<RedeemService>>();
-            var mockRedeemRepository = new Mock<IRedemptionRepository>();
-            mockRedeemRepository.Setup(x => x.FindAsync(It.IsAny<Expression<Func<Entities.Redemption, bool>>>(), It.IsAny<CancellationToken>()))
+            var mockRepository = new Mock<IUberRepository>();
+            mockRepository.Setup(x => x.FindListAsync(It.IsAny<Expression<Func<Entities.Redemption, bool>>>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(redemptions));
 
-            _redeemService = new RedeemService(mockRedeemRepository.Object, mockLogger.Object);
+            _redeemService = new RedeemService(mockRepository.Object, mockLogger.Object);
         }
 
         [Fact]
