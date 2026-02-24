@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using StreamDroid.Core.Entities;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Infrastructure.Persistence;
 using StreamDroid.Infrastructure.Settings;
@@ -28,9 +27,7 @@ namespace StreamDroid.Infrastructure
 
             // Add services to the container.
             services.AddDbContext<DatabaseContext>(options => options.UseSqlite(sqliteSettings.ConnectionString));
-            services.AddScoped<IRepository<User>, Repository<User>>();
-            services.AddScoped<IRepository<Reward>, Repository<Reward>>();
-            services.AddScoped<IRedemptionRepository, RedemptionRepository>();
+            services.AddScoped<IUberRepository, UberRepository>();
             return services;
         }
     }
