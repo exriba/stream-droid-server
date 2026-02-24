@@ -2,6 +2,7 @@
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using StreamDroid.Core.Entities;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.DTOs;
 using static GrpcRedeemService;
@@ -16,10 +17,10 @@ namespace StreamDroid.Domain.Services.Redeem
     {
         private const string ID = "Id";
 
-        private readonly IRedemptionRepository _repository;
+        private readonly IUberRepository _repository;
         private readonly ILogger<RedeemService> _logger;
 
-        public RedeemService(IRedemptionRepository repository,
+        public RedeemService(IUberRepository repository,
                              ILogger<RedeemService> logger)
         {
             _repository = repository;
@@ -35,7 +36,7 @@ namespace StreamDroid.Domain.Services.Redeem
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var redeems = await _repository.FindAsync(x => x.Reward.StreamerId.Equals(claim.Value), context.CancellationToken);
+            var redeems = await _repository.FindListAsync<Redemption>(x => x.Reward.StreamerId.Equals(claim.Value), cancellationToken: context.CancellationToken);
             var rewardRedeems = redeems.GroupBy(x => x.Reward, (x, y) =>
             {
                 var value = decimal.Divide(y.Count(), redeems.Count);
@@ -65,7 +66,7 @@ namespace StreamDroid.Domain.Services.Redeem
                 throw new ArgumentException($"Invalid Reward Id: {request.RewardId}.", nameof(request.RewardId));
             }
 
-            var redeems = await _repository.FindAsync(x => x.Reward.Id.Equals(rewardId.ToString()), context.CancellationToken);
+            var redeems = await _repository.FindListAsync<Redemption>(x => x.Reward.Id.Equals(rewardId.ToString()), cancellationToken: context.CancellationToken);
 
             var userRedeemResponse = new UserRedeemResponse();
 

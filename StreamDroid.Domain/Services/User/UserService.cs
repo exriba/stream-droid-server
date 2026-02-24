@@ -38,7 +38,7 @@ namespace StreamDroid.Domain.Services.User
         private readonly ICoreSettings _coreSettings;
         private readonly IUserManager _userManager;
         private readonly IMemoryCache _cache;
-        private readonly IRepository<Entities.User> _repository;
+        private readonly IUberRepository _repository;
         private readonly ILogger<UserService> _logger;
 
         public UserService(HelixApi helixApi,
@@ -46,7 +46,7 @@ namespace StreamDroid.Domain.Services.User
                            ICoreSettings coreSettings,
                            IMemoryCache cache,
                            IUserManager userManager,
-                           IRepository<Entities.User> repository,
+                           IUberRepository repository,
                            ILogger<UserService> logger)
         {
             _authApi = authApi;

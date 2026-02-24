@@ -21,11 +21,11 @@ namespace StreamDroid.Domain.Services.User
 
         private readonly IAuthApi _authApi;
         private readonly JwtSettings _jwtSettings;
-        private readonly IRepository<Entities.User> _repository;
+        private readonly IUberRepository _repository;
 
         public UserManager(IAuthApi authApi,
                            IOptions<JwtSettings> options,
-                           IRepository<Entities.User> repository)
+                           IUberRepository repository)
         {
             _authApi = authApi;
             _repository = repository;
@@ -35,7 +35,7 @@ namespace StreamDroid.Domain.Services.User
         /// <inheritdoc/>
         public async Task<Entities.User> FetchUserByIdAsync(string userId, CancellationToken cancellationToken = default)
         {
-            return await _repository.FindByIdAsync(userId, cancellationToken) ?? throw new EntityNotFoundException(userId);
+            return await _repository.FindByIdAsync<Entities.User>(userId, cancellationToken) ?? throw new EntityNotFoundException(userId);
         }
 
         /// <inheritdoc/>

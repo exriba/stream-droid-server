@@ -26,12 +26,12 @@ namespace StreamDroid.Domain.Services.Reward
         private readonly HelixApi _helixApi;
         private readonly IUserManager _userManager;
         private readonly IAssetFileService _assetFileService;
-        private readonly IRepository<Entities.Reward> _repository;
+        private readonly IUberRepository _repository;
         private readonly ILogger<RewardService> _logger;
 
         public RewardService(HelixApi helixApi,
                              IUserManager userManager,
-                             IRepository<Entities.Reward> repository,
+                             IUberRepository repository,
                              IAssetFileService assetFileService,
                              ILogger<RewardService> logger)
         {
@@ -71,20 +71,21 @@ namespace StreamDroid.Domain.Services.Reward
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
 
-            var rewards = await _repository.FindAsync(r => r.StreamerId.Equals(claim.Value), context.CancellationToken);
+            var rewardCount = await _repository.CountAsync<Entities.Reward>(r => r.StreamerId.Equals(claim.Value), context.CancellationToken);
 
-            if (rewards.Count == 0)
+            if (rewardCount == 0)
             {
                 _logger.LogInformation("No rewards found. Searching external server.");
-                rewards = await SynchronizeRewardsAsync(claim.Value, context.CancellationToken);
+                await SynchronizeRewardsAsync(claim.Value, context.CancellationToken);
             }
 
-            foreach (var reward in rewards)
+            await foreach (var reward in _repository.FindStreamAsync<Entities.Reward>(r => r.StreamerId.Equals(claim.Value), cancellationToken: context.CancellationToken))
             {
                 var response = new RewardResponse
                 {
                     Reward = RewardProto.FromEntity(reward)
                 };
+
                 await responseStream.WriteAsync(response, context.CancellationToken);
             }
         }
@@ -207,10 +208,8 @@ namespace StreamDroid.Domain.Services.Reward
         /// </summary>
         /// <param name="userId">user id</param>
         /// <param name="cancellationToken">cancellation token</param>
-        /// <returns>A collection of rewards.</returns>
-        private async Task<List<Entities.Reward>> SynchronizeRewardsAsync(string userId, CancellationToken cancellationToken = default)
+        private async Task SynchronizeRewardsAsync(string userId, CancellationToken cancellationToken = default)
         {
-            var rewards = new List<Entities.Reward>();
             var tokenRefreshPolicy = await _userManager.CreateTokenRefreshPolicyAsync(userId, cancellationToken);
 
             var twitchUsers = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
@@ -219,6 +218,7 @@ namespace StreamDroid.Domain.Services.Reward
             if (twitchUsers.Any())
             {
                 var twitchUser = twitchUsers.First();
+
                 _logger.LogInformation("Found user with id {id} and name {name}.", twitchUser.Id, twitchUser.DisplayName);
 
                 if (twitchUser.UserBroadcasterType is not BroadcasterType.NORMAL)
@@ -248,16 +248,14 @@ namespace StreamDroid.Domain.Services.Reward
                         await _repository.AddAsync(entity, cancellationToken);
                     }
 
-                    rewards.AddRange(entities);
-                    return rewards;
+                    return;
                 }
 
                 _logger.LogInformation("No rewards were found.");
-                return rewards;
+                return;
             }
 
             _logger.LogInformation("Unable to find user in external server.");
-            return rewards;
         }
 
         #region Helpers
@@ -284,7 +282,7 @@ namespace StreamDroid.Domain.Services.Reward
         {
             if (rewardId == Guid.Empty)
                 throw new ArgumentException("Invalid Reward Id.", nameof(rewardId));
-            return await _repository.FindByIdAsync(rewardId.ToString(), cancellationToken);
+            return await _repository.FindByIdAsync<Entities.Reward>(rewardId.ToString(), cancellationToken);
         }
         #endregion
     }
