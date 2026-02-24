@@ -206,8 +206,8 @@ namespace StreamDroid.Application.Tests.Common
             var serviceScopeFactory = _webApplication.Services.GetRequiredService<IServiceScopeFactory>();
 
             using var scope = serviceScopeFactory.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
 
-            var userRepository = scope.ServiceProvider.GetRequiredService<IRepository<User>>();
             var user = new User
             {
                 Id = userId,
@@ -215,9 +215,9 @@ namespace StreamDroid.Application.Tests.Common
                 AccessToken = "accessToken",
                 RefreshToken = "refreshToken"
             };
-            await userRepository.AddAsync(user);
 
-            var rewardRepository = scope.ServiceProvider.GetRequiredService<IRepository<Reward>>();
+            await repository.AddAsync(user);
+
             var reward = new Reward
             {
                 Id = rewardId,
@@ -232,16 +232,17 @@ namespace StreamDroid.Application.Tests.Common
             var fileName2 = FileName.FromString("file.mp4");
             reward.AddAsset(fileName, 50);
             reward.AddAsset(fileName2, 50);
-            await rewardRepository.AddAsync(reward);
 
-            var redeemRepository = scope.ServiceProvider.GetRequiredService<IRedemptionRepository>();
+            await repository.AddAsync(reward);
+
             var redemption = new Redemption
             {
                 UserId = user.Id,
                 UserName = user.Name,
                 Reward = reward,
             };
-            await redeemRepository.AddAsync(redemption);
+
+            await repository.AddAsync(redemption);
         }
 
         public async Task DisposeAsync()
