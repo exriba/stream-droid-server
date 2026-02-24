@@ -7,7 +7,7 @@ using StreamDroid.Domain;
 using StreamDroid.Domain.Middleware;
 using StreamDroid.Domain.Services.Redeem;
 using StreamDroid.Domain.Services.Reward;
-using StreamDroid.Domain.Services.Stream;
+using StreamDroid.Domain.Services.Subscriber;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Infrastructure;
