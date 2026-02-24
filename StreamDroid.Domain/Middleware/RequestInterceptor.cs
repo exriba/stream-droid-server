@@ -7,6 +7,7 @@ namespace StreamDroid.Domain.Middleware
 {
     public class RequestInterceptor : Interceptor
     {
+        private const string ID = "ID";
         private const string NAME = "Name";
 
         private readonly ILogger<RequestInterceptor> _logger;
@@ -39,20 +40,20 @@ namespace StreamDroid.Domain.Middleware
         {
             var correlationId = Guid.NewGuid();
             var userPrincipal = context.GetHttpContext().User;
-            var userName = "Guest";
+            var authenticated = userPrincipal?.Identity?.IsAuthenticated ?? false;
 
-            if (userPrincipal.Claims.Any())
+            if (authenticated)
             {
-                var userNameClaim = userPrincipal.Claims.First(c => c.Type.Equals(NAME));
-                userName = userNameClaim?.Value ?? userName;
+                var idClaim = userPrincipal!.FindFirst(ID)!.Value;
+
+                _logger.LogInformation("{correlationId}: Initiating request. {id} {userName} requested {method}.",
+                    correlationId, idClaim, userPrincipal.Identity!.Name, context.Method);
             }
             else
             {
-                userName = context.RequestHeaders.GetValue("Referer") ?? userName;
+                _logger.LogInformation("{correlationId}: Initiating request. Client requested {method}.",
+                    correlationId, context.Method);
             }
-
-            _logger.LogInformation("{correlationId}: Initiating request. {userName} requested {method}.",
-                correlationId, userName, context.Method);
 
             try
             {

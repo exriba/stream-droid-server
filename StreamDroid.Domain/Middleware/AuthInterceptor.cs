@@ -8,6 +8,7 @@ namespace StreamDroid.Domain.Middleware
     {
         private const string ID = "Id";
         private const string EXPIRY = "exp";
+        private const string ACCESS_TOKEN = "access-token";
 
         private readonly IUserManager _userManager;
 
@@ -52,7 +53,7 @@ namespace StreamDroid.Domain.Middleware
                 if (timeSpan.TotalSeconds < 300)
                 {
                     var token = await _userManager.GenerateAccessTokenAsync(idClaim!);
-                    context.ResponseTrailers.Add("access-token", token);
+                    context.ResponseTrailers.Add(ACCESS_TOKEN, token);
                 }
             }
 
