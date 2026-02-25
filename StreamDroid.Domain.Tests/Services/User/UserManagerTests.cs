@@ -28,8 +28,13 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             Entities.User? user = null;
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user));
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user));
 
             await Assert.ThrowsAnyAsync<EntityNotFoundException>(
                 async () => await _userManager.FetchUserByIdAsync(string.Empty, CancellationToken.None)
@@ -41,8 +46,13 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             var user = SetupUser();
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
 
             var result = await _userManager.FetchUserByIdAsync(user.Id);
 
@@ -54,8 +64,13 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             var user = SetupUser();
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
 
             var token = await _userManager.GenerateAccessTokenAsync(user.Id, CancellationToken.None);
 
@@ -67,8 +82,13 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             var user = SetupUser();
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
 
             var policy = await _userManager.CreateTokenRefreshPolicyAsync(user.Id);
 

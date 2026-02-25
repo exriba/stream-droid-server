@@ -1,41 +1,36 @@
 ﻿using Grpc.Core;
-using Grpc.Core.Testing;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Services.Redeem;
+using StreamDroid.Domain.Tests.Common;
 using System.Linq.Expressions;
-using System.Security.Claims;
 using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Tests.Services.Redemption
 {
+    [Collection(TestCollectionFixture.Definition)]
     public class RedeemServiceTests
     {
+        private readonly ServerCallContext _context;
         private readonly RedeemService _redeemService;
-        private readonly ServerCallContext _context = TestServerCallContext.Create(
-            method: "TestMethod",
-            host: "localhost",
-            deadline: DateTime.UtcNow.AddMinutes(1),
-            requestHeaders: [],
-            cancellationToken: CancellationToken.None,
-            peer: "127.0.0.1",
-            authContext: null,
-            contextPropagationToken: null,
-            writeHeadersFunc: (m) => Task.CompletedTask,
-            writeOptionsGetter: () => null,
-            writeOptionsSetter: (o) => { }
-        );
 
-        public RedeemServiceTests()
+        public RedeemServiceTests(TestFixture testFixture)
         {
             var redemptions = SetupRedemptions();
+            _context = testFixture.createTestServerCallContext(null);
 
             var mockLogger = new Mock<ILogger<RedeemService>>();
             var mockRepository = new Mock<IUberRepository>();
-            mockRepository.Setup(x => x.FindListAsync(It.IsAny<Expression<Func<Entities.Redemption, bool>>>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(redemptions));
+            mockRepository.Setup(
+                x => x.FindListAsync(
+                    It.IsAny<Expression<Func<Entities.Redemption, bool>>>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(redemptions));
 
             _redeemService = new RedeemService(mockRepository.Object, mockLogger.Object);
         }
@@ -43,9 +38,6 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
         [Fact]
         public async Task RedeemService_FindRewardRedeemStatisticsFromUser()
         {
-            var id = Guid.NewGuid();
-            ConfigureServerCallContext(id);
-
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
             var response = await _redeemService.FindRewardRedeemStatisticsFromUser(request, _context);
@@ -62,16 +54,17 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
                 RewardId = Guid.Empty.ToString()
             };
 
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _redeemService.FindUserRedeemStatisticsByReward(request, _context));
+            await Assert.ThrowsAnyAsync<ArgumentException>(
+                async () => await _redeemService.FindUserRedeemStatisticsByReward(request, _context)
+            );
         }
 
         [Fact]
         public async Task RedemptionService_FindUserRedeemStatisticsByReward()
         {
-            var id = Guid.NewGuid();
             var request = new RewardRequest
             {
-                RewardId = id.ToString()
+                RewardId = Guid.NewGuid().ToString()
             };
 
             var response = await _redeemService.FindUserRedeemStatisticsByReward(request, _context);
@@ -126,18 +119,6 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
                     }
                 }
             };
-        }
-
-        private void ConfigureServerCallContext(Guid id)
-        {
-            var httpContext = new DefaultHttpContext();
-            var claimsIdentity = new ClaimsIdentity();
-            var idClaim = new Claim("Id", id.ToString());
-            var nameClaim = new Claim("Name", "Name");
-            claimsIdentity.AddClaims([idClaim, nameClaim]);
-            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-            httpContext.User = claimsPrincipal;
-            _context.UserState["__HttpContext"] = httpContext;
         }
         #endregion
     }

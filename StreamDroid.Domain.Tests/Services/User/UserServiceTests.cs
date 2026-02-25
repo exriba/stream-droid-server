@@ -1,6 +1,4 @@
 ﻿using Grpc.Core;
-using Grpc.Core.Testing;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -17,7 +15,6 @@ using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Tests.Common;
 using StreamDroid.Shared.Extensions;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Entities = StreamDroid.Core.Entities;
@@ -28,25 +25,13 @@ namespace StreamDroid.Domain.Tests.Services.User
     [Collection(TestCollectionFixture.Definition)]
     public class UserServiceTests
     {
+        private readonly ServerCallContext _context;
+        private readonly UserService _userService;
         private readonly Mock<IApiCore> _mockApiCore;
         private readonly Mock<IAuthApi> _mockAuthApi;
         private readonly Mock<IMemoryCache> _mockMemoryCache;
         private readonly Mock<IUberRepository> _mockRepository;
-
-        private readonly UserService _userService;
-        private readonly ServerCallContext _context = TestServerCallContext.Create(
-            method: "TestMethod",
-            host: "localhost",
-            deadline: DateTime.UtcNow.AddMinutes(1),
-            requestHeaders: [],
-            cancellationToken: CancellationToken.None,
-            peer: "127.0.0.1",
-            authContext: null,
-            contextPropagationToken: null,
-            writeHeadersFunc: (m) => Task.CompletedTask,
-            writeOptionsGetter: () => null,
-            writeOptionsSetter: (o) => { }
-        );
+        private readonly Func<CancellationTokenSource?, ServerCallContext> _createContext;
 
         public UserServiceTests(TestFixture testFixture)
         {
@@ -54,6 +39,8 @@ namespace StreamDroid.Domain.Tests.Services.User
             _mockApiCore = new Mock<IApiCore>();
             _mockMemoryCache = new Mock<IMemoryCache>();
             _mockRepository = new Mock<IUberRepository>();
+            _context = testFixture.createTestServerCallContext(null);
+            _createContext = testFixture.createTestServerCallContext;
 
             var mockLogger = new Mock<ILogger<UserService>>();
             var mockCoreSettings = new Mock<ICoreSettings>();
@@ -76,8 +63,14 @@ namespace StreamDroid.Domain.Tests.Services.User
             };
 
             var tcs = new TaskCompletionSource<string>() as object;
-            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
-                .Returns(true);
+
+            _mockMemoryCache.Setup(
+                x => x.TryGetValue(
+                    It.IsAny<object>(),
+                    out tcs
+                )
+            )
+            .Returns(true);
 
             var response = await _userService.GenerateLoginUrl(sessionRequest, _context);
 
@@ -105,8 +98,14 @@ namespace StreamDroid.Domain.Tests.Services.User
             };
 
             var tcs = new TaskCompletionSource<string>() as object;
-            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
-                .Returns(true);
+
+            _mockMemoryCache.Setup(
+                x => x.TryGetValue(
+                    It.IsAny<object>(),
+                    out tcs
+                )
+            )
+            .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
@@ -124,12 +123,18 @@ namespace StreamDroid.Domain.Tests.Services.User
             var user = SetupUser();
             var sessionRequest = new SessionRequest
             {
-                SessionId = user.Id,
+                SessionId = id.ToString(),
             };
 
             var tcs = new TaskCompletionSource<string>() as object;
-            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
-                .Returns(true);
+
+            _mockMemoryCache.Setup(
+                x => x.TryGetValue(
+                    It.IsAny<object>(),
+                    out tcs
+                )
+            )
+            .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
@@ -138,10 +143,21 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var authenticationRequest = CreateAuthenticationRequest(id);
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
-            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
+
+            _mockRepository.Setup(
+                x => x.UpdateAsync(
+                    It.IsAny<Entities.User>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
 
             var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
@@ -176,13 +192,19 @@ namespace StreamDroid.Domain.Tests.Services.User
             };
 
             var tcs = new TaskCompletionSource<string>() as object;
-            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out tcs))
-                .Returns(true);
+
+            _mockMemoryCache.Setup(
+                x => x.TryGetValue(
+                    It.IsAny<object>(),
+                    out tcs
+                )
+            )
+            .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             var source = new CancellationTokenSource();
-            var context = CreateTestServerCallContext(source);
+            var context = _createContext(source);
 
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
@@ -207,8 +229,14 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var tcs = new TaskCompletionSource<string>();
             var outvalue = tcs as object;
-            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out outvalue))
-                .Returns(true);
+
+            _mockMemoryCache.Setup(
+                x => x.TryGetValue(
+                    It.IsAny<object>(),
+                    out outvalue
+                )
+            )
+            .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
@@ -235,18 +263,35 @@ namespace StreamDroid.Domain.Tests.Services.User
             var tcs = new TaskCompletionSource<string>();
             tcs.SetResult(user.AccessToken);
             var outvalue = tcs as object;
-            _mockMemoryCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out outvalue))
-                .Returns(true);
+
+            _mockMemoryCache.Setup(
+                x => x.TryGetValue(
+                    It.IsAny<object>(),
+                    out outvalue
+                )
+            )
+            .Returns(true);
 
             await _userService.GenerateLoginUrl(sessionRequest, _context);
 
             ConfigureAuthApi();
             ConfigureHelixApi();
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
-            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Entities.User>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user));
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
+
+            _mockRepository.Setup(
+                x => x.UpdateAsync(
+                    It.IsAny<Entities.User>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user));
 
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
@@ -262,24 +307,27 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_FindUser_Throws_EntityNotFound()
         {
-            var user = SetupUser();
-            ConfigureServerCallContext(user.Id);
-
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
-            await Assert.ThrowsAnyAsync<EntityNotFoundException>(async () => await _userService.FindUser(request, _context));
+            await Assert.ThrowsAnyAsync<EntityNotFoundException>(
+                async () => await _userService.FindUser(request, _context)
+            );
         }
 
         [Fact]
         public async Task UserService_FindUser()
         {
             var user = SetupUser();
-            ConfigureServerCallContext(user.Id);
 
             var request = new Google.Protobuf.WellKnownTypes.Empty();
 
-            _mockRepository.Setup(x => x.FindByIdAsync<Entities.User>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(user)!);
+            _mockRepository.Setup(
+                x => x.FindByIdAsync<Entities.User>(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(user)!);
 
             var response = await _userService.FindUser(request, _context);
 
@@ -298,17 +346,6 @@ namespace StreamDroid.Domain.Tests.Services.User
                 AccessToken = "accessToken",
                 RefreshToken = "refreshToken"
             };
-        }
-
-        private void ConfigureServerCallContext(string id)
-        {
-            var httpContext = new DefaultHttpContext();
-            var claimsIdentity = new ClaimsIdentity();
-            var claim = new Claim("Id", id);
-            claimsIdentity.AddClaim(claim);
-            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-            httpContext.User = claimsPrincipal;
-            _context.UserState["__HttpContext"] = httpContext;
         }
 
         private static AuthenticationRequest CreateAuthenticationRequest(Guid id, bool hasError = false)
@@ -383,23 +420,6 @@ namespace StreamDroid.Domain.Tests.Services.User
                 .Returns(Task.CompletedTask)
                 .Callback((SessionStatus status, CancellationToken token) => messages.Add(status));
             return mockStreamWriter;
-        }
-
-        private static ServerCallContext CreateTestServerCallContext(CancellationTokenSource source)
-        {
-            return TestServerCallContext.Create(
-                method: "TestMethod",
-                host: "localhost",
-                deadline: DateTime.UtcNow.AddMinutes(1),
-                requestHeaders: [],
-                cancellationToken: source.Token,
-                peer: "127.0.0.1",
-                authContext: null,
-                contextPropagationToken: null,
-                writeHeadersFunc: (m) => Task.CompletedTask,
-                writeOptionsGetter: () => null,
-                writeOptionsSetter: (o) => { }
-            );
         }
         #endregion
     }
