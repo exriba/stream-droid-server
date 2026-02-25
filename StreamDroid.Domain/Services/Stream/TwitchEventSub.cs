@@ -2,8 +2,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpTwitch.Auth;
 using SharpTwitch.Core.Enums;
 using SharpTwitch.Core.Exceptions;
+using SharpTwitch.Core.Models;
 using SharpTwitch.EventSub;
 using SharpTwitch.EventSub.Core.EventArgs;
 using SharpTwitch.EventSub.Core.EventArgs.Channel.Redemption;
@@ -31,6 +33,7 @@ namespace StreamDroid.Domain.Services.Stream
     /// </summary>
     internal class TwitchEventSub : BackgroundService, ITwitchSubscriber
     {
+        private const string BASE_BROADCASTER_ID = "BASE_BROADCASTER_ID";
         private static readonly IReadOnlySet<SubscriptionType> SUBSCRIPTION_TYPES = new HashSet<SubscriptionType>
         {
             { SubscriptionType.STREAM_ONLINE },
@@ -41,12 +44,15 @@ namespace StreamDroid.Domain.Services.Stream
             { SubscriptionType.CHANNEL_CHANNEL_POINTS_CUSTOM_REWARD_REDEMPTION_ADD },
         };
 
+        private Subscription? _baseSubscription;
+        private readonly TaskCompletionSource<bool> _eventSubConnectedTask = new();
+
         private readonly EventSub _eventSub;
         private readonly IAppSettings _appSettings;
         private readonly ILogger<TwitchEventSub> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly HashSet<string> _activeSubscribers = new HashSet<string>();
         private readonly NotificationRegistry _notificationRegistry;
+        private readonly HashSet<string> _activeSubscribers = [];
 
         public TwitchEventSub(EventSub eventSub,
                               IAppSettings appSettings,
@@ -67,8 +73,6 @@ namespace StreamDroid.Domain.Services.Stream
         /// <param name="cancellationToken">Cancellation Token</param>
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Initiating TwitchEventSub service.");
-
             _eventSub.OnRevocation += OnRevocation;
             _eventSub.OnErrorMessage += OnErrorMessage;
             _eventSub.OnStreamOnline += OnStreamOnline;
@@ -80,28 +84,97 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub.OnCustomRewardRemove += OnCustomRewardRemove;
             _eventSub.OnChannelPointsCustomRewardRedemption += OnChannelPointsCustomRewardRedemption;
 
-            _logger.LogInformation("Loaded event handlers.");
+            var source = new CancellationTokenSource();
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, source.Token);
 
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                try
-                {
-                    await Task.Delay(Timeout.Infinite, cancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    _logger.LogInformation("Shutting down TwitchEventSub.");
-
-                    await DeleteSubscriptionsAsync(CancellationToken.None);
-
-                    if (_eventSub.WebSocketClient!.Connected)
-                        await _eventSub.DisconnectAsync(CancellationToken.None);
-
-                    var sessionId = _eventSub.SessionId == string.Empty ? "N/A" : _eventSub.SessionId;
-                    _logger.LogInformation("Disposing event sub with session {id}.", sessionId);
-                    await _eventSub.DisposeAsync();
-                }
+                await ConnectAsync(cancellationToken);
+                source.CancelAfter(TimeSpan.FromSeconds(10));
+                await _eventSubConnectedTask.Task.WaitAsync(linkedCts.Token);
+                await CreateBaseSubscriptionAsync(cancellationToken);
+                await Task.Delay(Timeout.Infinite, cancellationToken);
             }
+            catch (OperationCanceledException ex) when (source.IsCancellationRequested)
+            {
+                _logger.LogError(ex, "Connection Timeout. Unable to connect to Twitch EventSub.");
+            }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogError(ex, "Unable to connect to Twitch EventSub.");
+                await DeleteBaseSubscriptionAsync(CancellationToken.None);
+            }
+            finally
+            {
+                await DisconnectAsync(CancellationToken.None);
+
+                _eventSub.OnRevocation -= OnRevocation;
+                _eventSub.OnErrorMessage -= OnErrorMessage;
+                _eventSub.OnStreamOnline -= OnStreamOnline;
+                _eventSub.OnStreamOffline -= OnStreamOffline;
+                _eventSub.OnClientConnected -= OnClientConnected;
+                _eventSub.OnClientDisconnected -= OnClientDisconnected;
+                _eventSub.OnCustomRewardAdd -= OnCustomRewardAdd;
+                _eventSub.OnCustomRewardUpdate -= OnCustomRewardUpdate;
+                _eventSub.OnCustomRewardRemove -= OnCustomRewardRemove;
+                _eventSub.OnChannelPointsCustomRewardRedemption -= OnChannelPointsCustomRewardRedemption;
+
+                linkedCts.Dispose();
+                source.Dispose();
+            }
+        }
+
+        private async Task ConnectAsync(CancellationToken cancellationToken = default)
+        {
+            if (_eventSub.WebSocketClient.Connected)
+                return;
+
+            _logger.LogInformation("Connecting to Twitch EventSub.");
+            await _eventSub.ConnectAsync(cancellationToken: cancellationToken);
+        }
+
+        private async Task DisconnectAsync(CancellationToken cancellationToken = default)
+        {
+            if (!_eventSub.WebSocketClient.Connected)
+                return;
+
+            foreach (var userId in _activeSubscribers)
+                await DeleteSubscriptionsAsync(userId, cancellationToken);
+
+            _logger.LogInformation("Disconnecting from Twitch EventSub.");
+            await _eventSub.DisconnectAsync(cancellationToken: cancellationToken);
+        }
+
+        private async Task CreateBaseSubscriptionAsync(CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Creating base subscription.");
+            string baseBroadcasterId = Environment.GetEnvironmentVariable(BASE_BROADCASTER_ID)!;
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var authApi = scope.ServiceProvider.GetRequiredService<IAuthApi>();
+            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+            var response = await authApi.GetApplicationAccessTokenAsync(cancellationToken);
+            var subscriptionResponse = await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(
+                baseBroadcasterId, response.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, cancellationToken
+            );
+            _baseSubscription = subscriptionResponse.Data.Single();
+        }
+
+        private async Task DeleteBaseSubscriptionAsync(CancellationToken cancellationToken = default)
+        {
+            if (_baseSubscription is null)
+                return;
+
+            _logger.LogInformation("Cleaning up base subscription.");
+            string baseBroadcasterId = Environment.GetEnvironmentVariable(BASE_BROADCASTER_ID)!;
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var authApi = scope.ServiceProvider.GetRequiredService<IAuthApi>();
+            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+            var response = await authApi.GetApplicationAccessTokenAsync(cancellationToken);
+            await helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(
+                baseBroadcasterId, response.AccessToken, _baseSubscription.Id, cancellationToken
+            );
         }
 
         /// <inheritdoc/>
@@ -110,43 +183,23 @@ namespace StreamDroid.Domain.Services.Stream
             if (_activeSubscribers.Contains(userId))
                 return;
 
-            await ConnectAsync(); // Might need to lock this to avoid race conditions
+            _activeSubscribers.Add(userId);
 
             await CreateSubscriptionsAsync(userId, cancellationToken);
         }
 
-        private async Task ConnectAsync()
-        {
-            if (!_eventSub.WebSocketClient.Connected)
-            {
-                await _eventSub.ConnectAsync(null, CancellationToken.None);
-                using var source = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-
-                try
-                {
-                    while (!_eventSub.WebSocketClient.Connected)
-                    {
-                        await Task.Delay(500, source.Token);
-                    }
-                }
-                catch (OperationCanceledException ex) when (source.IsCancellationRequested)
-                {
-                    throw new TimeoutException("Unable to establish connection Twitch EventSub.", ex);
-                }
-            }
-        }
-
         private async Task CreateSubscriptionsAsync(string userId, CancellationToken cancellationToken = default)
         {
-            _activeSubscribers.Add(userId);
-
             _logger.LogInformation("Creating subscriptions for user id {id}.", userId);
 
-            using (var scope = _serviceScopeFactory.CreateScope())
+            using var scope = _serviceScopeFactory.CreateScope();
+            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+            var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
+            var user = await userManager.FetchUserByIdAsync(userId, cancellationToken);
+
+            if (user.UserType == UserType.AFFILIATE || user.UserType == UserType.PARTNER)
             {
-                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
-                var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(userId, CancellationToken.None);
+                var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(userId, cancellationToken);
 
                 try
                 {
@@ -172,11 +225,62 @@ namespace StreamDroid.Domain.Services.Stream
             }
         }
 
+        /// <inheritdoc/>
+        public async Task UnsubscribeAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            if (!_activeSubscribers.Contains(userId))
+                return;
+
+            await DeleteSubscriptionsAsync(userId, cancellationToken);
+
+            _activeSubscribers.Remove(userId);
+        }
+
+        private async Task DeleteSubscriptionsAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Cleaning up subscriptions for user id {id}.", userId);
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
+            var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
+            var user = await userManager.FetchUserByIdAsync(userId, cancellationToken);
+
+            if (user.UserType == UserType.AFFILIATE || user.UserType == UserType.PARTNER)
+            {
+                var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(userId, cancellationToken);
+
+                try
+                {
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
+                         await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
+
+                    var tasks = helixSubscriptionResponse.Data.Select(x =>
+                    {
+                        _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} which was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
+                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, cancellationToken);
+                    });
+
+                    await Task.WhenAll(tasks);
+                }
+                catch (UnauthorizedRequestException ex)
+                {
+                    _logger.LogError(ex, "Unauthorized access request from user {userId}.", userId);
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError(ex, "Unable to connect to the remote server.");
+                }
+            }
+        }
+
         #region EventSub Handlers
 
         private void OnClientConnected(object? sender, ClientConnectedArgs e)
         {
             _logger.LogInformation("EventSub client connected");
+
+            if (!e.ReconnectionRequested)
+                _eventSubConnectedTask.TrySetResult(true);
         }
 
         private async void OnClientDisconnected(object? sender, ClientDisconnectedArgs e)
@@ -259,15 +363,12 @@ namespace StreamDroid.Domain.Services.Stream
             _logger.LogInformation("Streamer {streamer}: {user} redeemed {title} at {redeemedAt}.",
                 redeem.BroadcasterUserName, redeem.UserName, redeem.Reward.Title, redeem.RedeemedAt);
 
-            var scope = _serviceScopeFactory.CreateScope();
+            using var scope = _serviceScopeFactory.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
             var reward = await repository.FindByIdAsync<Entities.Reward>(redeem.Reward.Id);
 
             if (reward is null)
-            {
-                scope.Dispose();
                 return;
-            }
 
             var redemption = new Entities.Redemption
             {
@@ -278,7 +379,6 @@ namespace StreamDroid.Domain.Services.Stream
             };
 
             await repository.AddAsync(redemption);
-            scope.Dispose();
 
             if (reward.Speech.Enabled)
             {
@@ -354,58 +454,5 @@ namespace StreamDroid.Domain.Services.Stream
         }
 
         #endregion
-
-        /// <inheritdoc/>
-        public async Task UnsubscribeAsync(string userId, CancellationToken cancellationToken = default)
-        {
-            await DeleteSubscriptionsAsync(userId, cancellationToken);
-        }
-
-        private async Task DeleteSubscriptionsAsync(CancellationToken cancellationToken = default)
-        {
-            _logger.LogInformation("Cleaning up subscriptions.");
-
-            foreach (var userId in _activeSubscribers)
-                await DeleteSubscriptionsAsync(userId, cancellationToken);
-        }
-
-        private async Task DeleteSubscriptionsAsync(string userId, CancellationToken cancellationToken = default)
-        {
-            if (!_activeSubscribers.Contains(userId))
-                return;
-
-            _logger.LogInformation("Cleaning up subscriptions for user id {id}.", userId);
-
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-                var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
-                var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(userId);
-
-                try
-                {
-                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                         await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
-
-                    var tasks = helixSubscriptionResponse.Data.Select(x =>
-                    {
-                        _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} which was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
-                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, cancellationToken);
-                    });
-
-                    await Task.WhenAll(tasks);
-                }
-                catch (UnauthorizedRequestException ex)
-                {
-                    _logger.LogError(ex, "Unauthorized access request from user {userId}.", userId);
-                }
-                catch (HttpRequestException ex)
-                {
-                    _logger.LogError(ex, "Unable to connect to the remote server.");
-                }
-            }
-
-            _activeSubscribers.Remove(userId);
-        }
     }
 }
