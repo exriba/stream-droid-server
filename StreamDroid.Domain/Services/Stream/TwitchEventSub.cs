@@ -95,14 +95,14 @@ namespace StreamDroid.Domain.Services.Stream
                 await CreateBaseSubscriptionAsync(cancellationToken);
                 await Task.Delay(Timeout.Infinite, cancellationToken);
             }
-            catch (OperationCanceledException ex) when (source.IsCancellationRequested)
-            {
-                _logger.LogError(ex, "Connection Timeout. Unable to connect to Twitch EventSub.");
-            }
             catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
                 _logger.LogError(ex, "Unable to connect to Twitch EventSub.");
                 await DeleteBaseSubscriptionAsync(CancellationToken.None);
+            }
+            catch (OperationCanceledException) when (source.IsCancellationRequested)
+            {
+                _logger.LogError("Connection Timeout. Unable to connect to Twitch EventSub.");
             }
             finally
             {
@@ -148,15 +148,28 @@ namespace StreamDroid.Domain.Services.Stream
         private async Task CreateBaseSubscriptionAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Creating base subscription.");
-            string baseBroadcasterId = Environment.GetEnvironmentVariable(BASE_BROADCASTER_ID)!;
+            var baseBroadcasterId = Environment.GetEnvironmentVariable(BASE_BROADCASTER_ID)!;
 
             using var scope = _serviceScopeFactory.CreateScope();
             var authApi = scope.ServiceProvider.GetRequiredService<IAuthApi>();
             var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-            var response = await authApi.GetApplicationAccessTokenAsync(cancellationToken);
-            var subscriptionResponse = await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(
-                baseBroadcasterId, response.AccessToken, _eventSub.SessionId, SubscriptionType.STREAM_ONLINE, cancellationToken
+            var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
+
+            var user = await userManager.FetchUserByIdAsync(baseBroadcasterId, cancellationToken);
+            var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(user.Id, cancellationToken);
+
+            var subscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(
+                async context =>
+                    await helixApi.Subscriptions.CreateEventSubSubscriptionAsync(
+                        user.Id,
+                        tokenRefreshPolicy.AccessToken,
+                        _eventSub.SessionId,
+                        SubscriptionType.STREAM_ONLINE,
+                        cancellationToken
+                    ),
+                tokenRefreshPolicy.ContextData
             );
+
             _baseSubscription = subscriptionResponse.Data.Single();
         }
 
@@ -171,9 +184,20 @@ namespace StreamDroid.Domain.Services.Stream
             using var scope = _serviceScopeFactory.CreateScope();
             var authApi = scope.ServiceProvider.GetRequiredService<IAuthApi>();
             var helixApi = scope.ServiceProvider.GetRequiredService<HelixApi>();
-            var response = await authApi.GetApplicationAccessTokenAsync(cancellationToken);
-            await helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(
-                baseBroadcasterId, response.AccessToken, _baseSubscription.Id, cancellationToken
+            var userManager = scope.ServiceProvider.GetRequiredService<IUserManager>();
+
+            var user = await userManager.FetchUserByIdAsync(baseBroadcasterId, cancellationToken);
+            var tokenRefreshPolicy = await userManager.CreateTokenRefreshPolicyAsync(user.Id, cancellationToken);
+
+            await tokenRefreshPolicy.Policy.ExecuteAsync(
+                async context =>
+                    await helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(
+                        user.Id,
+                        tokenRefreshPolicy.AccessToken,
+                        _baseSubscription.Id,
+                        cancellationToken
+                    ),
+                tokenRefreshPolicy.ContextData
             );
         }
 
@@ -203,13 +227,27 @@ namespace StreamDroid.Domain.Services.Stream
 
                 try
                 {
-                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                        await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(
+                        async context =>
+                            await helixApi.Subscriptions.GetEventSubSubscriptionAsync(
+                                userId,
+                                tokenRefreshPolicy.AccessToken,
+                                cancellationToken
+                            ),
+                        tokenRefreshPolicy.ContextData
+                    );
 
                     var tasks = SUBSCRIPTION_TYPES.Select(x =>
                     {
                         _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
-                        return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, _eventSub.SessionId, x, cancellationToken);
+                        return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(
+                            userId,
+                            tokenRefreshPolicy.
+                            AccessToken,
+                            _eventSub.SessionId,
+                            x,
+                            cancellationToken
+                        );
                     });
 
                     await Task.WhenAll(tasks);
@@ -251,13 +289,25 @@ namespace StreamDroid.Domain.Services.Stream
 
                 try
                 {
-                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(async context =>
-                         await helixApi.Subscriptions.GetEventSubSubscriptionAsync(userId, tokenRefreshPolicy.AccessToken, cancellationToken), tokenRefreshPolicy.ContextData);
+                    var helixSubscriptionResponse = await tokenRefreshPolicy.Policy.ExecuteAsync(
+                        async context =>
+                             await helixApi.Subscriptions.GetEventSubSubscriptionAsync(
+                                 userId,
+                                 tokenRefreshPolicy.AccessToken,
+                                 cancellationToken
+                            ),
+                        tokenRefreshPolicy.ContextData
+                    );
 
                     var tasks = helixSubscriptionResponse.Data.Select(x =>
                     {
                         _logger.LogInformation("Session {session}: Deleting subscription {type} with id {id} which was created on {date}.", x.Transport.SessionId, x.Type, x.Id, x.CreatedAt);
-                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(x.Condition.BroadcasterUserId, tokenRefreshPolicy.AccessToken, x.Id, cancellationToken);
+                        return helixApi.Subscriptions.DeleteEventSubSubscriptionAsync(
+                            x.Condition.BroadcasterUserId,
+                            tokenRefreshPolicy.AccessToken,
+                            x.Id,
+                            cancellationToken
+                        );
                     });
 
                     await Task.WhenAll(tasks);
@@ -277,10 +327,11 @@ namespace StreamDroid.Domain.Services.Stream
 
         private void OnClientConnected(object? sender, ClientConnectedArgs e)
         {
-            _logger.LogInformation("EventSub client connected");
+            if (e.ReconnectionRequested)
+                return;
 
-            if (!e.ReconnectionRequested)
-                _eventSubConnectedTask.TrySetResult(true);
+            _logger.LogInformation("EventSub client connected");
+            _eventSubConnectedTask.TrySetResult(true);
         }
 
         private async void OnClientDisconnected(object? sender, ClientDisconnectedArgs e)
