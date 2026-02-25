@@ -483,3 +483,4 @@ NuGet.Config
 Migrations/
 log4net.config
 launchsettings.json
+Directory.Build.props
