@@ -67,11 +67,7 @@ namespace StreamDroid.Domain.Services.Stream
             _serviceScopeFactory = serviceScopeFactory;
         }
 
-        /// <summary>
-        /// Initializes Event Handlers and clears all active eventsub subscriptions, then disconnects and disposes client when the application shuts down. 
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation Token</param>
-        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+        private void SubscribeEvents()
         {
             _eventSub.OnRevocation += OnRevocation;
             _eventSub.OnErrorMessage += OnErrorMessage;
@@ -83,50 +79,74 @@ namespace StreamDroid.Domain.Services.Stream
             _eventSub.OnCustomRewardUpdate += OnCustomRewardUpdate;
             _eventSub.OnCustomRewardRemove += OnCustomRewardRemove;
             _eventSub.OnChannelPointsCustomRewardRedemption += OnChannelPointsCustomRewardRedemption;
+        }
+        private void UnSubscribeEvents()
+        {
+            _eventSub.OnRevocation -= OnRevocation;
+            _eventSub.OnErrorMessage -= OnErrorMessage;
+            _eventSub.OnStreamOnline -= OnStreamOnline;
+            _eventSub.OnStreamOffline -= OnStreamOffline;
+            _eventSub.OnClientConnected -= OnClientConnected;
+            _eventSub.OnClientDisconnected -= OnClientDisconnected;
+            _eventSub.OnCustomRewardAdd -= OnCustomRewardAdd;
+            _eventSub.OnCustomRewardUpdate -= OnCustomRewardUpdate;
+            _eventSub.OnCustomRewardRemove -= OnCustomRewardRemove;
+            _eventSub.OnChannelPointsCustomRewardRedemption -= OnChannelPointsCustomRewardRedemption;
+        }
 
-            var source = new CancellationTokenSource();
-            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, source.Token);
+        /// <summary>
+        /// Initializes Event Handlers and clears all active eventsub subscriptions, then disconnects and disposes client when the application shuts down. 
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+        {
+            SubscribeEvents();
 
             try
             {
-                await ConnectAsync(cancellationToken);
-                source.CancelAfter(TimeSpan.FromSeconds(10));
+                await RunAsync(cancellationToken);
+            }
+            finally
+            {
+                await CleanUpAsync();
+                UnSubscribeEvents();
+            }
+        }
+
+        private async Task RunAsync(CancellationToken cancellationToken)
+        {
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            try
+            {
+                await ConnectAsync(linkedCts.Token);
                 await _eventSubConnectedTask.Task.WaitAsync(linkedCts.Token);
                 await CreateBaseSubscriptionAsync(cancellationToken);
                 await Task.Delay(Timeout.Infinite, cancellationToken);
             }
-            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(ex, "Unable to connect to Twitch EventSub.");
+                _logger.LogInformation("EventSub worker stopping.");
                 await DeleteBaseSubscriptionAsync(CancellationToken.None);
             }
-            catch (OperationCanceledException) when (source.IsCancellationRequested)
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
             {
-                _logger.LogError("Connection Timeout. Unable to connect to Twitch EventSub.");
+                _logger.LogError("Connection timeout after {TimeoutSeconds}s while connecting to Twitch EventSub.", 10);
             }
-            finally
-            {
-                await DisconnectAsync(CancellationToken.None);
+        }
 
-                _eventSub.OnRevocation -= OnRevocation;
-                _eventSub.OnErrorMessage -= OnErrorMessage;
-                _eventSub.OnStreamOnline -= OnStreamOnline;
-                _eventSub.OnStreamOffline -= OnStreamOffline;
-                _eventSub.OnClientConnected -= OnClientConnected;
-                _eventSub.OnClientDisconnected -= OnClientDisconnected;
-                _eventSub.OnCustomRewardAdd -= OnCustomRewardAdd;
-                _eventSub.OnCustomRewardUpdate -= OnCustomRewardUpdate;
-                _eventSub.OnCustomRewardRemove -= OnCustomRewardRemove;
-                _eventSub.OnChannelPointsCustomRewardRedemption -= OnChannelPointsCustomRewardRedemption;
+        private async Task CleanUpAsync()
+        {
+            foreach (var userId in _activeSubscribers)
+                await DeleteSubscriptionsAsync(userId, CancellationToken.None);
 
-                linkedCts.Dispose();
-                source.Dispose();
-            }
+            await DisconnectAsync(CancellationToken.None);
         }
 
         private async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
-            if (_eventSub.WebSocketClient.Connected)
+            if (_eventSub.Connected)
                 return;
 
             _logger.LogInformation("Connecting to Twitch EventSub.");
@@ -135,11 +155,8 @@ namespace StreamDroid.Domain.Services.Stream
 
         private async Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
-            if (!_eventSub.WebSocketClient.Connected)
+            if (!_eventSub.Connected)
                 return;
-
-            foreach (var userId in _activeSubscribers)
-                await DeleteSubscriptionsAsync(userId, cancellationToken);
 
             _logger.LogInformation("Disconnecting from Twitch EventSub.");
             await _eventSub.DisconnectAsync(cancellationToken: cancellationToken);
