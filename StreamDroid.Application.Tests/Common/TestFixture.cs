@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -89,6 +91,7 @@ namespace StreamDroid.Application.Tests.Common
 
             builder.Services.AddInfrastructureConfiguration(builder.Configuration);
             builder.Services.AddServiceConfiguration(builder.Configuration);
+            builder.Services.RemoveAll<IHostedService>();
 
             var user = new Helix.User.User
             {
