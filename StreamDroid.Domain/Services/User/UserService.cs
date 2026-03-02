@@ -240,27 +240,29 @@ namespace StreamDroid.Domain.Services.User
             return _cache.GetOrCreate(sessionId, entry =>
             {
                 entry.SetSize(1);
-
-                var cts = new CancellationTokenSource(); // for canceling the timeout
                 var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _ = MonitorAsync();
 
-                // Timeout: ensures TCS completes after 5 minutes if nothing happens
-                Task.Delay(TimeSpan.FromMinutes(5), cts.Token)
-                    .ContinueWith(_ =>
-                    {
-                        var exception = new TimeoutException("Authentication session timed out.");
-                        tcs.TrySetException(exception);
-                        _cache.Remove(sessionId);
-                        cts.Dispose(); // dispose CTS
-                    }, TaskScheduler.Default);
-
-                // Cleanup cache when TCS completes (success or failure)
-                tcs.Task.ContinueWith(_ =>
+                async Task MonitorAsync()
                 {
-                    _cache.Remove(sessionId);
-                    cts.Cancel(); // cancel the timeout if it hasn’t fired
-                    cts.Dispose(); // dispose CTS 
-                }, TaskScheduler.Default);
+                    try
+                    {
+                        var timeoutTask = Task.Delay(TimeSpan.FromMinutes(5));
+                        var completed = await Task.WhenAny(tcs.Task, timeoutTask);
+
+                        if (completed == timeoutTask)
+                        {
+                            var exception = new TimeoutException("Authentication session timed out.");
+                            tcs.TrySetException(exception);
+                        }
+
+                        // expected path, tcs.Task completed first.
+                    }
+                    finally
+                    {
+                        _cache.Remove(sessionId);
+                    }
+                }
 
                 return tcs;
             })!;
