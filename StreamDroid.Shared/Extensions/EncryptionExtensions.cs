@@ -7,6 +7,7 @@ namespace StreamDroid.Shared.Extensions
 {
     /// <summary>
     /// Utility class for encryption extensions.
+    /// TODO: Strengthen weak encryption and check tokens
     /// </summary>
     public static class EncryptionExtensions
     {
