@@ -142,7 +142,7 @@ namespace StreamDroid.Application.Tests.Common
                 It.IsAny<IEnumerable<KeyValuePair<QueryParameter, string>>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(helixUserCollectionResponse);
-            builder.Services.AddSingleton<IApiCore>(mockApiCore.Object);
+            builder.Services.AddSingleton(mockApiCore.Object);
 
             var accessTokenResponseJson = new JsonObject
             {
@@ -166,10 +166,10 @@ namespace StreamDroid.Application.Tests.Common
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(validateTokenResponse!);
-            builder.Services.AddSingleton<IAuthApi>(mockAuthApi.Object);
+            builder.Services.AddSingleton(mockAuthApi.Object);
 
             var mockAssetFileService = new Mock<IAssetFileService>();
-            builder.Services.AddSingleton<IAssetFileService>(mockAssetFileService.Object);
+            builder.Services.AddSingleton(mockAssetFileService.Object);
 
             builder.Services.AddAuthentication();
             builder.Services.AddAuthorization();
