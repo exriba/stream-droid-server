@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth;
+using SharpTwitch.Auth.Models;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Policies;
@@ -75,8 +76,8 @@ namespace StreamDroid.Domain.Services.User
 
             async Task<string> refreshToken(string userId)
             {
-                var refreshToken = user.RefreshToken.Base64Decrypt();
-                var token = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
+                string refreshToken = user.RefreshToken.Base64Decrypt();
+                RefreshTokenResponse token = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
                 user.AccessToken = token.AccessToken;
                 user.RefreshToken = token.RefreshToken;
                 user = await _repository.UpdateAsync(user, cancellationToken);
