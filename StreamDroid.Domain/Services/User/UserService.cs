@@ -206,6 +206,7 @@ namespace StreamDroid.Domain.Services.User
             var user = userTask.Result;
             var userDetails = userDetailsTask.Result;
             var userBroadcasterType = userDetails.First().UserBroadcasterType;
+            var userType = ConvertUserBroadcasterType(userBroadcasterType);
 
             if (user is null)
             {
@@ -213,7 +214,7 @@ namespace StreamDroid.Domain.Services.User
                 {
                     Id = userData.UserId,
                     Name = userData.Login,
-                    UserType = ConvertUserBroadcasterType(userBroadcasterType),
+                    UserType = userType,
                     AccessToken = token.AccessToken,
                     RefreshToken = token.RefreshToken,
                 };
@@ -224,7 +225,7 @@ namespace StreamDroid.Domain.Services.User
             user.Name = userData.Login;
             user.AccessToken = token.AccessToken;
             user.RefreshToken = token.RefreshToken;
-            user.UserType = ConvertUserBroadcasterType(userBroadcasterType);
+            user.UserType = userType;
             user = await _repository.UpdateAsync(user, cancellationToken);
             return user;
         }
