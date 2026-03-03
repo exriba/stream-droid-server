@@ -259,8 +259,7 @@ namespace StreamDroid.Domain.Services.Stream
                         _logger.LogInformation("Session {session}: Creating subscription {type} on {date}.", _eventSub.SessionId, x, DateTime.UtcNow);
                         return helixApi.Subscriptions.CreateEventSubSubscriptionAsync(
                             userId,
-                            tokenRefreshPolicy.
-                            AccessToken,
+                            tokenRefreshPolicy.AccessToken,
                             _eventSub.SessionId,
                             x,
                             cancellationToken
