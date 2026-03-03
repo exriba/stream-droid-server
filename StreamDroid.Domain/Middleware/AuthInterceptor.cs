@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using Grpc.Core.Interceptors;
+using Microsoft.Extensions.Logging;
 using StreamDroid.Domain.Services.User;
 
 namespace StreamDroid.Domain.Middleware
@@ -11,10 +12,12 @@ namespace StreamDroid.Domain.Middleware
         private const string ACCESS_TOKEN = "access-token";
 
         private readonly IUserManager _userManager;
+        private readonly ILogger<AuthInterceptor> _logger;
 
-        public AuthInterceptor(IUserManager userManager)
+        public AuthInterceptor(IUserManager userManager, ILogger<AuthInterceptor> logger)
         {
             _userManager = userManager;
+            _logger = logger;
         }
 
         public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
@@ -41,18 +44,32 @@ namespace StreamDroid.Domain.Middleware
             var userPrincipal = context.GetHttpContext().User;
             var authenticated = userPrincipal?.Identity?.IsAuthenticated ?? false;
 
-            if (authenticated)
+            if (userPrincipal is not null && authenticated)
             {
-                var idClaim = userPrincipal!.FindFirst(ID)!.Value;
-                var expClaim = userPrincipal.FindFirst(EXPIRY)!.Value;
+                var idClaim = userPrincipal.FindFirst(ID);
+                var expClaim = userPrincipal.FindFirst(EXPIRY);
 
-                _ = long.TryParse(expClaim, out long unixSeconds);
-                var expiry = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
-                var timeSpan = expiry.Subtract(DateTime.UtcNow);
+                if (idClaim is null || expClaim is null)
+                {
+                    _logger.LogError("JWT missing required claims.");
+                    throw new ArgumentException("Missing required JWT claims.");
+                }
+
+                var idValue = idClaim.Value;
+                var expValue = expClaim.Value;
+
+                if (!long.TryParse(expValue, out long unixSeconds))
+                {
+                    _logger.LogError("Invalid expiry format: {value}", expValue);
+                    throw new ArgumentException("Invalid token expiry format.");
+                }
+
+                var expiry = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+                var timeSpan = expiry - DateTimeOffset.UtcNow;
 
                 if (timeSpan.TotalSeconds < 300)
                 {
-                    var token = await _userManager.GenerateAccessTokenAsync(idClaim!);
+                    var token = await _userManager.GenerateAccessTokenAsync(idValue);
                     context.ResponseTrailers.Add(ACCESS_TOKEN, token);
                 }
             }

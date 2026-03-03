@@ -42,12 +42,18 @@ namespace StreamDroid.Domain.Middleware
             var userPrincipal = context.GetHttpContext().User;
             var authenticated = userPrincipal?.Identity?.IsAuthenticated ?? false;
 
-            if (authenticated)
+            if (userPrincipal is not null && authenticated)
             {
-                var idClaim = userPrincipal!.FindFirst(ID)!.Value;
+                var idClaim = userPrincipal.FindFirst(ID);
 
-                _logger.LogInformation("{correlationId}: Initiating request. {id} {userName} requested {method}.",
-                    correlationId, idClaim, userPrincipal.Identity!.Name, context.Method);
+                if (idClaim is null)
+                {
+                    _logger.LogError("{correlationId}: JWT missing required id claim.", correlationId);
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, "An invalid argument was found while executing this request."));
+                }
+
+                _logger.LogInformation("{correlationId}: Initiating request. User with {id} requested {method}.",
+                    correlationId, idClaim.Value, context.Method);
             }
             else
             {
