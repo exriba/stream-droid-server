@@ -239,9 +239,7 @@ namespace StreamDroid.Domain.Services.User
         {
             return _cache.GetOrCreate(sessionId, entry =>
             {
-                entry.SetSize(1);
                 var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-                _ = MonitorAsync();
 
                 async Task MonitorAsync()
                 {
@@ -263,6 +261,8 @@ namespace StreamDroid.Domain.Services.User
                         _cache.Remove(sessionId);
                     }
                 }
+
+                _ = MonitorAsync();
 
                 return tcs;
             })!;
