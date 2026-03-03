@@ -156,7 +156,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 Data = [customReward]
             };
 
-            static async Task<string> refreshToken(string userId) => await Task.FromResult("NewAccessToken");
+            static async Task<string> refreshToken() => await Task.FromResult("NewAccessToken");
             var tokenRefreshPolicy = new TokenRefreshPolicy(user.Id, "accessToken", refreshToken);
 
             _mockUserManager.Setup(

@@ -1,9 +1,12 @@
-﻿using Moq;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Moq;
 using SharpTwitch.Auth;
+using SharpTwitch.Auth.Models;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Services.User;
 using StreamDroid.Domain.Tests.Common;
+using StreamDroid.Shared.Extensions;
 using Entities = StreamDroid.Core.Entities;
 
 namespace StreamDroid.Domain.Tests.Services.User
@@ -11,16 +14,19 @@ namespace StreamDroid.Domain.Tests.Services.User
     [Collection(TestCollectionFixture.Definition)]
     public class UserManagerTests
     {
+        private readonly Mock<IAuthApi> _mockAuthApi;
+        private readonly Mock<IMemoryCache> _mockCache;
         private readonly Mock<IUberRepository> _mockRepository;
 
         private readonly UserManager _userManager;
 
         public UserManagerTests(TestFixture testFixture)
         {
-            var mockAuthApi = new Mock<IAuthApi>();
+            _mockAuthApi = new Mock<IAuthApi>();
+            _mockCache = new Mock<IMemoryCache>();
             _mockRepository = new Mock<IUberRepository>();
 
-            _userManager = new UserManager(mockAuthApi.Object, testFixture.options, _mockRepository.Object);
+            _userManager = new UserManager(_mockAuthApi.Object, _mockCache.Object, testFixture.options, _mockRepository.Object);
         }
 
         [Fact]
@@ -81,6 +87,11 @@ namespace StreamDroid.Domain.Tests.Services.User
         public async Task UserManager_CreateTokenRefreshPolicyAsync()
         {
             var user = SetupUser();
+            var refreshTokenResponse = new RefreshTokenResponse
+            {
+                AccessToken = user.AccessToken,
+                RefreshToken = user.RefreshToken,
+            };
 
             _mockRepository.Setup(
                 x => x.FindByIdAsync<Entities.User>(
@@ -89,6 +100,18 @@ namespace StreamDroid.Domain.Tests.Services.User
                 )
             )
             .Returns(Task.FromResult(user)!);
+            _mockAuthApi.Setup(
+                x => x.RefreshAccessTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(Task.FromResult(refreshTokenResponse));
+
+            var mockEntry = new Mock<ICacheEntry>();
+            mockEntry.SetupAllProperties();
+            _mockCache.Setup(x => x.CreateEntry(It.IsAny<object>()))
+                      .Returns(mockEntry.Object);
 
             var policy = await _userManager.CreateTokenRefreshPolicyAsync(user.Id);
 
@@ -105,7 +128,7 @@ namespace StreamDroid.Domain.Tests.Services.User
                 Id = id.ToString(),
                 Name = "user",
                 AccessToken = "accessToken",
-                RefreshToken = "refreshToken"
+                RefreshToken = "refreshToken".Base64Encrypt()
             };
         }
         #endregion

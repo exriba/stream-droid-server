@@ -1,13 +1,14 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SharpTwitch.Auth;
-using SharpTwitch.Auth.Models;
 using StreamDroid.Core.Exceptions;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.Policies;
 using StreamDroid.Domain.Settings;
 using StreamDroid.Shared.Extensions;
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using Entities = StreamDroid.Core.Entities;
@@ -20,14 +21,21 @@ namespace StreamDroid.Domain.Services.User
         private const string NAME = "Name";
         private const string JWT_ID = "jti";
 
+        private readonly TimeSpan _safetyBuffer = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _accessTokenLifetime = TimeSpan.FromHours(4);
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
+
         private readonly IAuthApi _authApi;
+        private readonly IMemoryCache _cache;
         private readonly JwtSettings _jwtSettings;
         private readonly IUberRepository _repository;
 
         public UserManager(IAuthApi authApi,
+                           IMemoryCache cache,
                            IOptions<JwtSettings> options,
                            IUberRepository repository)
         {
+            _cache = cache;
             _authApi = authApi;
             _repository = repository;
             _jwtSettings = options.Value;
@@ -73,19 +81,47 @@ namespace StreamDroid.Domain.Services.User
         public async Task<TokenRefreshPolicy> CreateTokenRefreshPolicyAsync(string userId, CancellationToken cancellationToken = default)
         {
             var user = await FetchUserByIdAsync(userId, cancellationToken);
-
-            async Task<string> refreshToken(string userId)
-            {
-                string refreshToken = user.RefreshToken.Base64Decrypt();
-                RefreshTokenResponse token = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
-                user.AccessToken = token.AccessToken;
-                user.RefreshToken = token.RefreshToken;
-                user = await _repository.UpdateAsync(user, cancellationToken);
-                return token.AccessToken;
-            }
-
-            var accessToken = user.AccessToken.Base64Decrypt();
+            var accessToken = await GetOrCreateAccessTokenAsync(user, cancellationToken);
+            async Task<string> refreshToken() => await RefreshAccessTokenAsync(user, cancellationToken);
             return new TokenRefreshPolicy(userId, accessToken, refreshToken);
+        }
+
+        private async Task<string> RefreshAccessTokenAsync(Entities.User user, CancellationToken cancellationToken = default)
+        {
+            string refreshToken = user.RefreshToken.Base64Decrypt();
+            var refreshTokenResponse = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
+            user.RefreshToken = refreshTokenResponse.RefreshToken;
+            await _repository.UpdateAsync(user, cancellationToken);
+
+            var cacheEntryOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpiration = DateTimeOffset.UtcNow + _accessTokenLifetime - _safetyBuffer
+            };
+
+            _cache.Set(user.Id, refreshTokenResponse.AccessToken, cacheEntryOptions);
+
+            return refreshTokenResponse.AccessToken;
+        }
+
+        private async Task<string> GetOrCreateAccessTokenAsync(Entities.User user, CancellationToken cancellationToken = default)
+        {
+            if (_cache.TryGetValue(user.Id, out string? accessToken))
+                return accessToken!;
+
+            var semaphore = _locks.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                if (_cache.TryGetValue(user.Id, out accessToken))
+                    return accessToken!;
+
+                return await RefreshAccessTokenAsync(user, cancellationToken);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
     }
 }

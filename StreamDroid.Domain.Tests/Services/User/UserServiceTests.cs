@@ -48,8 +48,10 @@ namespace StreamDroid.Domain.Tests.Services.User
             mockCoreSettings.SetupGet(x => x.RedirectUri).Returns("test");
             mockCoreSettings.SetupGet(x => x.Scopes).Returns([Scope.CHAT_READ]);
 
+            var mockCache = new Mock<IMemoryCache>();
+
             var helixApi = new HelixApi(mockCoreSettings.Object, _mockApiCore.Object);
-            var userManager = new UserManager(_mockAuthApi.Object, testFixture.options, _mockRepository.Object);
+            var userManager = new UserManager(_mockAuthApi.Object, mockCache.Object, testFixture.options, _mockRepository.Object);
             _userService = new UserService(helixApi, _mockAuthApi.Object, mockCoreSettings.Object, _mockMemoryCache.Object, userManager, _mockRepository.Object, mockLogger.Object);
         }
 

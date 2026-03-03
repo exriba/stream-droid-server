@@ -12,7 +12,7 @@ namespace StreamDroid.Domain.Tests.RefreshPolicy
             var newAccessToken = "NewAccessToken";
             var userId = Guid.NewGuid().ToString();
 
-            async Task<string> refreshToken(string userId) => await Task.FromResult(newAccessToken);
+            async Task<string> refreshToken() => await Task.FromResult(newAccessToken);
             var refreshPolicy = new TokenRefreshPolicy(userId, accessToken, refreshToken);
 
             var token = await refreshPolicy.Policy.ExecuteAsync(async context =>

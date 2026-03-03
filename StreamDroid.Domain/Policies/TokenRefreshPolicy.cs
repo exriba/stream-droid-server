@@ -32,13 +32,13 @@ namespace StreamDroid.Domain.Policies
         /// </summary>
         public string AccessToken => ContextData.TryGetValue(ACCESS_TOKEN, out var accessToken) ? $"{accessToken}" : string.Empty;
 
-        public TokenRefreshPolicy(string userId, string accessToken, Func<string, Task<string>> refreshToken)
+        public TokenRefreshPolicy(string userId, string accessToken, Func<Task<string>> refreshToken)
         {
             Policy = Polly.Policy
                 .Handle<UnauthorizedRequestException>()
                 .RetryAsync(async (exception, retryCount, context) =>
                 {
-                    var accessToken = await refreshToken(userId);
+                    var accessToken = await refreshToken();
                     ContextData[ACCESS_TOKEN] = accessToken;
                 });
 
