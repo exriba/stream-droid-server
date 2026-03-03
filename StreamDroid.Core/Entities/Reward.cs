@@ -93,9 +93,9 @@ namespace StreamDroid.Core.Entities
             if (_assets.Count is 0)
                 return false;
 
-            var random = new Random();
-            var index = random.Next(_assets.Count);
-            asset = _assets.ToList()[index];
+            var index = Random.Shared.Next(_assets.Count);
+            var assets = _assets.ToList();
+            asset = assets[index];
             return true;
         }
 
