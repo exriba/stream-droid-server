@@ -12,7 +12,7 @@ namespace StreamDroid.Shared.Tests.Common
             };
 
             using var configurationManager = new ConfigurationManager();
-            configurationManager.AddInMemoryCollection(dictionary).Build();
+            configurationManager.AddInMemoryCollection(dictionary!).Build();
             configurationManager.Configure();
         }
     }

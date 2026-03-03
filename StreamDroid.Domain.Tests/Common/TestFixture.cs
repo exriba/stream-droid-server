@@ -32,7 +32,7 @@ namespace StreamDroid.Domain.Tests.Common
             };
 
             using var configurationManager = new ConfigurationManager();
-            configurationManager.AddInMemoryCollection(dictionary).Build();
+            configurationManager.AddInMemoryCollection(dictionary!).Build();
             configurationManager.Configure();
 
             var jwtSettings = new JwtSettings();
