@@ -5,7 +5,7 @@ using Entities = StreamDroid.Core.Entities;
 namespace StreamDroid.Domain.Services.User
 {
     /// <summary>
-    /// Defines <see cref="Core.Entities.User"/> business logic.
+    /// Defines <see cref="Entities.User"/> business logic.
     /// </summary>
     public interface IUserManager
     {
