@@ -89,7 +89,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             var user = SetupUser();
             var refreshTokenResponse = new RefreshTokenResponse
             {
-                AccessToken = user.AccessToken,
+                AccessToken = "AccessToken",
                 RefreshToken = user.RefreshToken,
             };
 
@@ -127,7 +127,6 @@ namespace StreamDroid.Domain.Tests.Services.User
             {
                 Id = id.ToString(),
                 Name = "user",
-                AccessToken = "accessToken",
                 RefreshToken = "refreshToken".Base64Encrypt()
             };
         }

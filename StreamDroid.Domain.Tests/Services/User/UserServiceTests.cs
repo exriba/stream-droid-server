@@ -263,7 +263,7 @@ namespace StreamDroid.Domain.Tests.Services.User
             };
 
             var tcs = new TaskCompletionSource<string>();
-            tcs.SetResult(user.AccessToken);
+            tcs.SetResult("AccessToken");
             var outvalue = tcs as object;
 
             _mockMemoryCache.Setup(
@@ -345,7 +345,6 @@ namespace StreamDroid.Domain.Tests.Services.User
             {
                 Id = id.ToString(),
                 Name = "user",
-                AccessToken = "accessToken",
                 RefreshToken = "refreshToken"
             };
         }
@@ -371,7 +370,7 @@ namespace StreamDroid.Domain.Tests.Services.User
 
             var accessTokenResponseJson = new JsonObject
             {
-                { "AccessToken", user.AccessToken },
+                { "AccessToken", "AccessToken" },
                 { "RefreshToken", user.RefreshToken }
             };
 

@@ -199,7 +199,7 @@ namespace StreamDroid.Domain.Services.User
             var token = await _authApi.GetAccessTokenFromCodeAsync(code, cancellationToken);
             var userData = await _authApi.ValidateAccessTokenAsync(token.AccessToken, cancellationToken);
             var userDetailsTask = _helixApi.Users.GetUsersAsync([], token.AccessToken, cancellationToken);
-            var userTask = _userManager.FetchUserByIdAsync(userData.UserId, cancellationToken);
+            var userTask = _repository.FindByIdAsync<Entities.User>(userData.UserId, cancellationToken);
 
             await Task.WhenAll(userDetailsTask, userTask);
 
@@ -215,7 +215,6 @@ namespace StreamDroid.Domain.Services.User
                     Id = userData.UserId,
                     Name = userData.Login,
                     UserType = userType,
-                    AccessToken = token.AccessToken,
                     RefreshToken = token.RefreshToken,
                 };
                 user = await _repository.AddAsync(user, cancellationToken);
@@ -223,7 +222,6 @@ namespace StreamDroid.Domain.Services.User
             }
 
             user.Name = userData.Login;
-            user.AccessToken = token.AccessToken;
             user.RefreshToken = token.RefreshToken;
             user.UserType = userType;
             user = await _repository.UpdateAsync(user, cancellationToken);

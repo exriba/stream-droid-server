@@ -146,7 +146,6 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
                 Id = userId.ToString(),
                 Name = "Name",
                 UserType = UserType.NORMAL,
-                AccessToken = "AccessToken",
                 RefreshToken = "RefreshToken",
             };
         }

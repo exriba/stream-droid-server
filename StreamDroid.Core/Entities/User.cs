@@ -31,20 +31,6 @@ namespace StreamDroid.Core.Entities
         /// </summary>
         public Guid UserKey { get; private init; } = Guid.NewGuid();
 
-        private string _accessToken = string.Empty;
-        /// <summary>
-        /// Encrypted access token
-        /// </summary>
-        public string AccessToken
-        {
-            get => _accessToken;
-            set
-            {
-                Guard.Against.NullOrWhiteSpace(value, nameof(AccessToken));
-                _accessToken = value.IsBase64String() ? value : value.Base64Encrypt();
-            }
-        }
-
         private string _refreshToken = string.Empty;
         /// <summary>
         /// Encrypted access token

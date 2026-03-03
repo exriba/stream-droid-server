@@ -19,13 +19,11 @@ namespace StreamDroid.Infrastructure.EntityConfiguration
                    .IsRequired();
             builder.Property(x => x.UserKey)
                    .IsRequired();
-            builder.Property(x => x.AccessToken)
-                   .IsRequired();
             builder.Property(x => x.RefreshToken)
                    .IsRequired();
             builder.Property(x => x.UserType)
-                   .HasConversion(x => x.Value, 
-                                  x => UserType.FromValue(x)) 
+                   .HasConversion(x => x.Value,
+                                  x => UserType.FromValue(x))
                    .IsRequired();
 
             builder.OwnsOne(x => x.Preferences, navigationBuilder =>

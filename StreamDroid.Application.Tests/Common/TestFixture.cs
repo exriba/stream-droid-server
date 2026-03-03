@@ -215,7 +215,6 @@ namespace StreamDroid.Application.Tests.Common
             {
                 Id = userId,
                 Name = "user",
-                AccessToken = "accessToken",
                 RefreshToken = "refreshToken"
             };
 
