@@ -31,11 +31,23 @@ else
 }
 
 #region Options
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.Key));
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection(AppSettings.Key));
 #endregion
 
 #region Shared
 builder.Configuration.Configure();
+#endregion
+
+#region Validation
+var jwtSettings = new JwtSettings();
+builder.Configuration.GetSection(JwtSettings.Key).Bind(jwtSettings);
+if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey) || jwtSettings.SigningKey.Length < 32)
+    throw new InvalidOperationException("JwtSettings - SigningKey must be 32+ characters.");
+if (string.IsNullOrWhiteSpace(jwtSettings.Issuer))
+    throw new InvalidOperationException("JwtSettings - Issuer must be configured.");
+if (string.IsNullOrWhiteSpace(jwtSettings.Audience))
+    throw new InvalidOperationException("JwtSettings - Audience must be configured.");
 #endregion
 
 #region Register Services
@@ -47,8 +59,6 @@ builder.Services.AddDirectoryBrowser();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
 {
-    var jwtSettings = new JwtSettings();
-    builder.Configuration.GetSection(JwtSettings.Key).Bind(jwtSettings);
     var encodedKey = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
 
     options.TokenValidationParameters = new TokenValidationParameters
