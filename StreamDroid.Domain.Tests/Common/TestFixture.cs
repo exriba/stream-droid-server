@@ -26,6 +26,7 @@ namespace StreamDroid.Domain.Tests.Common
             var dictionary = new Dictionary<string, string>
             {
                 { "EncryptionSettings:KeyPhrase", "w9z$C&F)H@McQfTj" },
+                { "EncryptionSettings:Salt", "6eb7dedd-d9b0-466c-b1a7-36c7fee348b5" },
                 { "JwtSettings:SigningKey", "this-is-a-super-secret-signingkey-please-dont-steal-it" },
                 { "JwtSettings:Issuer", "stream-droid-server" },
                 { "JwtSettings:Audience", "stream-droid-client" }

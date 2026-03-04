@@ -6,13 +6,12 @@ namespace StreamDroid.Shared.Tests.Extensions
     public class EncryptionExtensionsTests : IClassFixture<TestFixture>
     {
         private const string TEXT = "EncryptMe";
-        private const string SECRET_KEY = "/A?D(G+KbPeShVmY";
 
         [Theory]
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(null)]
-        public void IsBase64String_Throws_InvalidArgs(string? text)
+        public void IsBase64String_Throws_InvalidArgs(string text)
         {
             Assert.ThrowsAny<ArgumentException>(() => text.IsBase64String());
         }
@@ -35,48 +34,38 @@ namespace StreamDroid.Shared.Tests.Extensions
         }
 
         [Theory]
-        [InlineData("", SECRET_KEY)]
-        [InlineData(" ", SECRET_KEY)]
-        [InlineData(null, SECRET_KEY)]
-        [InlineData(TEXT, "")]
-        [InlineData(TEXT, " ")]
-        [InlineData(TEXT, null)]
-        public void Base64Encrypt_Throws_InvalidArgs(string? text, string? secretKey)
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(null)]
+        public void Base64Encrypt_Throws_InvalidArgs(string? text)
         {
-            Assert.ThrowsAny<ArgumentException>(() => text.Base64Encrypt(keyPhrase: secretKey));
+            Assert.ThrowsAny<ArgumentException>(() => text.Base64Encrypt());
         }
 
         [Fact]
         public void Base64Encrypt()
         {
-            var encryptedTextWithDefaultKeyPhrase = TEXT.Base64Encrypt();
-            var encryptedTextWithKeyPhrase = TEXT.Base64Encrypt(keyPhrase: SECRET_KEY);
+            var encryptedText = TEXT.Base64Encrypt();
 
-            Assert.NotEqual(encryptedTextWithDefaultKeyPhrase, encryptedTextWithKeyPhrase);
+            Assert.NotEqual(TEXT, encryptedText);
         }
 
         [Theory]
-        [InlineData("", SECRET_KEY)]
-        [InlineData(" ", SECRET_KEY)]
-        [InlineData(null, SECRET_KEY)]
-        [InlineData(TEXT, "")]
-        [InlineData(TEXT, " ")]
-        [InlineData(TEXT, null)]
-        public void Base64Decrypt_Throws_InvalidArgs(string? text, string? secretKey)
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(null)]
+        public void Base64Decrypt_Throws_InvalidArgs(string? text)
         {
-            Assert.ThrowsAny<ArgumentException>(() => text.Base64Decrypt(keyPhrase: secretKey));
+            Assert.ThrowsAny<ArgumentException>(() => text.Base64Decrypt());
         }
 
         [Fact]
         public void Base64Decrypt()
         {
-            var encryptedTextWithDefaultKeyPhrase = TEXT.Base64Encrypt();
-            var decryptedTextWithDefaultKeyPhrase = encryptedTextWithDefaultKeyPhrase.Base64Decrypt();
+            var encryptedText = TEXT.Base64Encrypt();
+            var decryptedText = encryptedText.Base64Decrypt();
 
-            var encryptedTextWithKeyPhrase = TEXT.Base64Encrypt(keyPhrase: SECRET_KEY);
-            var decryptedTextWithKeyPhrase = encryptedTextWithKeyPhrase.Base64Decrypt(keyPhrase: SECRET_KEY);
-
-            Assert.Equal(decryptedTextWithDefaultKeyPhrase, decryptedTextWithKeyPhrase);
+            Assert.Equal(TEXT, decryptedText);
         }
     }
 }

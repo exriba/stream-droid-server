@@ -47,6 +47,7 @@ namespace StreamDroid.Application.Tests.Common
             var dictionary = new Dictionary<string, string>
             {
                 { "EncryptionSettings:KeyPhrase", "w9z$C&F)H@McQfTj" },
+                { "EncryptionSettings:Salt", "6eb7dedd-d9b0-466c-b1a7-36c7fee348b5" },
 
                 { "SqliteSettings:ConnectionString", "Data Source=file::memory:?cache=shared" },
 
