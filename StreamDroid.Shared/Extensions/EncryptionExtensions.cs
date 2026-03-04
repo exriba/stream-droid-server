@@ -7,21 +7,43 @@ namespace StreamDroid.Shared.Extensions
 {
     /// <summary>
     /// Utility class for encryption extensions.
-    /// TODO: Strengthen weak encryption and check tokens
     /// </summary>
     public static class EncryptionExtensions
     {
-        private static byte[] _key = Array.Empty<byte>();
+        private const int KEY_SIZE_BYTES = 32;
+        private const int PBKDF2_ITERATION = 300000;
+
+        private static byte[] _masterKey = Array.Empty<byte>();
 
         /// <summary>
         /// Initializes encryption properties. 
         /// </summary>
         /// <param name="encryptionSettings">encryption settings</param>
         /// <exception cref="ArgumentNullException">If the encryption settings are null</exception>
+        /// <exception cref="InvalidOperationException">If the master key has already been configured</exception>
         internal static void Configure(EncryptionSettings encryptionSettings)
         {
             Guard.Against.Null(encryptionSettings, nameof(encryptionSettings));
-            _key = Encoding.UTF8.GetBytes(encryptionSettings.KeyPhrase);
+
+            if (encryptionSettings.Salt.Length < 16)
+                throw new ArgumentException("EcryptionSettings - Salt must be 16+ characters.");
+
+            if (_masterKey.Length != 0)
+                throw new InvalidOperationException("Encryption already configured.");
+
+            _masterKey = DeriveKeyFromPassphrase(encryptionSettings.KeyPhrase, encryptionSettings.Salt);
+        }
+
+        private static byte[] DeriveKeyFromPassphrase(string passphrase, string salt)
+        {
+            var saltBytes = Encoding.UTF8.GetBytes(salt);
+            using var dkf = new Rfc2898DeriveBytes(
+                passphrase,
+                saltBytes,
+                PBKDF2_ITERATION,
+                HashAlgorithmName.SHA256
+            );
+            return dkf.GetBytes(KEY_SIZE_BYTES);
         }
 
         /// <summary>
@@ -39,7 +61,7 @@ namespace StreamDroid.Shared.Extensions
         }
 
         /// <summary>
-        /// Encrypts a string using the default key.
+        /// Encrypts a string using the master key.
         /// </summary>
         /// <param name="str">string</param>
         /// <returns>A base64 encrypted string.</returns>
@@ -47,49 +69,27 @@ namespace StreamDroid.Shared.Extensions
         /// <exception cref="ArgumentException">If the string is empty or whitespace string</exception>
         public static string Base64Encrypt(this string str)
         {
-            Guard.Against.NullOrWhiteSpace(str, nameof(str));
-            return Base64Encrypt(str, _key);
-        }
+            ValidateArguments(str);
 
-        /// <summary>
-        /// Encrypts a string using the given key.
-        /// </summary>
-        /// <param name="str">string</param>
-        /// <param name="keyPhrase">keyphrase</param>
-        /// <returns>A base64 encrypted string.</returns>
-        /// <exception cref="ArgumentNullException">If the string or keyphrase is null</exception>
-        /// <exception cref="ArgumentException">If the string or keyphrase is empty or whitespace string</exception>
-        public static string Base64Encrypt(this string str, string keyPhrase)
-        {
-            Guard.Against.NullOrWhiteSpace(str, nameof(str));
-            Guard.Against.NullOrWhiteSpace(keyPhrase, nameof(keyPhrase));
-            var key = Encoding.UTF8.GetBytes(keyPhrase);
-            return Base64Encrypt(str, key);
-        }
+            byte[] nonce = RandomNumberGenerator.GetBytes(12);
+            byte[] plaintextBytes = Encoding.UTF8.GetBytes(str);
+            byte[] cipherText = new byte[plaintextBytes.Length];
+            byte[] tag = new byte[16];
 
-        private static string Base64Encrypt(string str, byte[] key)
-        {
-            using var aesAlg = Aes.Create();
-            using var encryptor = aesAlg.CreateEncryptor(key, aesAlg.IV);
-            using var memoryStream = new MemoryStream();
-            using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
-            using (var streamWriter = new StreamWriter(cryptoStream))
-            {
-                streamWriter.Write(str);
-            }
+            using var aes = new AesGcm(_masterKey, 16);
+            aes.Encrypt(nonce, plaintextBytes, cipherText, tag);
 
-            var iv = aesAlg.IV;
-            var decryptedContent = memoryStream.ToArray();
-            var result = new byte[iv.Length + decryptedContent.Length];
+            byte[] result = new byte[nonce.Length + tag.Length + cipherText.Length];
 
-            Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
-            Buffer.BlockCopy(decryptedContent, 0, result, iv.Length, decryptedContent.Length);
+            Buffer.BlockCopy(nonce, 0, result, 0, nonce.Length);
+            Buffer.BlockCopy(tag, 0, result, nonce.Length, tag.Length);
+            Buffer.BlockCopy(cipherText, 0, result, nonce.Length + tag.Length, cipherText.Length);
 
             return Convert.ToBase64String(result);
         }
 
         /// <summary>
-        /// Decrypts an encrypted string using the default key.
+        /// Decrypts an encrypted string using the master key.
         /// </summary>
         /// <param name="str">encrypted string</param>
         /// <returns>A decrypted string.</returns>
@@ -97,47 +97,42 @@ namespace StreamDroid.Shared.Extensions
         /// <exception cref="ArgumentException">If the string is empty or whitespace string</exception>
         public static string Base64Decrypt(this string str)
         {
-            Guard.Against.NullOrWhiteSpace(str, nameof(str));
-            return Base64Decrypt(str, _key);
+            ValidateArguments(str);
+
+            byte[] fullCipher = Convert.FromBase64String(str);
+
+            if (fullCipher.Length < 28)
+                throw new ArgumentException("Invalid encrypted payload.");
+
+            byte[] nonce = new byte[12];
+            byte[] tag = new byte[16];
+            byte[] cipherText = new byte[fullCipher.Length - 28];
+
+            Buffer.BlockCopy(fullCipher, 0, nonce, 0, 12);
+            Buffer.BlockCopy(fullCipher, 12, tag, 0, 16);
+            Buffer.BlockCopy(fullCipher, 28, cipherText, 0, cipherText.Length);
+
+            byte[] plaintextBytes = new byte[cipherText.Length];
+
+            using var aes = new AesGcm(_masterKey, 16);
+            aes.Decrypt(nonce, cipherText, tag, plaintextBytes);
+
+            return Encoding.UTF8.GetString(plaintextBytes);
         }
 
         /// <summary>
-        /// Decrypts an encrypted string using the given key.
+        /// Validates arguments
         /// </summary>
-        /// <param name="str">encrypted string</param>
-        /// <param name="keyPhrase">keyphrase</param>
-        /// <returns>A decrypted string.</returns>
-        /// <exception cref="ArgumentNullException">If the string or keyphrase is null</exception>
-        /// <exception cref="ArgumentException">If the string or keyphrase is empty or whitespace string</exception>
-        public static string Base64Decrypt(this string str, string keyPhrase)
+        /// <param name="str"></param>
+        /// <exception cref="ArgumentNullException">If the string is null</exception>
+        /// <exception cref="ArgumentException">If the string is empty or whitespace string</exception>
+        /// <exception cref="InvalidOperationException">If the master key is not configured</exception>
+        private static void ValidateArguments(string str)
         {
             Guard.Against.NullOrWhiteSpace(str, nameof(str));
-            Guard.Against.NullOrWhiteSpace(keyPhrase, nameof(keyPhrase));
-            var key = Encoding.UTF8.GetBytes(keyPhrase);
-            return Base64Decrypt(str, key);
-        }
 
-        private static string Base64Decrypt(string str, byte[] key)
-        {
-            var encrypted = Convert.FromBase64String(str);
-
-            var iv = new byte[16];
-            var cipher = new byte[encrypted.Length - iv.Length];
-
-            Buffer.BlockCopy(encrypted, 0, iv, 0, iv.Length);
-            Buffer.BlockCopy(encrypted, iv.Length, cipher, 0, cipher.Length);
-
-            string? decrypted = null;
-            using var aesAlg = Aes.Create();
-            using var decryptor = aesAlg.CreateDecryptor(key, iv);
-            using (var memoryStream = new MemoryStream(cipher))
-            {
-                using var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read);
-                using var streamReader = new StreamReader(cryptoStream);
-                decrypted = streamReader.ReadToEnd();
-            }
-
-            return decrypted;
+            if (_masterKey.Length == 0)
+                throw new InvalidOperationException("Encryption not configured.");
         }
     }
 }
