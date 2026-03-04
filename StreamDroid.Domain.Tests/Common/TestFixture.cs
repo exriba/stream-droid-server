@@ -61,8 +61,8 @@ namespace StreamDroid.Domain.Tests.Common
 
             var claimsIdentity = new ClaimsIdentity(
                 [
-                    new Claim("Id", "userId"),
-                    new Claim("Name", "Name")
+                    new Claim(ClaimTypes.NameIdentifier, "1"),
+                    new Claim(ClaimTypes.Name, "user")
                 ]
             );
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);

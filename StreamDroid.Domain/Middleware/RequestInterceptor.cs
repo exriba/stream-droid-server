@@ -2,14 +2,12 @@
 using Grpc.Core.Interceptors;
 using Microsoft.Extensions.Logging;
 using StreamDroid.Core.Exceptions;
+using System.Security.Claims;
 
 namespace StreamDroid.Domain.Middleware
 {
     public class RequestInterceptor : Interceptor
     {
-        private const string ID = "Id";
-        private const string NAME = "Name";
-
         private readonly ILogger<RequestInterceptor> _logger;
 
         public RequestInterceptor(ILogger<RequestInterceptor> logger)
@@ -44,7 +42,7 @@ namespace StreamDroid.Domain.Middleware
 
             if (userPrincipal is not null && authenticated)
             {
-                var idClaim = userPrincipal.FindFirst(ID);
+                var idClaim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier);
 
                 if (idClaim is null)
                 {

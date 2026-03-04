@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using StreamDroid.Core.Entities;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.DTOs;
+using System.Security.Claims;
 using static GrpcRedeemService;
 
 namespace StreamDroid.Domain.Services.Redeem
@@ -15,8 +16,6 @@ namespace StreamDroid.Domain.Services.Redeem
     [Authorize]
     public sealed class RedeemService : GrpcRedeemServiceBase
     {
-        private const string ID = "Id";
-
         private readonly IUberRepository _repository;
         private readonly ILogger<RedeemService> _logger;
 
@@ -34,7 +33,7 @@ namespace StreamDroid.Domain.Services.Redeem
         public override async Task<RewardRedeemResponse> FindRewardRedeemStatisticsFromUser(Empty request, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
-            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
+            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ClaimTypes.NameIdentifier));
 
             var redeems = await _repository.FindListAsync<Redemption>(x => x.Reward.StreamerId.Equals(claim.Value), cancellationToken: context.CancellationToken);
             var rewardRedeems = redeems.GroupBy(x => x.Reward, (x, y) =>

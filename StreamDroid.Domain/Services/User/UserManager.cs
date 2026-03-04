@@ -17,10 +17,6 @@ namespace StreamDroid.Domain.Services.User
 {
     public sealed class UserManager : IUserManager
     {
-        private const string ID = "Id";
-        private const string NAME = "Name";
-        private const string JWT_ID = "jti";
-
         private readonly TimeSpan _safetyBuffer = TimeSpan.FromMinutes(5);
         private readonly TimeSpan _accessTokenLifetime = TimeSpan.FromHours(4);
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
@@ -52,15 +48,15 @@ namespace StreamDroid.Domain.Services.User
         {
             var user = await FetchUserByIdAsync(userId, cancellationToken);
 
-            var claims = new List<Claim>
-            {
-                new(ID, userId),
-                new(NAME, user.Name),
-                new(JWT_ID, Guid.NewGuid().ToString()),
-            };
-
             var encodedKey = Encoding.UTF8.GetBytes(_jwtSettings.SigningKey);
             var securityKey = new SymmetricSecurityKey(encodedKey);
+
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, userId),
+                new(ClaimTypes.Name, user.Name),
+                new(ClaimTypes.Sid, Guid.NewGuid().ToString()),
+            };
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

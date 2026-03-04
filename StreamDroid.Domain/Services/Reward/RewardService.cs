@@ -10,6 +10,7 @@ using StreamDroid.Core.ValueObjects;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Domain.Services.AssetFile;
 using StreamDroid.Domain.Services.User;
+using System.Security.Claims;
 using static GrpcRewardService;
 using Entities = StreamDroid.Core.Entities;
 
@@ -21,8 +22,6 @@ namespace StreamDroid.Domain.Services.Reward
     [Authorize]
     public sealed class RewardService : GrpcRewardServiceBase
     {
-        private const string ID = "Id";
-
         private readonly HelixApi _helixApi;
         private readonly IUserManager _userManager;
         private readonly IAssetFileService _assetFileService;
@@ -69,7 +68,7 @@ namespace StreamDroid.Domain.Services.Reward
         public override async Task FindUserRewards(Empty request, IServerStreamWriter<RewardResponse> responseStream, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
-            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
+            var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;
 
             var rewardCount = await _repository.CountAsync<Entities.Reward>(r => r.StreamerId.Equals(claim.Value), context.CancellationToken);
 
@@ -120,7 +119,7 @@ namespace StreamDroid.Domain.Services.Reward
         public override async Task<RewardResponse> AddRewardAssets(IAsyncStreamReader<AddRewardAssetRequest> requestStream, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
-            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
+            var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;
 
             Entities.Reward? reward = null;
 
@@ -180,7 +179,7 @@ namespace StreamDroid.Domain.Services.Reward
         public override async Task<RewardResponse> RemoveRewardAssets(RemoveRewardAssetRequest request, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
-            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ID));
+            var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;
 
             var rewardIdExists = Guid.TryParse(request.RewardId, out var rewardId);
 

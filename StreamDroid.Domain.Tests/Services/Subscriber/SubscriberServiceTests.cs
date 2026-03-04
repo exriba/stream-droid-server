@@ -57,7 +57,7 @@ namespace StreamDroid.Domain.Tests.Services.Subscriber
             {
                 Id = Guid.NewGuid().ToString(),
                 EventType = EventType.Audio,
-                StreamerId = "userId",
+                StreamerId = "1",
                 AssetFileEvent = new AssetFileEvent
                 {
                     Uri = "uri",
@@ -71,7 +71,7 @@ namespace StreamDroid.Domain.Tests.Services.Subscriber
 
             _ = _subscriberService.Subscribe(request, mockStreamWriter.Object, context);
 
-            await _notificationRegistry.Publish("userId", notificationEvent);
+            await _notificationRegistry.Publish("1", notificationEvent);
 
             await Task.Delay(100);
 

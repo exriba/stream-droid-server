@@ -105,7 +105,7 @@ namespace StreamDroid.Domain.Tests.Middleware
             );
 
             if (includeId)
-                claimsIdentity.AddClaim(new Claim("Id", "123"));
+                claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, "1"));
 
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
             var httpContext = new DefaultHttpContext

@@ -5,9 +5,6 @@ namespace StreamDroid.Application.Tests.Middleware
 {
     public class AuthenticationMiddleware
     {
-        private const string ID = "Id";
-        private const string NAME = "Name";
-
         private readonly RequestDelegate _next;
 
         public AuthenticationMiddleware(RequestDelegate next)
@@ -19,8 +16,8 @@ namespace StreamDroid.Application.Tests.Middleware
         {
             var claims = new[]
             {
-                new Claim(ID, "1"),
-                new Claim(NAME, "user"),
+                new Claim(ClaimTypes.NameIdentifier, "1"),
+                new Claim(ClaimTypes.Name, "user"),
             };
 
             var identity = new ClaimsIdentity(claims, "TestAuthentication");

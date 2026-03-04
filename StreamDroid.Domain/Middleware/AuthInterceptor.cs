@@ -2,13 +2,13 @@
 using Grpc.Core.Interceptors;
 using Microsoft.Extensions.Logging;
 using StreamDroid.Domain.Services.User;
+using System.Security.Claims;
 
 namespace StreamDroid.Domain.Middleware
 {
     public class AuthInterceptor : Interceptor
     {
-        private const string ID = "Id";
-        private const string EXPIRY = "exp";
+        private const string EXPIRATION = "exp";
         private const string ACCESS_TOKEN = "access-token";
 
         private readonly IUserManager _userManager;
@@ -46,8 +46,8 @@ namespace StreamDroid.Domain.Middleware
 
             if (userPrincipal is not null && authenticated)
             {
-                var idClaim = userPrincipal.FindFirst(ID);
-                var expClaim = userPrincipal.FindFirst(EXPIRY);
+                var idClaim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier);
+                var expClaim = userPrincipal.FindFirst(EXPIRATION);
 
                 if (idClaim is null || expClaim is null)
                 {

@@ -15,6 +15,7 @@ using StreamDroid.Core.Enums;
 using StreamDroid.Core.Interfaces;
 using StreamDroid.Domain.DTOs;
 using StreamDroid.Shared.Extensions;
+using System.Security.Claims;
 using System.Text;
 using static GrpcUserService;
 using Entities = StreamDroid.Core.Entities;
@@ -28,7 +29,6 @@ namespace StreamDroid.Domain.Services.User
     [Authorize]
     public sealed class UserService : GrpcUserServiceBase
     {
-        private const string ID = "Id";
         private const string SUCCESS_FILE = "success.html";
         private const string ERROR_FILE = "error.html";
 
@@ -171,8 +171,8 @@ namespace StreamDroid.Domain.Services.User
         /// <returns>A user response.</returns>
         public override async Task<UserResponse> FindUser(Google.Protobuf.WellKnownTypes.Empty request, ServerCallContext context)
         {
-            var usePrincipal = context.GetHttpContext().User;
-            var claim = usePrincipal.Claims.First(c => c.Type.Equals(ID));
+            var userPrincipal = context.GetHttpContext().User;
+            var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;
 
             var user = await _userManager.FetchUserByIdAsync(claim.Value, context.CancellationToken);
 

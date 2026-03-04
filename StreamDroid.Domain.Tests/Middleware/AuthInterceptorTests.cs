@@ -13,6 +13,7 @@ namespace StreamDroid.Domain.Tests.Middleware
     public class AuthInterceptorTests
     {
         private const string TOKEN = "token";
+        private const string EXPIRATION = "exp";
 
         private readonly AuthInterceptor _authInterceptor;
 
@@ -46,7 +47,7 @@ namespace StreamDroid.Domain.Tests.Middleware
         {
             var empty = new Empty();
             var claimsIdentity = CreateClaimsIdentity(true, false);
-            claimsIdentity.AddClaim(new Claim("Exp", "x"));
+            claimsIdentity.AddClaim(new Claim(EXPIRATION, "x"));
             var context = CreateTestServerCallContext(claimsIdentity);
 
             await Assert.ThrowsAnyAsync<ArgumentException>(
@@ -81,10 +82,10 @@ namespace StreamDroid.Domain.Tests.Middleware
             );
 
             if (includeId)
-                claimsIdentity.AddClaim(new Claim("Id", "123"));
+                claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, "1"));
 
             if (includeExpiry)
-                claimsIdentity.AddClaim(new Claim("Exp", expiry));
+                claimsIdentity.AddClaim(new Claim(EXPIRATION, expiry));
 
             return claimsIdentity;
         }
