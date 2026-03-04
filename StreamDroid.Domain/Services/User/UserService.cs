@@ -18,7 +18,6 @@ using StreamDroid.Shared.Extensions;
 using System.Text;
 using static GrpcUserService;
 using Entities = StreamDroid.Core.Entities;
-using GrpcUser = Grpc.Model.User;
 
 // TODO: Handle logout? Maybe mark token for invalidation. Look into interceptors and validators
 namespace StreamDroid.Domain.Services.User
@@ -176,8 +175,6 @@ namespace StreamDroid.Domain.Services.User
             var claim = usePrincipal.Claims.First(c => c.Type.Equals(ID));
 
             var user = await _userManager.FetchUserByIdAsync(claim.Value, context.CancellationToken);
-
-            bool parsed = Enum.TryParse(user.UserType.Name, true, out GrpcUser.Types.UserType userType);
 
             return new UserResponse
             {
