@@ -121,29 +121,36 @@ namespace StreamDroid.Domain.Services.Reward
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;
 
+            string? rewardId = null;
             Entities.Reward? reward = null;
 
-            // TODO: This method needs review. Keep it simple for now but:
-            // 1. Consider batching for large streams 
-            // 2. Process every single item and rollback the transaction if validation fail
+            // TODO: Consider batching for large streams 
             while (await requestStream.MoveNext(context.CancellationToken))
             {
                 var request = requestStream.Current;
 
-                var isGuid = Guid.TryParse(request.RewardId, out var rewardId);
+                if (!Guid.TryParse(request.RewardId, out var id) || id == Guid.Empty)
+                    throw new ArgumentException($"Invalid Reward Id: {id}.");
 
-                if (!isGuid || rewardId == Guid.Empty)
-                    throw new ArgumentException($"Invalid Reward Id: {rewardId}.", nameof(request.RewardId));
+                rewardId ??= request.RewardId;
 
-                reward = await FetchRewardAsync(rewardId, context.CancellationToken);
-                reward.AddAsset(FileName.FromString(request.FileName), request.Volume);
-                await _assetFileService.AddAssetFileAsync(claim.Value, reward.Title, FileName.FromString(request.FileName), request.File, context.CancellationToken);
-                await _repository.UpdateAsync(reward, context.CancellationToken);
+                if (rewardId != request.RewardId)
+                    throw new ArgumentException($"Invalid Reward Id: {request.RewardId}. All items must share the same reward id {rewardId}.");
+
+                reward ??= await FetchRewardAsync(id, context.CancellationToken);
+                var fileName = FileName.FromString(request.FileName);
+                reward.AddAsset(fileName, request.Volume);
+                await _assetFileService.AddAssetFileAsync(claim.Value, reward.Title, fileName, request.File);
             }
+
+            if (reward is null)
+                throw new InvalidOperationException("Stream cannot be empty.");
+
+            await _repository.UpdateAsync(reward, context.CancellationToken);
 
             return new RewardResponse
             {
-                Reward = RewardProto.FromEntity(reward!)
+                Reward = RewardProto.FromEntity(reward)
             };
         }
 
