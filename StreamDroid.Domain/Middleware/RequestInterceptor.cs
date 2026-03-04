@@ -7,7 +7,7 @@ namespace StreamDroid.Domain.Middleware
 {
     public class RequestInterceptor : Interceptor
     {
-        private const string ID = "ID";
+        private const string ID = "Id";
         private const string NAME = "Name";
 
         private readonly ILogger<RequestInterceptor> _logger;
