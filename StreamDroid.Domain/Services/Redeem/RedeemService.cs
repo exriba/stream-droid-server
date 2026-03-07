@@ -33,7 +33,7 @@ namespace StreamDroid.Domain.Services.Redeem
         public override async Task<RewardRedeemResponse> FindRewardRedeemStatisticsFromUser(Empty request, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
-            var claim = userPrincipal.Claims.First(c => c.Type.Equals(ClaimTypes.NameIdentifier));
+            var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;
 
             var redeems = await _repository.FindListAsync<Redemption>(x => x.Reward.StreamerId.Equals(claim.Value), cancellationToken: context.CancellationToken);
             var rewardRedeems = redeems.GroupBy(x => x.Reward, (x, y) =>
