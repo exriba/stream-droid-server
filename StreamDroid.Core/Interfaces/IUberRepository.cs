@@ -56,16 +56,21 @@ namespace StreamDroid.Core.Interfaces
         /// Updates an entity.
         /// </summary>
         /// <param name="entity">entity</param>
-        /// <param name="cancellationToken">cancellation token</param>
-        /// <returns>An entity.</returns>
         /// <exception cref="ArgumentNullException">If the entity is null</exception>
-        Task<TEntity> UpdateAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : EntityBase;
+        void Update<TEntity>(TEntity entity) where TEntity : EntityBase;
 
         /// <summary>
-        /// Deletes an entity by their id.
+        /// Deletes an entity.
         /// </summary>
         /// <param name="id">id</param>
         /// <param name="cancellationToken">cancellation token</param>
         Task DeleteAsync<TEntity>(string id, CancellationToken cancellationToken = default) where TEntity : EntityBase;
+
+        /// <summary>
+        /// Saves changes to the underlying database.
+        /// </summary>
+        /// <param name="cancellationToken">cancellation token</param>
+        /// <returns>the number of state entries written to the database</returns>
+        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

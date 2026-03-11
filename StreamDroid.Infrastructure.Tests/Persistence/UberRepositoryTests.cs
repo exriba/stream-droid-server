@@ -30,6 +30,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var user = CreateUser();
 
             await _repository.AddAsync(user);
+            await _repository.SaveChangesAsync();
 
             var entity = await _repository.FindByIdAsync<User>(user.Id);
 
@@ -42,12 +43,14 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var user = CreateUser();
 
             await _repository.AddAsync(user);
+            await _repository.SaveChangesAsync();
 
             var reward = CreateReward(user);
             var reward2 = CreateReward(user);
 
             await _repository.AddAsync(reward);
             await _repository.AddAsync(reward2);
+            await _repository.SaveChangesAsync();
 
             var entities = await _repository.FindListAsync<Reward>();
 
@@ -60,6 +63,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var user = CreateUser();
 
             await _repository.AddAsync(user);
+            await _repository.SaveChangesAsync();
 
             var reward = CreateReward(user);
             var reward2 = CreateReward(user);
@@ -67,6 +71,7 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
 
             await _repository.AddAsync(reward);
             await _repository.AddAsync(reward2);
+            await _repository.SaveChangesAsync();
 
             await foreach (var entity in _repository.FindStreamAsync<Reward>())
             {
@@ -87,15 +92,16 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var user = CreateUser();
 
             var entity = await _repository.AddAsync(user);
+            await _repository.SaveChangesAsync();
 
             Assert.Equal(user, entity);
         }
 
         [Theory]
         [InlineData(null)]
-        public async Task UberRepository_UpdateAsync_Throws_InvalidArgs(User? user)
+        public void UberRepository_Update_Throws_InvalidArgs(User? user)
         {
-            await Assert.ThrowsAnyAsync<ArgumentException>(async () => await _repository.UpdateAsync(user!));
+            Assert.ThrowsAny<ArgumentException>(() => _repository.Update(user!));
         }
 
         [Fact]
@@ -104,13 +110,16 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var user = CreateUser();
 
             await _repository.AddAsync(user);
+            await _repository.SaveChangesAsync();
 
             user.Name = "NewName";
+            _repository.Update(user);
+            await _repository.SaveChangesAsync();
 
-            var entity = await _repository.UpdateAsync(user);
+            var entity = await _repository.FindByIdAsync<User>(user.Id);
 
-            Assert.Equal(user.Id, entity.Id);
-            Assert.Equal("NewName", entity.Name);
+            Assert.Equal(user.Id, entity!.Id);
+            Assert.Equal("NewName", entity!.Name);
         }
 
         [Theory]
@@ -128,8 +137,10 @@ namespace StreamDroid.Infrastructure.Tests.Persistence
             var user = CreateUser();
 
             await _repository.AddAsync(user);
+            await _repository.SaveChangesAsync();
 
             await _repository.DeleteAsync<User>(user.Id);
+            await _repository.SaveChangesAsync();
 
             var entity = await _repository.FindByIdAsync<User>(user.Id);
 

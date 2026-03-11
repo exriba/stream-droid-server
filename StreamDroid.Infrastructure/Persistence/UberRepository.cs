@@ -80,19 +80,16 @@ namespace StreamDroid.Infrastructure.Persistence
 
             var entitySet = _databaseContext.Set<TEntity>();
             var entry = await entitySet.AddAsync(entity, cancellationToken);
-            await _databaseContext.SaveChangesAsync(cancellationToken);
             return entry.Entity;
         }
 
         /// <inheritdoc/>
-        public async Task<TEntity> UpdateAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : EntityBase
+        public void Update<TEntity>(TEntity entity) where TEntity : EntityBase
         {
             Guard.Against.Null(entity);
 
             var entitySet = _databaseContext.Set<TEntity>();
-            var entry = entitySet.Update(entity);
-            await _databaseContext.SaveChangesAsync(cancellationToken);
-            return entry.Entity;
+            entitySet.Update(entity);
         }
 
         /// <inheritdoc/>
@@ -104,8 +101,13 @@ namespace StreamDroid.Infrastructure.Persistence
             {
                 var entitySet = _databaseContext.Set<TEntity>();
                 entitySet.Remove(entity);
-                await _databaseContext.SaveChangesAsync(cancellationToken);
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _databaseContext.SaveChangesAsync(cancellationToken);
         }
 
         public void Dispose()
