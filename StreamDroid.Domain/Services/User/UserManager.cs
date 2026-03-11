@@ -87,7 +87,8 @@ namespace StreamDroid.Domain.Services.User
             string refreshToken = user.RefreshToken.Base64Decrypt();
             var refreshTokenResponse = await _authApi.RefreshAccessTokenAsync(refreshToken, cancellationToken);
             user.RefreshToken = refreshTokenResponse.RefreshToken;
-            await _repository.UpdateAsync(user, cancellationToken);
+            _repository.Update(user);
+            await _repository.SaveChangesAsync(cancellationToken);
 
             var cacheEntryOptions = new MemoryCacheEntryOptions
             {

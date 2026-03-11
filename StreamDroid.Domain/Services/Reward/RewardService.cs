@@ -103,7 +103,8 @@ namespace StreamDroid.Domain.Services.Reward
 
             var reward = await FetchRewardAsync(rewardId, context.CancellationToken);
             reward.Speech = new Speech(enabled: request.Speech.Enabled, voiceIndex: request.Speech.VoiceIndex);
-            reward = await _repository.UpdateAsync(reward, context.CancellationToken);
+            _repository.Update(reward);
+            await _repository.SaveChangesAsync(context.CancellationToken);
 
             return new RewardResponse
             {
@@ -146,7 +147,8 @@ namespace StreamDroid.Domain.Services.Reward
             if (reward is null)
                 throw new InvalidOperationException("Stream cannot be empty.");
 
-            await _repository.UpdateAsync(reward, context.CancellationToken);
+            _repository.Update(reward);
+            await _repository.SaveChangesAsync(context.CancellationToken);
 
             return new RewardResponse
             {
@@ -168,9 +170,9 @@ namespace StreamDroid.Domain.Services.Reward
 
             var reward = await FetchRewardAsync(rewardId, context.CancellationToken);
             reward.RemoveAsset(request.FileName);
-            await _repository.UpdateAsync(reward, context.CancellationToken);
             reward.AddAsset(FileName.FromString(request.FileName), request.Volume);
-            reward = await _repository.UpdateAsync(reward, context.CancellationToken);
+            _repository.Update(reward);
+            await _repository.SaveChangesAsync(context.CancellationToken);
 
             return new RewardResponse
             {
@@ -201,7 +203,8 @@ namespace StreamDroid.Domain.Services.Reward
                 reward.RemoveAsset(fileName.ToString());
             }
 
-            reward = await _repository.UpdateAsync(reward, context.CancellationToken);
+            _repository.Update(reward);
+            await _repository.SaveChangesAsync(context.CancellationToken);
 
             return new RewardResponse
             {
@@ -249,9 +252,14 @@ namespace StreamDroid.Domain.Services.Reward
                         };
                     });
 
-                    foreach (var entity in entities)
+                    if (entities.Any())
                     {
-                        await _repository.AddAsync(entity, cancellationToken);
+                        foreach (var entity in entities)
+                        {
+                            await _repository.AddAsync(entity, cancellationToken);
+                        }
+
+                        await _repository.SaveChangesAsync(cancellationToken);
                     }
 
                     return;

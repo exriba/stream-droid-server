@@ -215,13 +215,15 @@ namespace StreamDroid.Domain.Services.User
                     RefreshToken = token.RefreshToken,
                 };
                 user = await _repository.AddAsync(user, cancellationToken);
+                await _repository.SaveChangesAsync(cancellationToken);
                 return user;
             }
 
             user.Name = userData.Login;
             user.RefreshToken = token.RefreshToken;
             user.UserType = userType;
-            user = await _repository.UpdateAsync(user, cancellationToken);
+            _repository.Update(user);
+            await _repository.SaveChangesAsync(cancellationToken);
             return user;
         }
 

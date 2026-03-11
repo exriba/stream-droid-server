@@ -153,14 +153,6 @@ namespace StreamDroid.Domain.Tests.Services.User
             )
             .Returns(Task.FromResult(user)!);
 
-            _mockRepository.Setup(
-                x => x.UpdateAsync(
-                    It.IsAny<Entities.User>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.FromResult(user)!);
-
             var httpBody = await _userService.AuthenticateUser(authenticationRequest, _context);
 
             Assert.Equal("text/html", httpBody.ContentType);
@@ -286,14 +278,6 @@ namespace StreamDroid.Domain.Tests.Services.User
                 )
             )
             .Returns(Task.FromResult(user)!);
-
-            _mockRepository.Setup(
-                x => x.UpdateAsync(
-                    It.IsAny<Entities.User>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.FromResult(user));
 
             var messages = new List<SessionStatus>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);

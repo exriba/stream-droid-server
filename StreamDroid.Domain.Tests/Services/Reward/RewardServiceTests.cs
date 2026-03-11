@@ -261,14 +261,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             )
             .Returns(Task.FromResult(rewards.FirstOrDefault()));
 
-            _mockRepository.Setup(
-                x => x.UpdateAsync(
-                    It.IsAny<Entities.Reward>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.FromResult(rewards.First()));
-
             var response = await _rewardService.AddRewardAssets(mockStreamReader.Object, _context);
 
             Assert.Equal(id.ToString(), response.Reward.Id);
@@ -310,14 +302,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             )
             .Returns(Task.FromResult(rewards.FirstOrDefault()));
 
-            _mockRepository.Setup(
-                x => x.UpdateAsync(
-                    It.IsAny<Entities.Reward>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.FromResult(rewards.First()));
-
             var response = await _rewardService.UpdateRewardSpeech(request, _context);
 
             Assert.Equal(request.RewardId, response.Reward.Id);
@@ -358,14 +342,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             )
             .Returns(Task.FromResult(rewards.FirstOrDefault()));
 
-            _mockRepository.Setup(
-                x => x.UpdateAsync(
-                    It.IsAny<Entities.Reward>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.FromResult(rewards.First()));
-
             var response = await _rewardService.UpdateRewardAssets(request, _context);
 
             Assert.Single(response.Reward.Assets);
@@ -404,14 +380,6 @@ namespace StreamDroid.Domain.Tests.Services.Reward
                 )
             )
             .Returns(Task.FromResult(rewards.FirstOrDefault()));
-
-            _mockRepository.Setup(
-                x => x.UpdateAsync(
-                    It.IsAny<Entities.Reward>(),
-                    It.IsAny<CancellationToken>()
-                )
-            )
-            .Returns(Task.FromResult(rewards.First()));
 
             var response = await _rewardService.RemoveRewardAssets(request, _context);
 

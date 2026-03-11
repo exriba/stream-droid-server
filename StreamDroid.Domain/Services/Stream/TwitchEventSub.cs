@@ -396,7 +396,7 @@ namespace StreamDroid.Domain.Services.Stream
                 reward.Prompt = customReward.Prompt;
                 reward.BackgroundColor = customReward.BackgroundColor;
                 reward.Speech = new Speech(customReward.IsUserInputRequired, reward.Speech.VoiceIndex);
-                await repository.UpdateAsync(reward);
+                repository.Update(reward);
             }
             else
             {
@@ -412,6 +412,8 @@ namespace StreamDroid.Domain.Services.Stream
                 };
                 await repository.AddAsync(reward);
             }
+
+            await repository.SaveChangesAsync();
         }
 
         private async void OnCustomRewardRemove(object? sender, CustomRewardRemoveArgs e)
@@ -422,6 +424,7 @@ namespace StreamDroid.Domain.Services.Stream
             using var scope = _serviceScopeFactory.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IUberRepository>();
             await repository.DeleteAsync<Entities.Reward>(customReward.Id);
+            await repository.SaveChangesAsync();
         }
 
         private async void OnChannelPointsCustomRewardRedemption(object? sender, CustomRewardRedemptionArgs e)
@@ -446,6 +449,7 @@ namespace StreamDroid.Domain.Services.Stream
             };
 
             await repository.AddAsync(redemption);
+            await repository.SaveChangesAsync();
 
             if (reward.Speech.Enabled)
             {
