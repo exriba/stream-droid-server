@@ -246,6 +246,7 @@ namespace StreamDroid.Application.Tests.Common
             };
 
             await repository.AddAsync(redemption);
+            await repository.SaveChangesAsync();
         }
 
         public async Task DisposeAsync()
