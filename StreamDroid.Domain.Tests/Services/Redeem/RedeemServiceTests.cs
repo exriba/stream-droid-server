@@ -1,4 +1,5 @@
 ﻿using Grpc.Core;
+using Grpc.Model;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StreamDroid.Core.Interfaces;
@@ -38,7 +39,7 @@ namespace StreamDroid.Domain.Tests.Services.Redemption
         [Fact]
         public async Task RedeemService_FindRewardRedeemStatisticsFromUser()
         {
-            var request = new Google.Protobuf.WellKnownTypes.Empty();
+            var request = new Empty();
 
             var response = await _redeemService.FindRewardRedeemStatisticsFromUser(request, _context);
             var rewardRedeem = response.RewardRedeems.Single();

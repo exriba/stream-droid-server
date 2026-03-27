@@ -1,5 +1,4 @@
 ﻿using Google.Protobuf;
-using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -92,7 +91,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             var id = Guid.NewGuid();
             var rewards = SetupRewards(id);
 
-            var request = new Empty();
+            var request = new Grpc.Model.Empty();
             var messages = new List<RewardResponse>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
 
@@ -125,7 +124,7 @@ namespace StreamDroid.Domain.Tests.Services.Reward
             var id = Guid.NewGuid();
             var rewards = SetupRewards(id);
 
-            var request = new Empty();
+            var request = new Grpc.Model.Empty();
             var messages = new List<RewardResponse>();
             var mockStreamWriter = CreateServerStreamWriterMock(messages);
 

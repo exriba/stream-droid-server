@@ -1,5 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using SharpTwitch.Core.Enums;
@@ -65,7 +64,7 @@ namespace StreamDroid.Domain.Services.Reward
         /// Finds a collection of rewards for the current user id.
         /// </summary>
         /// <returns>A collection of rewards.</returns>
-        public override async Task FindUserRewards(Empty request, IServerStreamWriter<RewardResponse> responseStream, ServerCallContext context)
+        public override async Task FindUserRewards(Grpc.Model.Empty request, IServerStreamWriter<RewardResponse> responseStream, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;

@@ -1,5 +1,5 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
+using Grpc.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using StreamDroid.Core.Entities;

@@ -1,5 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Model;
 using Microsoft.Extensions.Logging;
 using Moq;

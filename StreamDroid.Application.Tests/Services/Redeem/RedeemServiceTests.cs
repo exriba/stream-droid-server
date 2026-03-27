@@ -1,5 +1,5 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
+using Grpc.Model;
 using StreamDroid.Application.Tests.Common;
 
 namespace StreamDroid.Application.Tests.Services.Redeem

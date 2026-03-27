@@ -2,6 +2,7 @@
 using Google.Api;
 using Google.Protobuf;
 using Grpc.Core;
+using Grpc.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -169,7 +170,7 @@ namespace StreamDroid.Domain.Services.User
         /// <param name="request">Generic empty message.</param>
         /// <param name="context">Context for server-side request.</param>
         /// <returns>A user response.</returns>
-        public override async Task<UserResponse> FindUser(Google.Protobuf.WellKnownTypes.Empty request, ServerCallContext context)
+        public override async Task<UserResponse> FindUser(Empty request, ServerCallContext context)
         {
             var userPrincipal = context.GetHttpContext().User;
             var claim = userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!;

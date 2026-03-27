@@ -1,5 +1,5 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
+﻿using Grpc.Core;
+using Grpc.Model;
 using Microsoft.IdentityModel.Tokens;
 using StreamDroid.Application.Tests.Common;
 using StreamDroid.Shared.Extensions;

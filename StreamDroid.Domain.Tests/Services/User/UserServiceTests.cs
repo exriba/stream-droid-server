@@ -1,4 +1,5 @@
 ﻿using Grpc.Core;
+using Grpc.Model;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -293,7 +294,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         [Fact]
         public async Task UserService_FindUser_Throws_EntityNotFound()
         {
-            var request = new Google.Protobuf.WellKnownTypes.Empty();
+            var request = new Empty();
 
             await Assert.ThrowsAnyAsync<EntityNotFoundException>(
                 async () => await _userService.FindUser(request, _context)
@@ -305,7 +306,7 @@ namespace StreamDroid.Domain.Tests.Services.User
         {
             var user = SetupUser();
 
-            var request = new Google.Protobuf.WellKnownTypes.Empty();
+            var request = new Empty();
 
             _mockRepository.Setup(
                 x => x.FindByIdAsync<Entities.User>(
