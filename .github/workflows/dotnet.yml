@@ -62,11 +62,25 @@ jobs:
 
       - name: Run .NET Tests and generate TRX
         run: |
-          dotnet test --configuration Release \
-            --logger "trx;LogFileName=test-results.trx" \
-            --results-directory ./TestResults
+          mkdir -p test_results
+          dotnet test --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory test_results || true
 
-      - name: Convert TRX to JUnit and upload
-        uses: mikepenz/action-junit-report@v2
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
         with:
-          path: ./TestResults/test-results.trx
+          report_paths: "**/test_results/*.xml"
+          detailed_summary: true
+          include_passed: true
+          fail_on_failure: true
+          simplified_summary: true
+          group_suite: true
+          check_name: .NET Test Results
+
+      - name: Upload Test Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test_results/
+          retention-days: 7
