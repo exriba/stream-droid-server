@@ -1,10 +1,10 @@
 syntax = "proto3";
 
+import "common/empty.proto";
 import "common/event.proto";
-import "google/protobuf/empty.proto";
 
 service GrpcEventService {
-  rpc Subscribe(google.protobuf.Empty) returns (stream EventResponse);
+  rpc Subscribe(grpc.model.Empty) returns (stream EventResponse);
 }
 
 message EventResponse {

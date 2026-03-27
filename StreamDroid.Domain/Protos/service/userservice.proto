@@ -1,7 +1,7 @@
 syntax = "proto3";
 
+import "common/empty.proto";
 import "common/user.proto";
-import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 import "google/api/httpbody.proto";
 
@@ -13,7 +13,7 @@ service GrpcUserService {
     };
   }
   rpc MonitorAuthenticationSessionStatus(SessionRequest) returns (stream SessionStatus);
-  rpc FindUser(google.protobuf.Empty) returns (UserResponse);
+  rpc FindUser(grpc.model.Empty) returns (UserResponse);
 }
 
 message SessionRequest {

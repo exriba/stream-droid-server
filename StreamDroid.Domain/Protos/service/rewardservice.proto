@@ -1,11 +1,11 @@
 syntax = "proto3";
 
+import "common/empty.proto";
 import "common/reward.proto";
-import "google/protobuf/empty.proto";
 
 service GrpcRewardService {
   rpc FindReward(RewardRequest) returns (RewardResponse);
-  rpc FindUserRewards(google.protobuf.Empty) returns (stream RewardResponse);
+  rpc FindUserRewards(grpc.model.Empty) returns (stream RewardResponse);
   rpc UpdateRewardSpeech(RewardSpeechRequest) returns (RewardResponse);
   rpc AddRewardAssets(stream AddRewardAssetRequest) returns (RewardResponse);
   rpc UpdateRewardAssets(UpdateRewardAssetRequest) returns (RewardResponse);
