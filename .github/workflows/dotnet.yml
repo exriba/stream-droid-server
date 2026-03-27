@@ -37,6 +37,7 @@ jobs:
         with:
           name: build-output
           path: ./**/bin/Release/
+          retention-days: 7
           
   test:
     runs-on: ubuntu-latest
