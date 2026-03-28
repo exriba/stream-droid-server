@@ -56,13 +56,9 @@ jobs:
       - name: Configure NUGET
         run: dotnet nuget add source --username "${{ github.actor }}" --password "${{ secrets.PAT_TOKEN }}" --store-password-in-clear-text --name "github" "https://nuget.pkg.github.com/exriba/index.json" 
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-
       - name: Install JUnit Logger
-        run: dotnet add package JunitXml.TestLogger --version 3.0.134
+        run: |
+          find . -name "*.Tests.csproj" -exec dotnet add {} package JunitXml.TestLogger --version 3.0.134 \;
 
       - name: Run Tests
         run: |
