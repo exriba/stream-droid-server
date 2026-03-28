@@ -74,8 +74,6 @@ jobs:
           detailed_summary: true
           include_passed: true
           fail_on_failure: true
-          simplified_summary: true
-          group_suite: true
           check_name: .NET Test Results
 
       - name: Upload Test Artifacts
