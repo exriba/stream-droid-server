@@ -8,9 +8,9 @@ The most up-to-date version of this project is available on the `network/gRPC-jw
 
 This branch includes:
 
-Latest features 
-Ongoing improvements 
-Current architecture
+* Latest features 
+* Ongoing improvements 
+* Current architecture
 
 📝 Notes
 
